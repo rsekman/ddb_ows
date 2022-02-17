@@ -13,7 +13,7 @@ Inspired by foo_ows
 
 ## License
 
-GPLv2
+GPL 3
 
 ## Requirements:
 
