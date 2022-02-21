@@ -33,9 +33,9 @@ artist: The Ocean
 album: Phanerozoic I: Palaeozoic
 title: Cambrian II: Eternal Recurrence
 ```
-the output is `The Ocean/Phanerozoic I- Palaezoic/Cambrian II- Eternal Recurrence`.
+the output is `The Ocean/Phanerozoic I- Palaeozoic/Cambrian II- Eternal Recurrence`.
 
-If your title formatting string contains functions whose outputs include `/` (e.g., `$replace(%title%, -, /), $if(..., /)` these will be interpretated literally;
+As a consequence, if your title formatting string contains functions whose outputs include `/` (e.g., `$replace(%title%, -, /), $if(..., /)` these will be interpretated literally;
 that is, so as to sub-path.
 
 This behaviour replicates `foo_fileops` as far as I can tell without source access.
