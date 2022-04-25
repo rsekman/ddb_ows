@@ -27,16 +27,16 @@ all: $(OUT)
 install: $(OUT)
 	cp -t ~/.local/lib/deadbeef $(OUT)
 
-$(BUILDDIR)/%.o: $(SRCDIR)/%.cpp $(SRCDIR)/%.hpp $(BUILDDIR)
+$(BUILDDIR)/%.o: $(SRCDIR)/%.cpp $(SRCDIR)/%.hpp
 	$(CXX) $(CFLAGS) $< -c -o $@
 
-$(BUILDDIR)/$(PROJECT).so: $(OBJ) $(BUILDDIR)
+$(BUILDDIR)/$(PROJECT).so: $(OBJ)
 	$(CXX) $(CFLAGS$) $(LDFLAGS) $(OBJ) -o $@
 
-$(BUILDDIR)/$(PROJECT)_gtk2.so: $(OBJ) $(BUILDDIR)
+$(BUILDDIR)/$(PROJECT)_gtk2.so: $(OBJ)
 	$(CXX) $(CFLAGS$) $(GTK2_DEPS_LIBS) $(GTK2_DEPS_CFLAGS) $(LDFLAGS) $(OBJ) -o $@
 
-$(BUILDDIR)/$(PROJECT)_gtk3.so: $(OBJ) $(BUILDDIR)
+$(BUILDDIR)/$(PROJECT)_gtk3.so: $(OBJ)
 	$(CXX) $(CFLAGS$) $(GTK3_DEPS_LIBS) $(GTK3_DEPS_CFLAGS) $(LDFLAGS) $(OBJ) -o $@
 
 $(BUILDDIR):
