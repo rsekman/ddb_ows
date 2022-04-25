@@ -4,7 +4,7 @@ PROJECT=ddb_ows
 BUILDDIR=build
 SRCDIR=src
 
-OUT=$(addprefix $(BUILDDIR)/,$(PROJECT).so $(PROJECT)_gtk2.so $(PROJECT)_gtk3.so)
+OUT=$(addprefix $(BUILDDIR)/,$(PROJECT).so $(PROJECT)_gtk2.so $(PROJECT)_gtk3.so $(PROJECT).glade)
 
 CXX?=g++
 CFLAGS+=-Wall -g -O2 -fPIC -D_GNU_SOURCE
@@ -38,6 +38,9 @@ $(BUILDDIR)/$(PROJECT)_gtk2.so: $(OBJ)
 
 $(BUILDDIR)/$(PROJECT)_gtk3.so: $(OBJ)
 	$(CXX) $(CFLAGS$) $(GTK3_DEPS_LIBS) $(GTK3_DEPS_CFLAGS) $(LDFLAGS) $(OBJ) -o $@
+
+$(BUILDDIR)/$(PROJECT).glade: $(SRCDIR)/$(PROJECT).glade
+	cp $< $@
 
 $(BUILDDIR):
 	mkdir -p $(BUILDDIR)
