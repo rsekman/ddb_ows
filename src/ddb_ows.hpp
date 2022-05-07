@@ -36,7 +36,7 @@
 
 #define DDB_OWS_ERR \
     if (DDB_OWS_LOGLEVEL < DDB_OWS_LOG_ERR) {} \
-    else std::cerr << "[ddb_ows_err] "
+    else std::cerr << "[ddb_ows] [error] "
 #define DDB_OWS_WARN \
     if (DDB_OWS_LOGLEVEL < DDB_OWS_LOG_WARN) {} \
     else std::cerr << "[ddb_ows] [warn] "
@@ -44,5 +44,7 @@
     if (DDB_OWS_LOGLEVEL < DDB_OWS_LOG_DEBUG) {} \
     else std::cerr << "[ddb_ows] [debug] "
 
+namespace ddb_ows {
+}
 
 #endif
