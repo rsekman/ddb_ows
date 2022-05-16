@@ -1,5 +1,4 @@
 #include <gtkmm.h>
-#include <gtk/gtk.h>
 
 #include <deadbeef/deadbeef.h>
 #include <deadbeef/plugins/converter/converter.h>
@@ -7,7 +6,6 @@
 
 #include <iostream>
 #include <string>
-#include <vector>
 #include <stdexcept>
 
 #include "ddb_ows.hpp"
@@ -18,6 +16,38 @@ DB_plugin_t definition_;
 const char* configDialog_ = "";
 static DB_functions_t* ddb_api;
 
+Glib::RefPtr<Gtk::Builder> builder;
+
+typedef struct {
+    GModule* gmodule;
+    gpointer data;
+} connect_args;
+
+static void
+gtk_builder_connect_signals_default (GtkBuilder    *builder,
+        GObject       *object,
+        const gchar   *signal_name,
+        const gchar   *handler_name,
+        GObject       *connect_object,
+        GConnectFlags  flags,
+        gpointer       user_data)
+{
+    GCallback func;
+    connect_args *args = (connect_args*)user_data;
+
+    if (!g_module_symbol (args->gmodule, handler_name, (gpointer*)&func) )
+    {
+        g_warning ("Could not find signal handler '%s'", handler_name);
+        return;
+    }
+
+    if (connect_object)
+        g_signal_connect_object (object, signal_name, func, connect_object, flags);
+    else
+        g_signal_connect_data (object, signal_name, func, args->data, NULL, flags);
+}
+
+extern "C"{
 void on_target_browser_selection_changed(GtkFileChooser* target_browser, gpointer data) {
 }
 
@@ -31,6 +61,9 @@ void on_target_dir_entry_changed(){
 }
 
 void on_quit_btn_clicked(){
+    GtkWidget* cwin = GTK_WIDGET( gtk_builder_get_object(builder->gobj(), "ddb_ows") );
+    gtk_widget_destroy(cwin);
+}
 }
 
 int start() {
@@ -40,9 +73,6 @@ int start() {
 int stop() {
     return 0;
 }
-
-
-Glib::RefPtr<Gtk::Builder> builder;
 
 int connect (void) {
     gtkui_plugin = ddb_api->plug_get_for_id (DDB_GTKUI_PLUGIN_ID);
@@ -63,7 +93,7 @@ int connect (void) {
         return -1;
     }
     // Needed to make gtkmm play nice
-    auto app = Gtk::Main(0, NULL);
+    auto app = new Gtk::Main(0, NULL, false);
     builder = Gtk::Builder::create();
     return 0;
 }
@@ -121,9 +151,24 @@ int create_gui(DB_plugin_action_t* action, ddb_action_context_t ctx) {
         DDB_OWS_ERR << "Could not read .ui" << std::endl;
         return -1;
     }
-    gtk_builder_connect_signals(builder->gobj(), NULL);
-    GtkWidget* cwin = GTK_WIDGET( gtk_builder_get_object(builder->gobj(), "ddb_ows") );
-    gtk_window_present(GTK_WINDOW(cwin));
+    DDB_OWS_DEBUG << "Trying to load GModule" << DDB_OWS_LIB_FILE << std::endl;
+    connect_args* args;
+    args = g_slice_new0 (connect_args);
+    args->gmodule = g_module_open (DDB_OWS_LIB_FILE, G_MODULE_BIND_LAZY);
+    args->data = NULL;
+    gtk_builder_connect_signals_full(builder->gobj(),
+        gtk_builder_connect_signals_default,
+        args);
+
+    //GObject* quit_btn = gtk_builder_get_object(gbuilder, "quit_btn");
+    //g_signal_connect(quit_btn, "clicked", G_CALLBACK(on_quit_btn_clicked), NULL);
+
+    Gtk::Button* quit_btn = NULL;
+    builder->get_widget("quit_btn", quit_btn);
+
+    Gtk::Window* ddb_ows_win = NULL;
+    builder->get_widget("ddb_ows", ddb_ows_win);
+    ddb_ows_win->present();
     return 0;
 }
 

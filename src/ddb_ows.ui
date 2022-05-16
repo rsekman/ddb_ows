@@ -9,6 +9,7 @@
     <property name="stock">gtk-open</property>
   </object>
   <object class="GtkCheckButton" id="ows_pl_select_all">
+    <property name="visible">True</property>
     <property name="can_focus">True</property>
     <property name="receives_default">False</property>
     <property name="draw_indicator">False</property>
@@ -139,6 +140,7 @@
                     <property name="sizing">fixed</property>
                     <property name="fixed_width">24</property>
                     <property name="widget">ows_pl_select_all</property>
+                    <property name="alignment">0.5</property>
                     <child>
                       <object class="GtkCellRendererToggle" id="pl_selected_rend">
                         <signal name="toggled" handler="on_pl_selected_rend_toggled" swapped="no"/>
