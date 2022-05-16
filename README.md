@@ -11,10 +11,29 @@ This can be useful e.g. if you want the destination directory structure to refle
 
 Inspired by foo_ows
 
+## Building
+
+Requirements
+- DeaDBeeF
+- gtk headers
+- `make`
+- `gcc`
+
+```sh
+export CPATH=/path/to/deadbeef/
+export DDB_OWS_DEBUG_LEVEL=n
+make install
+```
+`ddb_ows` uses interfaces with plugins bundled with DeaDBeeF and needs to be able to find their headers.
+Clone https://github.com/DeaDBeeF-Player/deadbeef and add it to your `CPATH`
+Set `n = 0, 1, 2, 3` for increasingly verbose console logging on `stderr`;
+the default is `3`.
+
+`ddb_ows` is Linux only with no plans to support other operating systems.
+
 ## Handling unallowed characters
 
-File systems generally do not allow file names to contain all bytes; e.g. ext[2-4] reserve `/` and 
-exFAT does not allow the characters `/\:*?"<>|`.
+File systems generally do not allow file names to contain all bytes; e.g. ext[2-4] reserve `/` and exFAT does not allow the characters `/\:*?"<>|`.
 As id3 tags may contain these characters, the following escaping scheme is implemented
 
 1. id3 tags undergo the replacement `/ -> -` before they are seen by title formatting
@@ -39,6 +58,14 @@ As a consequence, if your title formatting string contains functions whose outpu
 that is, so as to sub-path.
 
 This behaviour replicates `foo_fileops` as far as I can tell without source access.
+
+## Case-sensitivity
+
+If your metadata is inconsistent in capitalisation, on a case-sensitive file system the output directory structure may be similarly inconsistent.
+That is, if you have files tagged both `Simon and Garfunkel` and `Simon And Garfunkel` and the destination format is something like `%artist%/%title%.%filename_ext%`, `ddb_ows` will (attempt to) create *two* directories.
+This is not an issue on case-insensitive file systems such as vfat.
+On, e.g., ext3, though, this may not be what you want.
+You can mogrify your format with string replacing functions, but the best solution is probably to retag your files using consistent capitalisation.
 
 ## License
 
