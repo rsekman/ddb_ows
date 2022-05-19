@@ -1,3 +1,5 @@
+#include "gtkmm/togglebutton.h"
+#include <gtkmm-2.4/gtkmm/filefilter.h>
 #include <gtkmm.h>
 
 #include <deadbeef/deadbeef.h>
@@ -7,6 +9,12 @@
 #include <iostream>
 #include <string>
 #include <stdexcept>
+#include <regex>
+
+#include <filesystem>
+namespace fs = std::filesystem;
+
+#include <execinfo.h>
 
 #include "ddb_ows.hpp"
 #include "ddb_ows_gui.hpp"
@@ -47,64 +55,129 @@ gtk_builder_connect_signals_default (GtkBuilder    *builder,
         g_signal_connect_data (object, signal_name, func, args->data, NULL, flags);
 }
 
+// TODO refactor this to take the model as an argument instead
+
+auto get_pl_selection_model(){
+    return Glib::RefPtr<Gtk::ListStore>::cast_static(
+        builder->get_object("pl_selection_model")
+    );
+}
+
+void pl_selection_check_consistency() {
+    auto model = Glib::RefPtr<Gtk::ListStore>::cast_static(
+        builder->get_object("pl_selection_model")
+    );
+    bool all_true  = true;
+    bool all_false = true;
+    bool pl_selected;
+    auto rows = model->children();
+    for(auto r = rows.begin(); r != rows.end(); r++) {
+        r->get_value(0, pl_selected);
+        all_true  = all_true && pl_selected;
+        all_false = all_false && !pl_selected;
+    }
+    Gtk::ToggleButton* pl_select_all = NULL;
+    builder->get_widget("pl_select_all", pl_select_all);
+    DDB_OWS_DEBUG << "Playlist selection is " <<
+        (all_true || all_false ? "consistent" : "inconsistent") << std::endl;
+    pl_select_all->set_inconsistent(!(all_true || all_false));
+}
+
+bool validate_fn_format() {
+    return true;
+}
+
+void update_fn_format_preview() {
+}
+
+void update_fn_format_model() {
+}
+
+/* BEGIN EXTERN SIGNAL HANDLERS */
+// TODO consider moving these into their own file
+
 extern "C"{
-void on_target_browser_selection_changed(GtkFileChooser* target_browser, gpointer data) {
+
+void on_pl_select_all_toggled(){
+    DDB_OWS_DEBUG << "Toggling all selections." << std::endl;
+    auto model = get_pl_selection_model();
+    Gtk::ToggleButton* pl_select_all = NULL;
+    builder->get_widget("pl_select_all", pl_select_all);
+    bool sel =
+        pl_select_all->get_inconsistent() ||
+        !pl_select_all->get_active();
+    model->foreach_iter(
+        [sel, &model] ( const Gtk::TreeIter r) -> bool {
+            r->set_value(0, sel);
+            model->row_changed(Gtk::TreePath(r), r);
+            return false;
+        }
+    );
+    pl_select_all->set_active(sel);
+    pl_selection_check_consistency();
 }
 
-void on_playlist_select_all_toggled(){
+void on_pl_selected_rend_toggled(GtkCellRendererToggle* rend, char* path, gpointer data){
+    auto model = get_pl_selection_model();
+    auto row = model->get_iter(path);
+    bool pl_selected;
+    row->get_value(0, pl_selected);
+    row->set_value(0, !pl_selected);
+    model->row_changed(Gtk::TreePath(path), row);
+    pl_selection_check_consistency();
 }
 
-void on_pl_selected_rend_toggled(){
+/* UI initalisation -- populate the various ListStores with data from DeadBeeF */
+
+void populate_playlists() {
 }
 
-void on_target_dir_entry_changed(){
+void populate_fn_formats() {
 }
+
+void populate_fts() {
+}
+
+void populate_presets() {
+}
+
+void init_target_root_directory() {
+}
+
+/* Handle config updates */
+
+void on_target_root_chooser_file_set() {
+}
+
+void on_fn_format_combobox_changed() {
+    if (!validate_fn_format()) {
+        return;
+    }
+    update_fn_format_preview();
+    update_fn_format_model();
+}
+
+/* Button actions */
 
 void on_quit_btn_clicked(){
     GtkWidget* cwin = GTK_WIDGET( gtk_builder_get_object(builder->gobj(), "ddb_ows") );
     gtk_widget_destroy(cwin);
 }
+
+void on_cancel_btn_clicked(){
 }
 
-int start() {
-    return 0;
+void on_dry_run_btn_clicked(){
 }
 
-int stop() {
-    return 0;
+void on_execute_btn_clicked(){
 }
 
-int connect (void) {
-    gtkui_plugin = ddb_api->plug_get_for_id (DDB_GTKUI_PLUGIN_ID);
-    converter_plugin = ddb_api->plug_get_for_id ("converter");
-    ddb_ows_plugin = ddb_api->plug_get_for_id ("ddb_ows");
-    if(!gtkui_plugin) {
-        DDB_OWS_ERR << DDB_OWS_GUI_PLUGIN_NAME
-            << ": matching gtkui plugin not found, quitting."
-            << std::endl;
-        return -1;
-    }
-    if(!converter_plugin) {
-        fprintf(stderr, "%s: converter plugin not found\n", DDB_OWS_GUI_PLUGIN_NAME);
-        return -1;
-    }
-    if(!ddb_ows_plugin) {
-        fprintf(stderr, "%s: ddb_ows plugin not found\n", DDB_OWS_GUI_PLUGIN_NAME);
-        return -1;
-    }
-    // Needed to make gtkmm play nice
-    auto app = new Gtk::Main(0, NULL, false);
-    builder = Gtk::Builder::create();
-    return 0;
 }
 
-int disconnect(){
-    return 0;
-}
+/* END EXTERN SIGNAL HANDLERS */
 
-int handleMessage(uint32_t id, uintptr_t ctx, uint32_t p1, uint32_t p2){
-    return 0;
-}
+/* Build the UI from .ui */
 
 int read_ui() {
     std::vector<std::string> plugdirs = {
@@ -138,34 +211,45 @@ int read_ui() {
         if (success) {
             DDB_OWS_DEBUG
                 << "loaded ui file "
-                << ui_fname << ": "
-                << std::endl;
+                << ui_fname << std::endl;
             return 0;
         }
     }
     return -1;
 }
 
-int create_gui(DB_plugin_action_t* action, ddb_action_context_t ctx) {
+int create_gui() {
     if(read_ui() < 0) {
         DDB_OWS_ERR << "Could not read .ui" << std::endl;
         return -1;
     }
-    DDB_OWS_DEBUG << "Trying to load GModule" << DDB_OWS_LIB_FILE << std::endl;
-    connect_args* args;
-    args = g_slice_new0 (connect_args);
-    args->gmodule = g_module_open (DDB_OWS_LIB_FILE, G_MODULE_BIND_LAZY);
+    // Use introspection (backtrace) to figure out which file (.so) we are in.
+    // This is necessary because we have to tell gtk to look for the signal
+    // handlers in the .so, rather than in the main deadbeef executable.
+    char** bt_symbols = NULL;
+    void* trace[1];
+    int trace_l = backtrace(trace, 1);
+    bt_symbols = backtrace_symbols(trace, trace_l);
+    // Backtrace looks something like "/usr/lib/deadbeef/ddb_ows_gtk2.so(create_gui+0x53) [0x7f7b0ae932a3]
+    // We need to account for the possibility that the path is silly and contains '(' => use regex
+    std::cmatch m;
+    std::regex e("^(.*)\\(");
+    std::regex_search(bt_symbols[0], m, e);
+    DDB_OWS_DEBUG << "Trying to load GModule" << m[1] << std::endl;
+
+    // Now we are ready to connect signal handlers;
+    connect_args* args = g_slice_new0 (connect_args);
+    args->gmodule = g_module_open (m[1].str().c_str(), G_MODULE_BIND_LAZY);
     args->data = NULL;
     gtk_builder_connect_signals_full(builder->gobj(),
         gtk_builder_connect_signals_default,
         args);
 
-    //GObject* quit_btn = gtk_builder_get_object(gbuilder, "quit_btn");
-    //g_signal_connect(quit_btn, "clicked", G_CALLBACK(on_quit_btn_clicked), NULL);
+    pl_selection_check_consistency();
+    return 0;
+}
 
-    Gtk::Button* quit_btn = NULL;
-    builder->get_widget("quit_btn", quit_btn);
-
+int show_gui(DB_plugin_action_t* action, ddb_action_context_t ctx) {
     Gtk::Window* ddb_ows_win = NULL;
     builder->get_widget("ddb_ows", ddb_ows_win);
     ddb_ows_win->present();
@@ -177,12 +261,52 @@ static DB_plugin_action_t gui_action = {
     .name = "ddb_ows_gui",
     .flags = DB_ACTION_COMMON | DB_ACTION_ADD_MENU,
     .next = NULL,
-    .callback2 = create_gui,
+    .callback2 = show_gui,
 };
 
 
 DB_plugin_action_t * get_actions(DB_playItem_t *it) {
     return &gui_action;
+}
+
+int start() {
+    return 0;
+}
+
+int stop() {
+    return 0;
+}
+
+int connect (void) {
+    gtkui_plugin = ddb_api->plug_get_for_id (DDB_GTKUI_PLUGIN_ID);
+    converter_plugin = ddb_api->plug_get_for_id ("converter");
+    ddb_ows_plugin = ddb_api->plug_get_for_id ("ddb_ows");
+    if(!gtkui_plugin) {
+        DDB_OWS_ERR << DDB_OWS_GUI_PLUGIN_NAME
+            << ": matching gtkui plugin not found, quitting."
+            << std::endl;
+        return -1;
+    }
+    if(!converter_plugin) {
+        fprintf(stderr, "%s: converter plugin not found\n", DDB_OWS_GUI_PLUGIN_NAME);
+        return -1;
+    }
+    if(!ddb_ows_plugin) {
+        fprintf(stderr, "%s: ddb_ows plugin not found\n", DDB_OWS_GUI_PLUGIN_NAME);
+        return -1;
+    }
+    // Needed to make gtkmm play nice
+    auto __attribute__((unused)) app = new Gtk::Main(0, NULL, false);
+    builder = Gtk::Builder::create();
+    return create_gui();
+}
+
+int disconnect(){
+    return 0;
+}
+
+int handleMessage(uint32_t id, uintptr_t ctx, uint32_t p1, uint32_t p2){
+    return 0;
 }
 
 void init(DB_functions_t* api) {
