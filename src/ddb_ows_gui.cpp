@@ -1,6 +1,9 @@
+#include "gtkmm/builder.h"
+#include "gtkmm/main.h"
+#include "gtkmm/liststore.h"
 #include "gtkmm/togglebutton.h"
-#include <gtkmm-2.4/gtkmm/filefilter.h>
-#include <gtkmm.h>
+#include "gtkmm/treeview.h"
+#include "gtkmm/window.h"
 
 #include <deadbeef/deadbeef.h>
 #include <deadbeef/plugins/converter/converter.h>
