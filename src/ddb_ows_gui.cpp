@@ -5,19 +5,20 @@
 #include "gtkmm/treeview.h"
 #include "gtkmm/window.h"
 
+#include <execinfo.h>
+
+#include <filesystem>
+#include <iostream>
+#include <set>
+#include <stdexcept>
+#include <string>
+#include <regex>
+
+namespace fs = std::filesystem;
+
 #include <deadbeef/deadbeef.h>
 #include <deadbeef/plugins/converter/converter.h>
 #include <deadbeef/plugins/gtkui/gtkui_api.h>
-
-#include <iostream>
-#include <string>
-#include <stdexcept>
-#include <regex>
-
-#include <filesystem>
-namespace fs = std::filesystem;
-
-#include <execinfo.h>
 
 #include "ddb_ows.hpp"
 #include "ddb_ows_gui.hpp"
