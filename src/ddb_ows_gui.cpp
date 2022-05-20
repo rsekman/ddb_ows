@@ -117,6 +117,7 @@ void pl_selection_populate(
 }
 
 void pl_selection_update_model(Glib::RefPtr<Gtk::ListStore> model) {
+    // store each playlist's selection status in a map
     std::map<ddb_playlist_t*, bool> selected = {};
     model->foreach_iter(
         [&selected] ( const Gtk::TreeIter r) -> bool {
@@ -128,6 +129,7 @@ void pl_selection_update_model(Glib::RefPtr<Gtk::ListStore> model) {
             return false;
         }
     );
+    // now rebuild the model using the map to assign selection statuses
     pl_selection_clear(model);
     pl_selection_populate(model, selected);
 }
@@ -136,6 +138,11 @@ void pl_selection_update_model(Glib::RefPtr<Gtk::ListStore> model) {
 // TODO consider moving these into their own file
 
 extern "C"{
+
+// TODO
+// This method and the following are actually agnostic re: which model we are
+// selecting/unselecting in. We should refactor them so we can reuse them for
+// the ft selection model
 
 void on_pl_select_all_toggled(GtkListStore* ls, gpointer data){
     // Taking ownership of the instance can lead to incorrect reference counts
@@ -174,12 +181,12 @@ void on_pl_selected_rend_toggled(GtkCellRendererToggle* rend, char* path, gpoint
 
 /* UI initalisation -- populate the various ListStores with data from DeadBeeF */
 
-void pl_selection_populate(GtkListStore* ls, gpointer data ) {
+void pl_selection_populate(GtkListStore* ls, gpointer data) {
     Glib::RefPtr<Gtk::ListStore> model = Glib::wrap(ls, true);
     pl_selection_populate(model);
 }
 
-void pl_selection_clear(GtkListStore* ls, gpointer data ) {
+void pl_selection_clear(GtkListStore* ls, gpointer data) {
     auto model_ptr = Glib::wrap(ls, true);
     auto model = Glib::RefPtr<Gtk::ListStore>::cast_static(model_ptr);
     pl_selection_clear(model);
@@ -271,7 +278,7 @@ int read_ui() {
     return -1;
 }
 
-int create_gui() {
+int create_ui() {
     if(read_ui() < 0) {
         DDB_OWS_ERR << "Could not read .ui" << std::endl;
         return -1;
@@ -283,7 +290,7 @@ int create_gui() {
     void* trace[1];
     int trace_l = backtrace(trace, 1);
     bt_symbols = backtrace_symbols(trace, trace_l);
-    // Backtrace looks something like "/usr/lib/deadbeef/ddb_ows_gtk2.so(create_gui+0x53) [0x7f7b0ae932a3]
+    // Backtrace looks something like "/usr/lib/deadbeef/ddb_ows_gtk2.so(create_ui+0x53) [0x7f7b0ae932a3]
     // We need to account for the possibility that the path is silly and contains '(' => use regex
     std::cmatch m;
     std::regex e("^(.*)\\(");
@@ -298,15 +305,16 @@ int create_gui() {
         gtk_builder_connect_signals_default,
         args);
 
-    auto model = Glib::RefPtr<Gtk::ListStore>::cast_static(
+    auto pl_model = Glib::RefPtr<Gtk::ListStore>::cast_static(
         builder->get_object("pl_selection_model")
     );
-    pl_selection_clear(model);
-    pl_selection_check_consistent(model);
+    pl_selection_clear(pl_model);
+    pl_selection_check_consistent(pl_model);
+
     return 0;
 }
 
-int show_gui(DB_plugin_action_t* action, ddb_action_context_t ctx) {
+int show_ui(DB_plugin_action_t* action, ddb_action_context_t ctx) {
     Gtk::Window* ddb_ows_win = NULL;
     builder->get_widget("ddb_ows", ddb_ows_win);
     ddb_ows_win->present();
@@ -315,10 +323,10 @@ int show_gui(DB_plugin_action_t* action, ddb_action_context_t ctx) {
 
 static DB_plugin_action_t gui_action = {
     .title = "File/One-Way Sync",
-    .name = "ddb_ows_gui",
+    .name = "ddb_ows_ui",
     .flags = DB_ACTION_COMMON | DB_ACTION_ADD_MENU,
     .next = NULL,
-    .callback2 = show_gui,
+    .callback2 = show_ui,
 };
 
 
@@ -355,7 +363,7 @@ int connect (void) {
     // Needed to make gtkmm play nice
     auto __attribute__((unused)) app = new Gtk::Main(0, NULL, false);
     builder = Gtk::Builder::create();
-    return create_gui();
+    return create_ui();
 }
 
 int disconnect(){
