@@ -58,18 +58,7 @@ gtk_builder_connect_signals_default (GtkBuilder    *builder,
         g_signal_connect_data (object, signal_name, func, args->data, NULL, flags);
 }
 
-// TODO refactor this to take the model as an argument instead
-
-auto get_pl_selection_model(){
-    return Glib::RefPtr<Gtk::ListStore>::cast_static(
-        builder->get_object("pl_selection_model")
-    );
-}
-
-void pl_selection_check_consistency() {
-    auto model = Glib::RefPtr<Gtk::ListStore>::cast_static(
-        builder->get_object("pl_selection_model")
-    );
+void pl_selection_check_consistent(Glib::RefPtr<Gtk::ListStore> model) {
     bool all_true  = true;
     bool all_false = true;
     bool pl_selected;
@@ -81,8 +70,6 @@ void pl_selection_check_consistency() {
     }
     Gtk::ToggleButton* pl_select_all = NULL;
     builder->get_widget("pl_select_all", pl_select_all);
-    DDB_OWS_DEBUG << "Playlist selection is " <<
-        (all_true || all_false ? "consistent" : "inconsistent") << std::endl;
     pl_select_all->set_inconsistent(!(all_true || all_false));
 }
 
@@ -96,14 +83,63 @@ void update_fn_format_preview() {
 void update_fn_format_model() {
 }
 
+void pl_selection_clear(Glib::RefPtr<Gtk::ListStore> model) {
+    model->foreach_iter(
+        [] ( const Gtk::TreeIter r) -> bool {
+            ddb_playlist_t* plt;
+            r->get_value(2, plt);
+            ddb_api->plt_unref(plt);
+            return false;
+        }
+    );
+    model->clear();
+}
+
+void pl_selection_populate(
+    Glib::RefPtr<Gtk::ListStore> model,
+    std::map<ddb_playlist_t*, bool> selected={}
+) {
+    int plt_count = ddb_api->plt_get_count();
+    char buf[4096];
+    ddb_playlist_t*  plt;
+    Gtk::TreeModel::iterator row;
+    bool s;
+    for(int i=0; i < plt_count; i++) {
+        plt = ddb_api->plt_get_for_idx(i);
+        ddb_api->plt_get_title(plt, buf, sizeof(buf));
+        row = model->append();
+        s = selected.count(plt) ? selected[plt] : false;
+        row->set_value(0, s);
+        row->set_value(1, std::string(buf));
+        row->set_value(2, plt);
+    }
+}
+
+void pl_selection_update_model(Glib::RefPtr<Gtk::ListStore> model) {
+    std::map<ddb_playlist_t*, bool> selected = {};
+    model->foreach_iter(
+        [&selected] ( const Gtk::TreeIter r) -> bool {
+            bool s;
+            r->get_value(0, s);
+            ddb_playlist_t* p;
+            r->get_value(2, p);
+            selected[p] = s;
+            return false;
+        }
+    );
+    pl_selection_clear(model);
+    pl_selection_populate(model, selected);
+}
+
 /* BEGIN EXTERN SIGNAL HANDLERS */
 // TODO consider moving these into their own file
 
 extern "C"{
 
-void on_pl_select_all_toggled(){
-    DDB_OWS_DEBUG << "Toggling all selections." << std::endl;
-    auto model = get_pl_selection_model();
+void on_pl_select_all_toggled(GtkListStore* ls, gpointer data){
+    // Taking ownership of the instance can lead to incorrect reference counts
+    // so we must pass true as the second argument to take a new copy or ref
+    Glib::RefPtr<Gtk::ListStore> model = Glib::wrap(ls, true);
     Gtk::ToggleButton* pl_select_all = NULL;
     builder->get_widget("pl_select_all", pl_select_all);
     bool sel =
@@ -112,27 +148,40 @@ void on_pl_select_all_toggled(){
     model->foreach_iter(
         [sel, &model] ( const Gtk::TreeIter r) -> bool {
             r->set_value(0, sel);
+            std::string n;
+            r->get_value(1, n);
             model->row_changed(Gtk::TreePath(r), r);
             return false;
         }
     );
     pl_select_all->set_active(sel);
-    pl_selection_check_consistency();
+    pl_selection_check_consistent(model);
 }
 
 void on_pl_selected_rend_toggled(GtkCellRendererToggle* rend, char* path, gpointer data){
-    auto model = get_pl_selection_model();
+    if (data == NULL) {
+        return;
+    }
+    Glib::RefPtr<Gtk::ListStore> model = Glib::wrap(GTK_LIST_STORE (data), true);
     auto row = model->get_iter(path);
     bool pl_selected;
     row->get_value(0, pl_selected);
     row->set_value(0, !pl_selected);
     model->row_changed(Gtk::TreePath(path), row);
-    pl_selection_check_consistency();
+    pl_selection_check_consistent(model);
 }
 
 /* UI initalisation -- populate the various ListStores with data from DeadBeeF */
 
-void populate_playlists() {
+void pl_selection_populate(GtkListStore* ls, gpointer data ) {
+    Glib::RefPtr<Gtk::ListStore> model = Glib::wrap(ls, true);
+    pl_selection_populate(model);
+}
+
+void pl_selection_clear(GtkListStore* ls, gpointer data ) {
+    auto model_ptr = Glib::wrap(ls, true);
+    auto model = Glib::RefPtr<Gtk::ListStore>::cast_static(model_ptr);
+    pl_selection_clear(model);
 }
 
 void populate_fn_formats() {
@@ -248,7 +297,11 @@ int create_gui() {
         gtk_builder_connect_signals_default,
         args);
 
-    pl_selection_check_consistency();
+    auto model = Glib::RefPtr<Gtk::ListStore>::cast_static(
+        builder->get_object("pl_selection_model")
+    );
+    pl_selection_clear(model);
+    pl_selection_check_consistent(model);
     return 0;
 }
 
@@ -305,10 +358,22 @@ int connect (void) {
 }
 
 int disconnect(){
+    auto model = Glib::RefPtr<Gtk::ListStore>::cast_static(
+        builder->get_object("pl_selection_model")
+    );
+    pl_selection_clear(model);
     return 0;
 }
 
 int handleMessage(uint32_t id, uintptr_t ctx, uint32_t p1, uint32_t p2){
+    switch (id) {
+        case DB_EV_PLAYLISTCHANGED:
+            auto model = Glib::RefPtr<Gtk::ListStore>::cast_static(
+                builder->get_object("pl_selection_model")
+            );
+            pl_selection_update_model(model);
+            break;
+    }
     return 0;
 }
 
