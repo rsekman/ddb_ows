@@ -5,8 +5,10 @@ BUILDDIR=build
 SRCDIR=src
 
 UISRC = $(PROJECT).ui
-OUT=$(addprefix $(BUILDDIR)/,$(PROJECT).so $(PROJECT)_gtk2.so $(PROJECT)_gtk3.so $(UISRC))
+TARGETS=$(PROJECT).so $(PROJECT)_gtk2.so $(PROJECT)_gtk3.so $(UISRC)
+OUT=$(addprefix $(BUILDDIR)/,$(TARGETS))
 LIBDIR=$(HOME)/.local/lib
+INSTALLDIR=$(LIBDIR)/deadbeef
 
 CXX?=g++
 CFLAGS+=-Wall --std=c++17 -g -O2 -fPIC -DLIBDIR="\"$(LIBDIR)\"" -Wno-deprecated-declarations
@@ -14,11 +16,11 @@ LDFLAGS=-shared -export-dynamic
 
 
 GTK2_CFLAGS=$(shell pkg-config --cflags-only-I gtkmm-2.4)
-GTK2_CFLAGS+=-DDDB_OWS_LIB_FILE="\"$(LIBDIR)/deadbeef/$(PROJECT)_gtk2.so\""
+GTK2_CFLAGS+=-DDDB_OWS_LIB_FILE="\"$(INSTALLDIR)/$(PROJECT)_gtk2.so\""
 GTK2_LDFLAGS=$(shell pkg-config --libs gtkmm-2.4)
 
 GTK3_CFLAGS=$(shell pkg-config --cflags-only-I gtkmm-3.0)
-GTK3_CFLAGS+=-DDDB_OWS_LIB_FILE="\"$(LIBDIR)/deadbeef/$(PROJECT)_gtk3.so\""
+GTK3_CFLAGS+=-DDDB_OWS_LIB_FILE="\"$(INSTALLDIR)/$(PROJECT)_gtk3.so\""
 GTK3_LDFLAGS=$(shell pkg-config --libs gtkmm-3.0)
 
 SOURCES?=$(addprefix $(SRCDIR)/,ddb_ows.cpp)
@@ -30,8 +32,17 @@ GTK3OBJ?=$(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%_gtk3.o, $(filter $(SRCDIR)/%.
 
 all: $(OUT)
 
-install: $(OUT)
-	cp -t $(LIBDIR)/deadbeef $(OUT)
+install: $(addprefix install-,main gtk2 gtk3)
+
+install-main: $(INSTALLDIR)/ddb_ows.so
+
+install-gtk2: $(INSTALLDIR)/$(PROJECT)_gtk2.so $(INSTALLDIR)/$(UISRC)
+
+install-gtk3: $(INSTALLDIR)/$(PROJECT)_gtk3.so $(INSTALLDIR)/$(UISRC)
+
+
+$(INSTALLDIR)/%: $(BUILDDIR)/%
+	cp -t $(INSTALLDIR) $<
 
 $(BUILDDIR)/$(PROJECT).so: $(OBJ)
 	$(CXX) $(CFLAGS) $(LDFLAGS) $(OBJ) -o $@
