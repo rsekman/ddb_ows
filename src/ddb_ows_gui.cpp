@@ -134,6 +134,31 @@ void pl_selection_update_model(Glib::RefPtr<Gtk::ListStore> model) {
     pl_selection_populate(model, selected);
 }
 
+void ft_populate(
+    Glib::RefPtr<Gtk::ListStore> model,
+    std::map<std::string, bool> selected={}
+) {
+    std::set<std::string> fts {};
+    DB_decoder_t **decoders = ddb_api->plug_get_decoder_list ();
+    // decoders and decoders[i]->exts are null-terminated arrays
+    int i = 0;
+    while (decoders[i]) {
+        int e = 0;
+        while(decoders[i]->exts[e]) {
+            fts.insert(decoders[i]->exts[e]);
+            e++;
+        }
+        i++;
+    }
+    Gtk::TreeModel::iterator row;
+    DDB_OWS_DEBUG << "Read all filetypes..." << std::endl;
+    for(auto ft = fts.begin(); ft != fts.end(); ft++) {
+        row = model->append();
+        row->set_value(0, false);
+        row->set_value(1, *ft);
+    }
+}
+
 /* BEGIN EXTERN SIGNAL HANDLERS */
 // TODO consider moving these into their own file
 
@@ -195,7 +220,9 @@ void pl_selection_clear(GtkListStore* ls, gpointer data) {
 void populate_fn_formats() {
 }
 
-void populate_fts() {
+void ft_populate(GtkListStore* ls, gpointer data) {
+    Glib::RefPtr<Gtk::ListStore> model = Glib::wrap(ls, true);
+    ft_populate(model);
 }
 
 void populate_presets() {
@@ -310,6 +337,11 @@ int create_ui() {
     );
     pl_selection_clear(pl_model);
     pl_selection_check_consistent(pl_model);
+
+    auto ft_model = Glib::RefPtr<Gtk::ListStore>::cast_static(
+        builder->get_object("ft_model")
+    );
+    ft_populate(ft_model);
 
     return 0;
 }

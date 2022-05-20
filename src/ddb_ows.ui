@@ -2,31 +2,6 @@
 <interface>
   <requires lib="gtk+" version="2.24"/>
   <!-- interface-naming-policy toplevel-contextual -->
-  <object class="GtkListStore" id="convert_ft_model">
-    <columns>
-      <!-- column-name ft_selected -->
-      <column type="gboolean"/>
-      <!-- column-name ft_filetype -->
-      <column type="gchararray"/>
-      <!-- column-name ft_ddb_id -->
-      <column type="gint"/>
-    </columns>
-    <data>
-      <row>
-        <col id="0">True</col>
-        <col id="1" translatable="yes">FLAC</col>
-        <col id="2">0</col>
-      </row>
-    </data>
-  </object>
-  <object class="GtkCheckButton" id="convert_ft_select_all">
-    <property name="label" translatable="yes">checkbutton</property>
-    <property name="visible">True</property>
-    <property name="can_focus">True</property>
-    <property name="receives_default">False</property>
-    <property name="draw_indicator">True</property>
-    <signal name="toggled" handler="on_convert_ft_select_all_toggled" swapped="no"/>
-  </object>
   <object class="GtkListStore" id="convert_preset_model">
     <columns>
       <!-- column-name converter_preset_name -->
@@ -59,6 +34,24 @@
     </data>
   </object>
   <object class="GtkEntryBuffer" id="fname_format_buffer"/>
+  <object class="GtkListStore" id="ft_model">
+    <columns>
+      <!-- column-name ft_selected -->
+      <column type="gboolean"/>
+      <!-- column-name ft_filetype -->
+      <column type="gchararray"/>
+      <!-- column-name ft_ddb_id -->
+      <column type="gint"/>
+    </columns>
+  </object>
+  <object class="GtkCheckButton" id="ft_select_all">
+    <property name="label" translatable="yes">checkbutton</property>
+    <property name="visible">True</property>
+    <property name="can_focus">True</property>
+    <property name="receives_default">False</property>
+    <property name="draw_indicator">True</property>
+    <signal name="toggled" handler="on_convert_ft_select_all_toggled" swapped="no"/>
+  </object>
   <object class="GtkImage" id="image1">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
@@ -372,7 +365,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                 <property name="height_request">240</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="model">convert_ft_model</property>
+                <property name="model">ft_model</property>
                 <property name="headers_clickable">False</property>
                 <property name="expander_column">pl_name</property>
                 <property name="rules_hint">True</property>
@@ -385,7 +378,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                     <property name="sizing">fixed</property>
                     <property name="fixed_width">24</property>
                     <property name="clickable">True</property>
-                    <property name="widget">convert_ft_select_all</property>
+                    <property name="widget">ft_select_all</property>
                     <property name="alignment">0.5</property>
                     <child>
                       <object class="GtkCellRendererToggle" id="ft_selected_rend"/>
