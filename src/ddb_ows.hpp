@@ -1,11 +1,16 @@
 #ifndef DDB_OWS_PROJECT_ID
 
+#include <string>
+#include <iostream>
+
 #include "deadbeef/deadbeef.h"
+
+#include "config.hpp"
 
 #define DDB_OWS_VERSION_MAJOR 0
 #define DDB_OWS_VERSION_MINOR 1
 #define DDB_OWS_PROJECT_ID "ddb_ows"
-#define DDB_OWS_PROJECT_NAME "DeaDBeef One-Way Sync"
+#define DDB_OWS_PROJECT_NAME "ddb_ows"
 #define DDB_OWS_PROJECT_DESC "Provides One-Way Sync to manage e.g. portable music players. Inspired by foo_ows."
 #define DDB_OWS_PROJECT_URL "https://github.com/rsekman/ddb_ows"
 #define DDB_OWS_DEFAULT_SOCKET "/tmp/ddb_socket"
@@ -43,6 +48,11 @@
 #define DDB_OWS_DEBUG \
     if (DDB_OWS_LOGLEVEL < DDB_OWS_LOG_DEBUG) {} \
     else std::cerr << "[ddb_ows] [debug] "
+
+typedef struct {
+    DB_misc_t plugin;
+    ddb_ows::Configuration& conf;
+} ddb_ows_plugin_t;
 
 namespace ddb_ows {
 }

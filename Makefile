@@ -23,7 +23,7 @@ GTK3_CFLAGS=$(shell pkg-config --cflags-only-I gtkmm-3.0)
 GTK3_CFLAGS+=-DDDB_OWS_LIB_FILE="\"$(INSTALLDIR)/$(PROJECT)_gtk3.so\""
 GTK3_LDFLAGS=$(shell pkg-config --libs gtkmm-3.0)
 
-SOURCES?=$(addprefix $(SRCDIR)/,ddb_ows.cpp)
+SOURCES?=$(addprefix $(SRCDIR)/,ddb_ows.cpp config.cpp)
 UISOURCES?=$(addprefix $(SRCDIR)/, ddb_ows_gui.cpp)
 OBJ?=$(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%.o, $(filter $(SRCDIR)/%.cpp,$(SOURCES)))
 GTK2OBJ?=$(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%_gtk2.o, $(filter $(SRCDIR)/%.cpp,$(UISOURCES)))
