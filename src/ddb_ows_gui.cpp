@@ -91,6 +91,11 @@ void list_store_check_consistent(
     toggle->set_active(all_true);
 }
 
+void fn_format_populate(Glib::RefPtr<Gtk::ListStore>) {
+    // TODO
+    // Logic to configuration
+}
+
 bool validate_fn_format() {
     return true;
 }
@@ -251,8 +256,14 @@ void list_store_check_consistent_on_delete(
 
 /* UI initalisation -- populate the various ListStores with data from DeadBeeF */
 
-void populate_presets() {
+void convert_presets_populate() {
 }
+
+void fn_formats_populate(GtkListStore* ls, gpointer data) {
+    Glib::RefPtr<Gtk::ListStore> model = Glib::wrap(GTK_LIST_STORE( ls ));
+    fn_format_populate(model);
+}
+
 
 void init_target_root_directory() {
 }
@@ -268,6 +279,12 @@ void on_fn_format_combobox_changed() {
     }
     update_fn_format_preview();
     update_fn_format_model();
+}
+
+void on_cover_sync_check_toggled() {
+}
+
+void on_cover_fname_entry_changed() {
 }
 
 /* Clean-up actions */

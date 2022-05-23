@@ -10,6 +10,14 @@
       <column type="gint"/>
     </columns>
   </object>
+  <object class="GtkEntryBuffer" id="cover_fname_buffer">
+    <property name="text" translatable="yes">cover.jpg</property>
+  </object>
+  <object class="GtkImage" id="dry_run_icon">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-spell-check</property>
+  </object>
   <object class="GtkListStore" id="fn_format_model">
     <columns>
       <!-- column-name format -->
@@ -47,11 +55,6 @@
     <property name="can_focus">True</property>
     <property name="receives_default">False</property>
     <property name="draw_indicator">True</property>
-  </object>
-  <object class="GtkImage" id="image1">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="stock">gtk-spell-check</property>
   </object>
   <object class="GtkTextBuffer" id="job_log_buffer">
     <property name="text" translatable="yes">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
@@ -166,7 +169,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="image">image1</property>
+                <property name="image">dry_run_icon</property>
                 <signal name="clicked" handler="on_dry_run_btn_clicked" swapped="no"/>
               </object>
               <packing>
@@ -255,9 +258,10 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                   <object class="GtkTable" id="gen_opts_table">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="n_rows">3</property>
+                    <property name="n_rows">4</property>
                     <property name="n_columns">3</property>
                     <property name="column_spacing">4</property>
+                    <property name="row_spacing">4</property>
                     <child>
                       <object class="GtkLabel" id="fn_format_example_label">
                         <property name="visible">True</property>
@@ -280,13 +284,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                         <property name="has_entry">True</property>
                         <property name="entry_text_column">0</property>
                         <signal name="changed" handler="on_fn_format_combobox_changed" swapped="no"/>
-                        <signal name="show" handler="populate_fn_formats" swapped="no"/>
-                        <child>
-                          <object class="GtkCellRendererText" id="fn_format_rend"/>
-                          <attributes>
-                            <attribute name="text">0</attribute>
-                          </attributes>
-                        </child>
+                        <signal name="show" handler="fn_formats_populate" object="fn_format_model" swapped="yes"/>
                       </object>
                       <packing>
                         <property name="left_attach">1</property>
@@ -362,6 +360,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="tooltip_text" translatable="yes">The selected format string is valid</property>
+                        <property name="ypad">4</property>
                         <property name="stock">gtk-yes</property>
                       </object>
                       <packing>
@@ -369,9 +368,68 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                         <property name="right_attach">3</property>
                         <property name="top_attach">2</property>
                         <property name="bottom_attach">3</property>
-                        <property name="x_options">GTK_SHRINK</property>
+                        <property name="x_options">GTK_FILL</property>
                         <property name="y_options">GTK_FILL</property>
                         <property name="x_padding">4</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkCheckButton" id="cover_sync_check">
+                        <property name="label" translatable="yes">Sync cover art</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">False</property>
+                        <property name="draw_indicator">True</property>
+                        <signal name="toggled" handler="on_cover_sync_check_toggled" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="top_attach">3</property>
+                        <property name="bottom_attach">4</property>
+                        <property name="x_options">GTK_FILL</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkHBox" id="cover_fname_hbox">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <child>
+                          <object class="GtkLabel" id="cover_fname_label">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">Cover art file name</property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="padding">4</property>
+                            <property name="position">0</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkEntry" id="cover_fname_entry">
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="buffer">cover_fname_buffer</property>
+                            <property name="invisible_char">•</property>
+                            <property name="invisible_char_set">True</property>
+                            <property name="primary_icon_activatable">False</property>
+                            <property name="secondary_icon_activatable">False</property>
+                            <property name="primary_icon_sensitive">True</property>
+                            <property name="secondary_icon_sensitive">True</property>
+                            <signal name="changed" handler="on_cover_fname_entry_changed" swapped="no"/>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">1</property>
+                          </packing>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="left_attach">1</property>
+                        <property name="right_attach">3</property>
+                        <property name="top_attach">3</property>
+                        <property name="bottom_attach">4</property>
                       </packing>
                     </child>
                   </object>
