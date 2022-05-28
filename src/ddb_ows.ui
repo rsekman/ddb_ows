@@ -2,16 +2,16 @@
 <interface>
   <requires lib="gtk+" version="2.24"/>
   <!-- interface-naming-policy toplevel-contextual -->
-  <object class="GtkListStore" id="convert_preset_model">
+  <object class="GtkEntryBuffer" id="cover_fname_buffer">
+    <property name="text" translatable="yes">cover.jpg</property>
+  </object>
+  <object class="GtkListStore" id="cp_model">
     <columns>
       <!-- column-name converter_preset_name -->
       <column type="gchararray"/>
       <!-- column-name converter_preset_ddb_id -->
-      <column type="gint"/>
+      <column type="gpointer"/>
     </columns>
-  </object>
-  <object class="GtkEntryBuffer" id="cover_fname_buffer">
-    <property name="text" translatable="yes">cover.jpg</property>
   </object>
   <object class="GtkImage" id="dry_run_icon">
     <property name="visible">True</property>
@@ -79,7 +79,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
       <column type="gboolean"/>
       <!-- column-name pl_name -->
       <column type="gchararray"/>
-      <!-- column-name pl_ddb_id1 -->
+      <!-- column-name pl_ddb_id -->
       <column type="gpointer"/>
     </columns>
     <signal name="row-changed" handler="list_store_check_consistent" object="pl_select_all" swapped="no"/>
@@ -622,19 +622,19 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkAlignment" id="convert_preset_alignment">
+                      <object class="GtkAlignment" id="cp_alignment">
                         <property name="height_request">220</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="yalign">0</property>
                         <property name="yscale">0</property>
                         <child>
-                          <object class="GtkComboBox" id="convert_preset_combobox">
+                          <object class="GtkComboBox" id="cp_combobox">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
-                            <property name="model">convert_preset_model</property>
+                            <property name="model">cp_model</property>
                             <child>
-                              <object class="GtkCellRendererText" id="convert_preset_renderer"/>
+                              <object class="GtkCellRendererText" id="cp_renderer"/>
                               <attributes>
                                 <attribute name="text">0</attribute>
                               </attributes>
@@ -693,7 +693,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkAlignment" id="convert_preset_label_alignment">
+                      <object class="GtkAlignment" id="cp_label_alignment">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="top_padding">6</property>

@@ -91,11 +91,10 @@ void list_store_check_consistent(
     toggle->set_active(all_true);
 }
 
-void fn_format_populate(Glib::RefPtr<Gtk::ListStore>) {
+void fn_format_populate(Glib::RefPtr<Gtk::ListStore> model) {
     // TODO
     // Logic to configuration
 }
-
 bool validate_fn_format() {
     return true;
 }
@@ -105,6 +104,24 @@ void update_fn_format_preview() {
 
 void update_fn_format_model() {
 }
+
+void cp_populate(Glib::RefPtr<Gtk::ListStore> model) {
+    ddb_converter_t* enc_plug = (ddb_converter_t*) ddb_api->plug_get_for_id("converter");
+    if (enc_plug == NULL) {
+        DDB_OWS_WARN << "Converter plugin not present!" << std::endl;
+        return;
+    }
+    ddb_encoder_preset_t* enc = enc_plug->encoder_preset_get_list();
+    Gtk::TreeModel::iterator row;
+    while ( enc != NULL ) {
+        row = model->append();
+        row->set_value(0, std::string(enc->title));
+        DDB_OWS_DEBUG << "Added " << enc->title << " encoder preset." << std::endl;
+        row->set_value(1, enc);
+        enc = enc->next;
+    }
+}
+
 
 void pl_selection_clear(Glib::RefPtr<Gtk::ListStore> model) {
     DDB_OWS_DEBUG << "Clearing playlist selection model." << std::endl;
@@ -256,7 +273,9 @@ void list_store_check_consistent_on_delete(
 
 /* UI initalisation -- populate the various ListStores with data from DeadBeeF */
 
-void convert_presets_populate() {
+void cp_populate(GtkListStore* ls, gpointer data) {
+    Glib::RefPtr<Gtk::ListStore> model = Glib::wrap(ls, true);
+    cp_populate(model);
 }
 
 void fn_formats_populate(GtkListStore* ls, gpointer data) {
@@ -389,6 +408,11 @@ int create_ui() {
         builder->get_object("ft_model")
     );
     ft_populate(ft_model);
+
+    auto cp_model = Glib::RefPtr<Gtk::ListStore>::cast_static(
+        builder->get_object("cp_model")
+    );
+    cp_populate(cp_model);
 
     return 0;
 }
