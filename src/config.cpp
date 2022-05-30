@@ -11,25 +11,25 @@ json read_config_json(DB_functions_t* ddb_api) {
     ddb_api->conf_lock();
     const char* buf;
     buf = ddb_api->conf_get_str_fast( DDB_OWS_CONFIG_MAIN, "{}" );
-    ddb_api->conf_unlock();
     json out;
     try {
-        out = json(buf);
+        out = json::parse(buf);
         if (!out.is_object()) {
             throw std::invalid_argument("Configuration is not a JSON object.");
         }
+        ddb_api->conf_unlock();
         return out;
     } catch (json::exception& e) {
         DDB_OWS_ERR << "Configuration contains malformed JSON: " << e.what() << std::endl;
-        return json {};
     } catch (std::exception& e) {
         DDB_OWS_ERR << "Error reading configuration: " << e.what() << std::endl;
-        return json {};
     }
+    ddb_api->conf_unlock();
+    return json {};
 }
 
 bool write_config_json(DB_functions_t* ddb_api, json config) {
-    std::string conf_str(config);
+    std::string conf_str = config.dump();
     ddb_api->conf_set_str( DDB_OWS_CONFIG_MAIN, conf_str.c_str() );
     return true;
 }
