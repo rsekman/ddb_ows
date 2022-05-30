@@ -295,22 +295,6 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkFileChooserButton" id="target_root_chooser">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="action">select-folder</property>
-                        <property name="preview_widget_active">False</property>
-                        <property name="title" translatable="yes">Select target root directory</property>
-                        <signal name="file-set" handler="on_target_root_chooser_file_set" swapped="no"/>
-                        <signal name="show" handler="init_target_root_directory" swapped="no"/>
-                      </object>
-                      <packing>
-                        <property name="left_attach">1</property>
-                        <property name="right_attach">3</property>
-                        <property name="y_options">GTK_FILL</property>
-                      </packing>
-                    </child>
-                    <child>
                       <object class="GtkLabel" id="target_dir_label">
                         <property name="visible">True</property>
                         <property name="sensitive">False</property>
@@ -430,6 +414,22 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                         <property name="right_attach">3</property>
                         <property name="top_attach">3</property>
                         <property name="bottom_attach">4</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkFileChooserButton" id="target_root_chooser">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="action">select-folder</property>
+                        <property name="preview_widget_active">False</property>
+                        <property name="title" translatable="yes">Select target root directory</property>
+                        <signal name="selection-changed" handler="on_target_root_chooser_selection_changed" swapped="no"/>
+                        <signal name="show" handler="init_target_root_directory" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="left_attach">1</property>
+                        <property name="right_attach">3</property>
+                        <property name="y_options">GTK_FILL</property>
                       </packing>
                     </child>
                   </object>

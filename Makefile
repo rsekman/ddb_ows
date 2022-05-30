@@ -27,6 +27,7 @@ SOURCES?=$(addprefix $(SRCDIR)/,ddb_ows.cpp config.cpp)
 UISOURCES?=$(addprefix $(SRCDIR)/, ddb_ows_gui.cpp)
 OBJ?=$(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%.o, $(filter $(SRCDIR)/%.cpp,$(SOURCES)))
 GTK2OBJ?=$(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%_gtk2.o, $(filter $(SRCDIR)/%.cpp,$(UISOURCES)))
+GTK2OBJ+=$(BUILDDIR)/config.o
 GTK3OBJ?=$(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%_gtk3.o, $(filter $(SRCDIR)/%.cpp,$(UISOURCES)))
 
 

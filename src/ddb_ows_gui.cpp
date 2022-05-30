@@ -1,5 +1,6 @@
 #include "gtkmm/builder.h"
 #include "gtkmm/checkbutton.h"
+#include "gtkmm/filechooserbutton.h"
 #include "gtkmm/main.h"
 #include "gtkmm/liststore.h"
 #include "gtkmm/togglebutton.h"
@@ -292,7 +293,15 @@ void init_target_root_directory() {
 
 /* Handle config updates */
 
-void on_target_root_chooser_file_set() {
+void on_target_root_chooser_selection_changed(GtkFileChooserButton* fcb, gpointer data) {
+    // We connect to this signal because file-set is only emitted if the file
+    // browser was opened, not if the target was chosen from the drop-down
+    // menu.
+    GFile* root = gtk_file_chooser_get_file( GTK_FILE_CHOOSER(fcb) );
+    char* root_path = g_file_get_path(root);
+    ddb_ows_plugin->conf.set_root( std::string(root_path) );
+    g_free(root_path);
+    g_object_unref(root);
 }
 
 void on_fn_format_combobox_changed() {
@@ -384,6 +393,13 @@ int create_ui() {
         DDB_OWS_ERR << "Could not read .ui" << std::endl;
         return -1;
     }
+
+    Gtk::FileChooserButton* root_chooser = NULL;
+    builder->get_widget("target_root_chooser", root_chooser);
+    if (root_chooser) {
+        root_chooser->set_filename( ddb_ows_plugin->conf.get_root() );
+    }
+
     // Use introspection (backtrace) to figure out which file (.so) we are in.
     // This is necessary because we have to tell gtk to look for the signal
     // handlers in the .so, rather than in the main deadbeef executable.
