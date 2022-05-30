@@ -16,10 +16,5 @@
 
 #define DDB_OWS_GUI_GLADE "ddb_ows.ui"
 
-//namespace ddb_ows_gui {
-    DB_plugin_t* gtkui_plugin;
-    DB_plugin_t* converter_plugin;
-    DB_plugin_t* ddb_ows_plugin;
-//} ;
 
 #endif

@@ -29,6 +29,10 @@ DB_plugin_t definition_;
 const char* configDialog_ = "";
 static DB_functions_t* ddb_api;
 
+DB_plugin_t* gtkui_plugin;
+ddb_converter_t* converter_plugin;
+ddb_ows_plugin_t* ddb_ows_plugin;
+
 Glib::RefPtr<Gtk::Builder> builder;
 
 typedef struct {
@@ -116,7 +120,6 @@ void cp_populate(Glib::RefPtr<Gtk::ListStore> model) {
     while ( enc != NULL ) {
         row = model->append();
         row->set_value(0, std::string(enc->title));
-        DDB_OWS_DEBUG << "Added " << enc->title << " encoder preset." << std::endl;
         row->set_value(1, enc);
         enc = enc->next;
     }
@@ -403,7 +406,6 @@ int create_ui() {
         gtk_builder_connect_signals_default,
         args);
 
-
     auto ft_model = Glib::RefPtr<Gtk::ListStore>::cast_static(
         builder->get_object("ft_model")
     );
@@ -447,8 +449,8 @@ int stop() {
 
 int connect (void) {
     gtkui_plugin = ddb_api->plug_get_for_id (DDB_GTKUI_PLUGIN_ID);
-    converter_plugin = ddb_api->plug_get_for_id ("converter");
-    ddb_ows_plugin = ddb_api->plug_get_for_id ("ddb_ows");
+    converter_plugin = (ddb_converter_t*) ddb_api->plug_get_for_id ("converter");
+    ddb_ows_plugin = (ddb_ows_plugin_t*) ddb_api->plug_get_for_id ("ddb_ows");
     if(!gtkui_plugin) {
         DDB_OWS_ERR << DDB_OWS_GUI_PLUGIN_NAME
             << ": matching gtkui plugin not found, quitting."
@@ -470,14 +472,12 @@ int connect (void) {
 }
 
 int disconnect(){
-    DDB_OWS_DEBUG << "Entered disconnect()" << std::endl;
     if (builder) {
         auto model = Glib::RefPtr<Gtk::ListStore>::cast_static(
             builder->get_object("pl_selection_model")
         );
         pl_selection_clear(model);
     }
-    DDB_OWS_DEBUG << "Done with disconnect()" << std::endl;
     return 0;
 }
 
