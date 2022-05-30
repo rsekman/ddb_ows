@@ -1,5 +1,7 @@
+#include "glibmm/refptr.h"
 #include "gtkmm/builder.h"
 #include "gtkmm/checkbutton.h"
+#include "gtkmm/combobox.h"
 #include "gtkmm/filechooserbutton.h"
 #include "gtkmm/main.h"
 #include "gtkmm/liststore.h"
@@ -96,15 +98,50 @@ void list_store_check_consistent(
     toggle->set_active(all_true);
 }
 
-void fn_format_populate(Glib::RefPtr<Gtk::ListStore> model) {
-    // TODO
-    // Logic to configuration
+void fn_formats_save(Glib::RefPtr<Gtk::ListStore> model){
+    std::vector<std::string> fmts {};
+    model->foreach_iter(
+        [&fmts] (const Gtk::TreeIter r) -> bool {
+            std::string f;
+            r->get_value(0, f);
+            fmts.push_back(f);
+            return false;
+        }
+    );
+    ddb_ows_plugin->conf.set_fn_formats(fmts);
 }
-bool validate_fn_format() {
-    return true;
+
+void fn_formats_populate(Glib::RefPtr<Gtk::ListStore> model) {
+    std::vector<std::string> fmts = ddb_ows_plugin->conf.get_fn_formats();
+    if (!fmts.size()) {
+        // No formats save in config => use formats from .ui file
+        // This has the side effect of bootstrapping the user's config from the .ui file
+        return;
+    }
+    model->clear();
+    Gtk::TreeModel::iterator r;
+    for(auto i = fmts.begin(); i != fmts.end(); i++) {
+        DDB_OWS_DEBUG << "Appending " << *i << " to fn formats" << std::endl;
+        r = model->append();
+        r->set_value(0, *i);
+    }
+}
+
+bool validate_fn_format(std::string fmt) {
+    char* bc = ddb_api->tf_compile(fmt.c_str());
+    bool out = bc != NULL;
+    ddb_api->tf_free(bc);
+    return out;
 }
 
 void update_fn_format_preview() {
+    Gtk::Label* preview_label;
+    builder->get_widget("fn_format_preview_label", preview_label);
+    std::optional<std::string> preview = ddb_ows_plugin->preview_output_path();
+    if (preview) {
+        preview_label->set_text(*preview);
+    } else {
+    }
 }
 
 void update_fn_format_model() {
@@ -282,12 +319,6 @@ void cp_populate(GtkListStore* ls, gpointer data) {
     cp_populate(model);
 }
 
-void fn_formats_populate(GtkListStore* ls, gpointer data) {
-    Glib::RefPtr<Gtk::ListStore> model = Glib::wrap(GTK_LIST_STORE( ls ));
-    fn_format_populate(model);
-}
-
-
 void init_target_root_directory() {
 }
 
@@ -304,12 +335,57 @@ void on_target_root_chooser_selection_changed(GtkFileChooserButton* fcb, gpointe
     g_object_unref(root);
 }
 
-void on_fn_format_combobox_changed() {
-    if (!validate_fn_format()) {
+void fn_formats_save(
+    GtkListStore* ls,
+    GtkTreePath *path,
+    GtkTreeIter *iter,
+    gpointer data
+){
+    Glib::RefPtr<Gtk::ListStore> model = Glib::wrap(ls, true);
+    fn_formats_save(model);
+}
+
+// needed because row-deleted has a different call signature than row-changed and row-inserted
+void fn_formats_save_on_delete(
+    GtkListStore* ls,
+    GtkTreePath *path,
+    gpointer data
+){
+    fn_formats_save(ls, path, NULL, data);
+}
+
+void on_fn_format_entered(Gtk::Entry* entry) {
+    auto model = Glib::RefPtr<Gtk::ListStore>::cast_static(
+        builder->get_object("fn_format_model")
+    );
+    std::string fn_format = entry->get_text();
+    if (!validate_fn_format(fn_format)) {
         return;
     }
+    auto row = model->prepend();
+    row->set_value(0, entry->get_text());
     update_fn_format_preview();
-    update_fn_format_model();
+}
+
+void on_fn_format_combobox_changed(GtkComboBox* fn_combobox, gpointer data) {
+    gint active = gtk_combo_box_get_active(fn_combobox);
+    auto model = Glib::RefPtr<Gtk::ListStore>::cast_static(
+        builder->get_object("fn_format_model")
+    );
+    GtkWidget* entry = gtk_bin_get_child( GTK_BIN (fn_combobox) );
+    if (gtk_widget_has_focus(entry)) {
+        // The signal was emitted because the user typed into the entry
+        // This should be handled only when the user is finished, by on_fn_format_entered()
+        return;
+    }
+    auto rows = model->children();
+    std::string fn_format;
+    rows[active]->get_value(0, fn_format);
+    if (!validate_fn_format(fn_format)) {
+        return;
+    }
+    model->move(rows[active], rows.begin());
+    update_fn_format_preview();
 }
 
 void on_cover_sync_check_toggled() {
@@ -400,6 +476,14 @@ int create_ui() {
         root_chooser->set_filename( ddb_ows_plugin->conf.get_root() );
     }
 
+    Gtk::ComboBox* fn_combobox;
+    builder->get_widget("fn_format_combobox", fn_combobox);
+    auto fn_model = Glib::RefPtr<Gtk::ListStore>::cast_static(
+        builder->get_object("fn_format_model")
+    );
+    fn_formats_populate(fn_model);
+    fn_combobox->set_active(0);
+
     // Use introspection (backtrace) to figure out which file (.so) we are in.
     // This is necessary because we have to tell gtk to look for the signal
     // handlers in the .so, rather than in the main deadbeef executable.
@@ -421,6 +505,14 @@ int create_ui() {
     gtk_builder_connect_signals_full(builder->gobj(),
         gtk_builder_connect_signals_default,
         args);
+
+    Gtk::Entry* fn_entry = (Gtk::Entry*) fn_combobox->get_child();
+    fn_entry->signal_activate().connect(
+        sigc::bind(
+            sigc::ptr_fun(&on_fn_format_entered),
+            fn_entry
+        )
+    );
 
     auto ft_model = Glib::RefPtr<Gtk::ListStore>::cast_static(
         builder->get_object("ft_model")
@@ -498,9 +590,10 @@ int disconnect(){
 }
 
 int handleMessage(uint32_t id, uintptr_t ctx, uint32_t p1, uint32_t p2){
+    Glib::RefPtr<Gtk::ListStore> model;
     switch (id) {
         case DB_EV_PLAYLISTCHANGED:
-            auto model = Glib::RefPtr<Gtk::ListStore>::cast_static(
+            model = Glib::RefPtr<Gtk::ListStore>::cast_static(
                 builder->get_object("pl_selection_model")
             );
             Gtk::CheckButton* toggle;
@@ -508,6 +601,9 @@ int handleMessage(uint32_t id, uintptr_t ctx, uint32_t p1, uint32_t p2){
             if (toggle) {
                 pl_selection_update_model(model);
             }
+            break;
+        case DB_EV_SONGCHANGED:
+            update_fn_format_preview();
             break;
     }
     return 0;

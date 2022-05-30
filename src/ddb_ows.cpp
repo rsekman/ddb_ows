@@ -1,6 +1,10 @@
 #include <deadbeef/deadbeef.h>
 #include <deadbeef/plugins/converter/converter.h>
 
+#include <optional>
+#include <regex>
+#include <string>
+
 #include <nlohmann/json.hpp>
 
 #include "ddb_ows.hpp"
@@ -9,6 +13,62 @@
 namespace ddb_ows{
 
 static DB_functions_t* ddb_api;
+Configuration conf = Configuration();
+
+std::string get_output_path(DB_playItem_t* it, char* format) {
+    DB_playItem_t* copy = ddb_api->pl_item_alloc();
+    std::basic_regex escape("[/\\:*?\"<>|]");
+    ddb_api->pl_lock();
+    DB_metaInfo_t* meta = ddb_api->pl_get_metadata_head(it);
+    while (meta != NULL) {
+        std::string raw(meta->value);
+        std::string escaped_value = std::regex_replace(raw, escape, "-");
+        ddb_api->pl_add_meta(copy, meta->key, escaped_value.c_str());
+        meta = meta->next;
+    }
+    ddb_api->pl_unlock();
+    char out[PATH_MAX];
+    ddb_tf_context_t ctx = {
+        ._size = sizeof(ddb_tf_context_t),
+        .flags = 0,
+        .it = copy,
+        .plt = NULL,
+        //TODO change this?
+        .idx = 0,
+        .id = 0,
+        .iter = PL_MAIN,
+    };
+    ddb_api->tf_eval(&ctx, format, out, sizeof(out));
+    ddb_api->pl_item_unref(copy);
+    return std::string(out);
+}
+
+std::optional<std::string> preview_output_path() {
+    DB_playItem_t* it = ddb_api->streamer_get_playing_track();
+    if (!it) {
+        //Pick a random track from the current playlist
+        ddb_playlist_t* plt = ddb_api->plt_get_curr();
+        if (!plt) {
+            return {};
+        }
+        it = ddb_api->plt_get_first(plt, PL_MAIN);
+        ddb_api->plt_unref(plt);
+    }
+    auto formats = conf.get_fn_formats();
+    if (formats.empty()) {
+        ddb_api->pl_item_unref(it);
+        return {};
+    }
+    char* fmt = ddb_api->tf_compile(formats.front().c_str());
+    if (fmt == NULL) {
+        ddb_api->pl_item_unref(it);
+        return {};
+    }
+    std::string out = get_output_path(it, fmt);
+    ddb_api->tf_free(fmt);
+    ddb_api->pl_item_unref(it);
+    return out;
+}
 
 int start() {
     return 0;
@@ -32,8 +92,6 @@ int handleMessage(uint32_t id, uintptr_t ctx, uint32_t p1, uint32_t p2){
 
 const char* configDialog_ = "";
 
-Configuration conf = Configuration();
-
 ddb_ows_plugin_t plugin = {
     .plugin = {
         .plugin = {
@@ -56,6 +114,8 @@ ddb_ows_plugin_t plugin = {
         },
     },
     .conf = conf,
+    .get_output_path = get_output_path,
+    .preview_output_path = preview_output_path
 };
 
 void init(DB_functions_t* api) {

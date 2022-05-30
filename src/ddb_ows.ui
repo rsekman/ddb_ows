@@ -25,15 +25,19 @@
     </columns>
     <data>
       <row>
-        <col id="0" translatable="yes">%artist%/%tracknumber%. %title%.%filename_ext%</col>
+        <col id="0" translatable="yes">%artist%/%tracknumber%. %title%.$ext(%path%)</col>
       </row>
       <row>
-        <col id="0" translatable="yes">%album artist%/%album%/%tracknumber%. %title%.%filename_ext%</col>
+        <col id="0" translatable="yes">%album artist%/%album%/%tracknumber%. %title%.$ext(%path%)</col>
       </row>
       <row>
-        <col id="0" translatable="yes">%album artist%/'['%year%']' %album%/%tracknumber%. %title%.%filename_ext%</col>
+        <col id="0" translatable="yes">%album artist%/'['%year%']' %album%/%tracknumber%. %title%.$ext(%path%)</col>
       </row>
     </data>
+    <signal name="row-changed" handler="fn_formats_save" swapped="no"/>
+    <signal name="row-deleted" handler="fn_formats_save_on_delete" swapped="no"/>
+    <signal name="row-inserted" handler="fn_formats_save" swapped="no"/>
+    <signal name="rows-reordered" handler="fn_formats_save" swapped="no"/>
   </object>
   <object class="GtkEntryBuffer" id="fname_format_buffer"/>
   <object class="GtkListStore" id="ft_model">
@@ -263,9 +267,10 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                     <property name="column_spacing">4</property>
                     <property name="row_spacing">4</property>
                     <child>
-                      <object class="GtkLabel" id="fn_format_example_label">
+                      <object class="GtkLabel" id="fn_format_preview_label">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
+                        <signal name="show" handler="update_fn_format_preview" swapped="no"/>
                       </object>
                       <packing>
                         <property name="left_attach">1</property>
@@ -284,7 +289,6 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                         <property name="has_entry">True</property>
                         <property name="entry_text_column">0</property>
                         <signal name="changed" handler="on_fn_format_combobox_changed" swapped="no"/>
-                        <signal name="show" handler="fn_formats_populate" object="fn_format_model" swapped="yes"/>
                       </object>
                       <packing>
                         <property name="left_attach">1</property>
