@@ -43,32 +43,6 @@ std::string get_output_path(DB_playItem_t* it, char* format) {
     return std::string(out);
 }
 
-std::optional<std::string> preview_output_path() {
-    DB_playItem_t* it = ddb_api->streamer_get_playing_track();
-    if (!it) {
-        //Pick a random track from the current playlist
-        ddb_playlist_t* plt = ddb_api->plt_get_curr();
-        if (!plt) {
-            return {};
-        }
-        it = ddb_api->plt_get_first(plt, PL_MAIN);
-        ddb_api->plt_unref(plt);
-    }
-    auto formats = conf.get_fn_formats();
-    if (formats.empty()) {
-        ddb_api->pl_item_unref(it);
-        return {};
-    }
-    char* fmt = ddb_api->tf_compile(formats.front().c_str());
-    if (fmt == NULL) {
-        ddb_api->pl_item_unref(it);
-        return {};
-    }
-    std::string out = get_output_path(it, fmt);
-    ddb_api->tf_free(fmt);
-    ddb_api->pl_item_unref(it);
-    return out;
-}
 
 int start() {
     return 0;
@@ -114,8 +88,7 @@ ddb_ows_plugin_t plugin = {
         },
     },
     .conf = conf,
-    .get_output_path = get_output_path,
-    .preview_output_path = preview_output_path
+    .get_output_path = get_output_path
 };
 
 void init(DB_functions_t* api) {

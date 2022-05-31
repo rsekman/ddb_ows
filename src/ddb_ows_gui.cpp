@@ -5,6 +5,7 @@
 #include "gtkmm/filechooserbutton.h"
 #include "gtkmm/main.h"
 #include "gtkmm/liststore.h"
+#include "gtkmm/stock.h"
 #include "gtkmm/togglebutton.h"
 #include "gtkmm/treeview.h"
 #include "gtkmm/window.h"
@@ -127,24 +128,47 @@ void fn_formats_populate(Glib::RefPtr<Gtk::ListStore> model) {
     }
 }
 
-bool validate_fn_format(std::string fmt) {
+char* validate_fn_format(std::string fmt) {
     char* bc = ddb_api->tf_compile(fmt.c_str());
-    bool out = bc != NULL;
-    ddb_api->tf_free(bc);
-    return out;
+    Gtk::Image* valid_indicator;
+    builder->get_widget("fn_format_valid_indicator", valid_indicator);
+    Gtk::BuiltinStockID icon;
+    if (bc != NULL) {
+        icon = Gtk::Stock::YES;
+    } else {
+        icon = Gtk::Stock::NO;
+    }
+    valid_indicator->set(icon, Gtk::ICON_SIZE_MENU);
+    return bc;
 }
 
-void update_fn_format_preview() {
+void clear_fn_preview() {
     Gtk::Label* preview_label;
     builder->get_widget("fn_format_preview_label", preview_label);
-    std::optional<std::string> preview = ddb_ows_plugin->preview_output_path();
-    if (preview) {
-        preview_label->set_text(*preview);
-    } else {
-    }
+    preview_label->set_text("");
 }
 
-void update_fn_format_model() {
+void update_fn_preview(char* format) {
+    if (format == NULL) {
+        // This should never happen
+        return;
+    }
+    Gtk::Label* preview_label;
+    builder->get_widget("fn_format_preview_label", preview_label);
+    DB_playItem_t* it = ddb_api->streamer_get_playing_track();
+    if (!it) {
+        //Pick a random track from the current playlist
+        ddb_playlist_t* plt = ddb_api->plt_get_curr();
+        if (!plt) {
+            return;
+        }
+        it = ddb_api->plt_get_first(plt, PL_MAIN);
+        ddb_api->plt_unref(plt);
+    }
+    std::string out = ddb_ows_plugin->get_output_path(it, format);
+    ddb_api->tf_free(format);
+    ddb_api->pl_item_unref(it);
+    preview_label->set_text(out);
 }
 
 void cp_populate(Glib::RefPtr<Gtk::ListStore> model) {
@@ -197,7 +221,6 @@ void pl_selection_populate(
         row->set_value(0, s);
         row->set_value(1, std::string(buf));
         row->set_value(2, plt);
-        ddb_api->plt_unref(plt);
     }
 }
 
@@ -360,33 +383,48 @@ void on_fn_format_entered(Gtk::Entry* entry) {
         builder->get_object("fn_format_model")
     );
     std::string fn_format = entry->get_text();
-    if (!validate_fn_format(fn_format)) {
-        return;
-    }
-    auto row = model->prepend();
-    row->set_value(0, entry->get_text());
-    update_fn_format_preview();
-}
-
-void on_fn_format_combobox_changed(GtkComboBox* fn_combobox, gpointer data) {
-    gint active = gtk_combo_box_get_active(fn_combobox);
-    auto model = Glib::RefPtr<Gtk::ListStore>::cast_static(
-        builder->get_object("fn_format_model")
-    );
-    GtkWidget* entry = gtk_bin_get_child( GTK_BIN (fn_combobox) );
-    if (gtk_widget_has_focus(entry)) {
-        // The signal was emitted because the user typed into the entry
-        // This should be handled only when the user is finished, by on_fn_format_entered()
+    char* format = validate_fn_format(fn_format);
+    if (format == NULL) {
         return;
     }
     auto rows = model->children();
-    std::string fn_format;
-    rows[active]->get_value(0, fn_format);
-    if (!validate_fn_format(fn_format)) {
-        return;
+    std::string f;
+    Gtk::ComboBox* fn_combobox;
+    builder->get_widget("fn_format_combobox", fn_combobox);
+    for(auto i = rows.begin(); i != rows.end(); i++) {
+        i->get_value(0, f);
+        if (f == fn_format) {
+            model->move(i, rows.begin());
+            fn_combobox->set_active(0);
+            return;
+        }
     }
-    model->move(rows[active], rows.begin());
-    update_fn_format_preview();
+    auto row = model->prepend();
+    row->set_value(0, entry->get_text());
+    update_fn_preview(format);
+}
+
+void on_fn_format_combobox_changed(GtkComboBox* fn_combobox, gpointer data) {
+    std::string fn_format;
+    gint active = gtk_combo_box_get_active(fn_combobox);
+    if (active >= 0) {
+        auto model = Glib::RefPtr<Gtk::ListStore>::cast_static(
+            builder->get_object("fn_format_model")
+        );
+        auto rows = model->children();
+        rows[active]->get_value(0, fn_format);
+        model->move(rows[active], rows.begin());
+    } else {
+        GtkEntry* entry = GTK_ENTRY (gtk_bin_get_child( GTK_BIN (fn_combobox) ));
+        fn_format = gtk_entry_get_text(entry);
+    }
+
+    char* format = validate_fn_format(fn_format);
+    if (format != NULL) {
+        update_fn_preview(format);
+    } else {
+        clear_fn_preview();
+    }
 }
 
 void on_cover_sync_check_toggled() {
@@ -592,6 +630,8 @@ int disconnect(){
 
 int handleMessage(uint32_t id, uintptr_t ctx, uint32_t p1, uint32_t p2){
     Glib::RefPtr<Gtk::ListStore> model;
+    Gtk::ComboBox* fn_combobox;
+    builder->get_widget("fn_format_combobox", fn_combobox);
     switch (id) {
         case DB_EV_PLAYLISTCHANGED:
             model = Glib::RefPtr<Gtk::ListStore>::cast_static(
@@ -604,7 +644,7 @@ int handleMessage(uint32_t id, uintptr_t ctx, uint32_t p1, uint32_t p2){
             }
             break;
         case DB_EV_SONGCHANGED:
-            update_fn_format_preview();
+            on_fn_format_combobox_changed(fn_combobox->gobj(), NULL);
             break;
     }
     return 0;

@@ -54,7 +54,6 @@ typedef struct {
     DB_misc_t plugin;
     ddb_ows::Configuration& conf;
     std::string (*get_output_path)(DB_playItem_t* it, char* format);
-    std::optional<std::string> (*preview_output_path)();
 } ddb_ows_plugin_t;
 
 namespace ddb_ows {
