@@ -216,6 +216,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                       <object class="GtkLabel" id="fn_format_preview_label">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
+                        <property name="xalign">0</property>
                         <signal name="show" handler="update_fn_format_preview" swapped="no"/>
                       </object>
                       <packing>
@@ -359,12 +360,20 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkCheckButton" id="rm_checkbox">
-                        <property name="label" translatable="yes">Delete unreferenced files</property>
+                      <object class="GtkAlignment" id="rm_alignment">
                         <property name="visible">True</property>
-                        <property name="can_focus">True</property>
-                        <property name="receives_default">False</property>
-                        <property name="draw_indicator">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="xalign">0</property>
+                        <property name="xscale">0</property>
+                        <child>
+                          <object class="GtkCheckButton" id="rm_checkbox">
+                            <property name="label" translatable="yes">Delete unreferenced files</property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="receives_default">False</property>
+                            <property name="draw_indicator">True</property>
+                          </object>
+                        </child>
                       </object>
                       <packing>
                         <property name="right_attach">3</property>

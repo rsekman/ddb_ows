@@ -197,6 +197,7 @@ void pl_selection_populate(
         row->set_value(0, s);
         row->set_value(1, std::string(buf));
         row->set_value(2, plt);
+        ddb_api->plt_unref(plt);
     }
 }
 
