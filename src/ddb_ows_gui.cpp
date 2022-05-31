@@ -402,6 +402,11 @@ void on_fn_format_entered(Gtk::Entry* entry) {
     update_fn_preview(format);
 }
 
+bool on_fn_format_focus_out(GdkEventFocus* event, Gtk::Entry* entry) {
+    on_fn_format_entered(entry);
+    return false;
+}
+
 void on_fn_format_combobox_changed(GtkComboBox* fn_combobox, gpointer data) {
     std::string fn_format;
     gint active = gtk_combo_box_get_active(fn_combobox);
@@ -547,6 +552,12 @@ int create_ui() {
     fn_entry->signal_activate().connect(
         sigc::bind(
             sigc::ptr_fun(&on_fn_format_entered),
+            fn_entry
+        )
+    );
+    fn_entry->signal_focus_out_event().connect(
+        sigc::bind(
+            sigc::ptr_fun(&on_fn_format_focus_out),
             fn_entry
         )
     );
