@@ -568,6 +568,10 @@ int create_ui() {
             fn_entry
         )
     );
+    auto pl_model = Glib::RefPtr<Gtk::ListStore>::cast_static(
+        builder->get_object("pl_selection_model")
+    );
+    pl_selection_update_model(pl_model);
 
     auto ft_model = Glib::RefPtr<Gtk::ListStore>::cast_static(
         builder->get_object("ft_model")
@@ -660,11 +664,7 @@ int handleMessage(uint32_t id, uintptr_t ctx, uint32_t p1, uint32_t p2){
             model = Glib::RefPtr<Gtk::ListStore>::cast_static(
                 builder->get_object("pl_selection_model")
             );
-            Gtk::CheckButton* toggle;
-            builder->get_widget("pl_select_all", toggle);
-            if (toggle) {
-                pl_selection_update_model(model);
-            }
+            pl_selection_update_model(model);
             break;
         case DB_EV_SONGCHANGED:
             if(fn_combobox->gobj()) {
