@@ -189,7 +189,6 @@ void cp_populate(Glib::RefPtr<Gtk::ListStore> model) {
 
 
 void pl_selection_clear(Glib::RefPtr<Gtk::ListStore> model) {
-    DDB_OWS_DEBUG << "Clearing playlist selection model." << std::endl;
     model->foreach_iter(
         [] ( const Gtk::TreeIter r) -> bool {
             ddb_playlist_t* plt;
@@ -208,7 +207,6 @@ void pl_selection_populate(
     std::map<ddb_playlist_t*, bool> selected={}
 ) {
     int plt_count = ddb_api->plt_get_count();
-    DDB_OWS_DEBUG << "Populating playlist selection model with " << plt_count << " playlists." << std::endl;
     char buf[4096];
     ddb_playlist_t*  plt;
     Gtk::TreeModel::iterator row;
