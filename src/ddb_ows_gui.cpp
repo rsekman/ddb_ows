@@ -158,12 +158,15 @@ void update_fn_preview(char* format) {
     DB_playItem_t* it = ddb_api->streamer_get_playing_track();
     if (!it) {
         //Pick a random track from the current playlist
+        ddb_api->pl_lock();
         ddb_playlist_t* plt = ddb_api->plt_get_curr();
         if (!plt) {
+            ddb_api->pl_unlock();
             return;
         }
         it = ddb_api->plt_get_first(plt, PL_MAIN);
         ddb_api->plt_unref(plt);
+        ddb_api->pl_unlock();
     }
     std::string out = ddb_ows_plugin->get_output_path(it, format);
     ddb_api->tf_free(format);
@@ -189,6 +192,7 @@ void cp_populate(Glib::RefPtr<Gtk::ListStore> model) {
 
 
 void pl_selection_clear(Glib::RefPtr<Gtk::ListStore> model) {
+    DDB_OWS_DEBUG << "Clearing playlist selection model." << std::endl;
     model->foreach_iter(
         [] ( const Gtk::TreeIter r) -> bool {
             ddb_playlist_t* plt;
@@ -207,6 +211,7 @@ void pl_selection_populate(
     std::map<ddb_playlist_t*, bool> selected={}
 ) {
     int plt_count = ddb_api->plt_get_count();
+    DDB_OWS_DEBUG << "Populating playlist selection model with " << plt_count << " playlists." << std::endl;
     char buf[4096];
     ddb_playlist_t*  plt;
     Gtk::TreeModel::iterator row;
@@ -225,6 +230,7 @@ void pl_selection_populate(
 void pl_selection_update_model(Glib::RefPtr<Gtk::ListStore> model) {
     // store each playlist's selection status in a map
     std::map<ddb_playlist_t*, bool> selected = {};
+    ddb_api->pl_lock();
     model->foreach_iter(
         [&selected] ( const Gtk::TreeIter r) -> bool {
             bool s;
@@ -240,6 +246,7 @@ void pl_selection_update_model(Glib::RefPtr<Gtk::ListStore> model) {
     builder->get_widget("pl_select_all", toggle);
     pl_selection_clear(model);
     pl_selection_populate(model, selected);
+    ddb_api->pl_unlock();
 }
 
 void ft_populate(
@@ -643,6 +650,13 @@ int handleMessage(uint32_t id, uintptr_t ctx, uint32_t p1, uint32_t p2){
     builder->get_widget("fn_format_combobox", fn_combobox);
     switch (id) {
         case DB_EV_PLAYLISTCHANGED:
+            if (p1 == DDB_PLAYLIST_CHANGE_CONTENT ||
+                p1 == DDB_PLAYLIST_CHANGE_SELECTION ||
+                p1 == DDB_PLAYLIST_CHANGE_SEARCHRESULT ||
+                p1 == DDB_PLAYLIST_CHANGE_PLAYQUEUE
+            ) {
+                break;
+            }
             model = Glib::RefPtr<Gtk::ListStore>::cast_static(
                 builder->get_object("pl_selection_model")
             );
@@ -653,7 +667,9 @@ int handleMessage(uint32_t id, uintptr_t ctx, uint32_t p1, uint32_t p2){
             }
             break;
         case DB_EV_SONGCHANGED:
-            on_fn_format_combobox_changed(fn_combobox->gobj(), NULL);
+            if(fn_combobox->gobj()) {
+                on_fn_format_combobox_changed(fn_combobox->gobj(), NULL);
+            }
             break;
     }
     return 0;
