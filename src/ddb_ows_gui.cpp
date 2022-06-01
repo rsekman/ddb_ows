@@ -17,7 +17,6 @@
 #include <set>
 #include <stdexcept>
 #include <string>
-#include <regex>
 
 namespace fs = std::filesystem;
 
@@ -256,19 +255,20 @@ void ft_populate(
     DB_decoder_t **decoders = ddb_api->plug_get_decoder_list ();
     // decoders and decoders[i]->exts are null-terminated arrays
     int i = 0;
-    std::cmatch m;
-    std::regex e("^(.*)\\s*(player|decoder)");
+    std::string::size_type n;
     Gtk::TreeModel::iterator row;
     while (decoders[i]) {
         row = model->append();
-        std::regex_search(decoders[i]->plugin.name, m, e);
+        std::string s(decoders[i]->plugin.name);
+        if (
+            (n = s.find(" decoder")) != std::string::npos ||
+            (n = s.find(" player"))  != std::string::npos
+        ) {
+            s = s.substr(0, n);
+        }
         row->set_value(0, false);
-        row->set_value(1, m[1].str());
+        row->set_value(1, s);
         row->set_value(2, decoders[i]);
-        /* int e = 0;
-        while(decoders[i]->exts[e]) {
-            e++;
-        } */
         i++;
     }
     DDB_OWS_DEBUG << "Finished reading decoders..." << std::endl;
@@ -541,15 +541,16 @@ int create_ui() {
     int trace_l = backtrace(trace, 1);
     bt_symbols = backtrace_symbols(trace, trace_l);
     // Backtrace looks something like "/usr/lib/deadbeef/ddb_ows_gtk2.so(create_ui+0x53) [0x7f7b0ae932a3]
-    // We need to account for the possibility that the path is silly and contains '(' => use regex
-    std::cmatch m;
-    std::regex e("^(.*)\\(");
-    std::regex_search(bt_symbols[0], m, e);
-    DDB_OWS_DEBUG << "Trying to load GModule" << m[1] << std::endl;
+    // We need to account for the possibility that the path is silly and contains '(' => find last position
+    char* last_bracket = strrchr(bt_symbols[0], '(');
+    if (last_bracket) {
+        *last_bracket = '\0';
+    }
+    DDB_OWS_DEBUG << "Trying to load GModule" << bt_symbols[0] << std::endl;
 
     // Now we are ready to connect signal handlers;
     connect_args* args = g_slice_new0 (connect_args);
-    args->gmodule = g_module_open (m[1].str().c_str(), G_MODULE_BIND_LAZY);
+    args->gmodule = g_module_open (bt_symbols[0], G_MODULE_BIND_LAZY);
     args->data = NULL;
     gtk_builder_connect_signals_full(builder->gobj(),
         gtk_builder_connect_signals_default,
