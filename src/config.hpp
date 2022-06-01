@@ -16,6 +16,7 @@
 #define DDB_OWS_CONFIG_KEY_FT_SEL "conv_fts"
 #define DDB_OWS_CONFIG_KEY_CONV_PRESET "conv_preset"
 #define DDB_OWS_CONFIG_KEY_WT "wts"
+#define DDB_OWS_CONFIG_KEY_RM_UNREFERENCED "rm_unref"
 
 namespace ddb_ows {
 
@@ -37,6 +38,9 @@ class Configuration {
 
         std::map<std::string, bool> get_ft_selection();
         bool set_ft_selection(std::map<std::string, bool> selection);
+
+        bool get_rm_unreferenced();
+        bool set_rm_unreferenced(bool sync);
 
         std::string get_preset();
         bool set_preset(std::string root);

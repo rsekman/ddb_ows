@@ -437,10 +437,24 @@ void on_fn_format_combobox_changed(GtkComboBox* fn_combobox, gpointer data) {
     }
 }
 
-void on_cover_sync_check_toggled() {
+void on_cover_sync_check_toggled(GtkToggleButton* toggle, gpointer data) {
+    gboolean cover_sync = gtk_toggle_button_get_active(toggle);
+    ddb_ows_plugin->conf.set_cover_sync(cover_sync);
 }
 
-void on_cover_fname_entry_changed() {
+void on_cover_fname_entry_changed(GtkEntry* entry, gpointer data) {
+    const gchar* cover_fname = gtk_entry_get_text(entry);
+    ddb_ows_plugin->conf.set_cover_fname(std::string(cover_fname));
+}
+
+void on_rm_check_toggled(GtkToggleButton* toggle, gpointer data) {
+    gboolean rm_unref = gtk_toggle_button_get_active(toggle);
+    ddb_ows_plugin->conf.set_rm_unreferenced(rm_unref);
+}
+
+void on_wt_spinbutton_value_changed(GtkSpinButton* spinbutton, gpointer data) {
+    int wt = (int) gtk_spin_button_get_value(spinbutton);
+    ddb_ows_plugin->conf.set_worker_threads(wt);
 }
 
 /* Clean-up actions */

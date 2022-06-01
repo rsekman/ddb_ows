@@ -365,12 +365,13 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                         <property name="xalign">0</property>
                         <property name="xscale">0</property>
                         <child>
-                          <object class="GtkCheckButton" id="rm_checkbox">
+                          <object class="GtkCheckButton" id="rm_check">
                             <property name="label" translatable="yes">Delete unreferenced files</property>
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="receives_default">False</property>
                             <property name="draw_indicator">True</property>
+                            <signal name="toggled" handler="on_rm_check_toggled" swapped="no"/>
                           </object>
                         </child>
                       </object>
@@ -632,6 +633,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                             <property name="secondary_icon_sensitive">True</property>
                             <property name="adjustment">wt_adjustment</property>
                             <property name="numeric">True</property>
+                            <signal name="value-changed" handler="on_wt_spinbutton_value_changed" swapped="no"/>
                           </object>
                         </child>
                       </object>

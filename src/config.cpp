@@ -72,6 +72,8 @@ bool Configuration::set_fn_formats(std::vector<std::string> formats) {
     return write_config_json(this->ddb_api, conf);
 }
 
+//cover sync
+
 bool Configuration::get_cover_sync() {
     json conf = read_config_json(this->ddb_api);
     return get_with_default(conf, DDB_OWS_CONFIG_KEY_COVER_SYNC, true);
@@ -95,6 +97,19 @@ std::string Configuration::get_cover_fname() {
 bool Configuration::set_cover_fname(std::string fname) {
     json conf = read_config_json(this->ddb_api);
     conf[DDB_OWS_CONFIG_KEY_COVER_FNAME] = fname;
+    return write_config_json(this->ddb_api, conf);
+}
+
+//remove unreferenced
+
+bool Configuration::get_rm_unreferenced() {
+    json conf = read_config_json(this->ddb_api);
+    return get_with_default(conf, DDB_OWS_CONFIG_KEY_RM_UNREFERENCED, true);
+}
+
+bool Configuration::set_rm_unreferenced(bool sync) {
+    json conf = read_config_json(this->ddb_api);
+    conf[DDB_OWS_CONFIG_KEY_RM_UNREFERENCED] = sync;
     return write_config_json(this->ddb_api, conf);
 }
 
