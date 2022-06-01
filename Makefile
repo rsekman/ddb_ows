@@ -10,9 +10,9 @@ OUT=$(addprefix $(BUILDDIR)/,$(TARGETS))
 LIBDIR=$(HOME)/.local/lib
 INSTALLDIR=$(LIBDIR)/deadbeef
 
-CXX?=g++
-CFLAGS+=-Wall --std=c++17 -g -O2 -fPIC -DLIBDIR="\"$(LIBDIR)\"" -Wno-deprecated-declarations
-LDFLAGS=-shared -export-dynamic
+CXX?=clang++
+CFLAGS+=-Wall --std=c++17 -g -fPIC -DLIBDIR="\"$(LIBDIR)\"" -Wno-deprecated-declarations
+LDFLAGS=-shared -rdynamic
 
 
 GTK2_CFLAGS=$(shell pkg-config --cflags-only-I gtkmm-2.4)
@@ -55,10 +55,10 @@ $(BUILDDIR)/$(PROJECT)_gtk3.so: $(GTK3OBJ)
 	$(CXX) $(CFLAGS) $(LDFLAGS) $(GTK3_CFLAGS) $(GTK3_LDFLAGS) $^ -o $@
 
 $(BUILDDIR)/%_gtk2.o: $(SRCDIR)/%.cpp $(SRCDIR)/%.hpp
-	$(CXX) $(CFLAGS) $(GTK2_CFLAGS) $(GTK2_LDFLAGS) $< -c -o $@
+	$(CXX) $(CFLAGS) $(GTK2_CFLAGS) $< -c -o $@
 
 $(BUILDDIR)/%_gtk3.o: $(SRCDIR)/%.cpp $(SRCDIR)/%.hpp
-	$(CXX) $(CFLAGS) $(GTK3_CFLAGS) $(GTK3_LDFLAGS) $< -c -o $@
+	$(CXX) $(CFLAGS) $(GTK3_CFLAGS) $< -c -o $@
 
 $(BUILDDIR)/%.o: $(SRCDIR)/%.cpp $(SRCDIR)/%.hpp
 	$(CXX) $(CFLAGS) $< -c -o $@
