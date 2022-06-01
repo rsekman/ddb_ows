@@ -2,10 +2,7 @@
 #include <deadbeef/plugins/converter/converter.h>
 
 #include <optional>
-#include <regex>
 #include <string>
-
-#include <nlohmann/json.hpp>
 
 #include "ddb_ows.hpp"
 #include "config.hpp"
@@ -15,15 +12,32 @@ namespace ddb_ows{
 static DB_functions_t* ddb_api;
 Configuration conf = Configuration();
 
+void escape(std::string& s) {
+    for (auto i = s.begin(); i != s.end(); i++) {
+        switch (*i) {
+            case '/':
+            case '\\':
+            case ':':
+            case '*':
+            case '?':
+            case '"':
+            case '<':
+            case '>':
+            case '|':
+                *i = '-';
+        }
+    }
+}
+
 std::string get_output_path(DB_playItem_t* it, char* format) {
     DB_playItem_t* copy = ddb_api->pl_item_alloc();
-    std::basic_regex escape("[/\\:*?\"<>|]");
+    //std::basic_regex escape("[/\\:*?\"<>|]");
     ddb_api->pl_lock();
     DB_metaInfo_t* meta = ddb_api->pl_get_metadata_head(it);
     while (meta != NULL) {
-        std::string raw(meta->value);
-        std::string escaped_value = std::regex_replace(raw, escape, "-");
-        ddb_api->pl_add_meta(copy, meta->key, escaped_value.c_str());
+        std::string val(meta->value);
+        escape(val);
+        ddb_api->pl_add_meta(copy, meta->key, val.c_str());
         meta = meta->next;
     }
     ddb_api->pl_unlock();
