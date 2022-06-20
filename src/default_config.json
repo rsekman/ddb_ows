@@ -1,0 +1,17 @@
+{
+  "fn_formats": [
+    "$replace($stripprefix(%album artist%,The),&,and)/'['$year(%year%)']' %album%/%tracknumber%. %title%.$ext(%path%)",
+    "$stripprefix(%album artist%,The)/'['$year(%year%)']' %album%/%tracknumber%. %title%.$ext(%path%)",
+    "%album artist%/'['$year(%year%)']' %album%/%tracknumber%. %title%.$ext(%path%)",
+    "%album artist%/%album%/%tracknumber%. %title%.$ext(%path%)",
+    "%artist%/%tracknumber%. %title%.$ext(%path%)"
+  ],
+  "cover_sync": true,
+  "cover_fname": "cover.jpg",
+  "rm_unref": false,
+  "conv_fts": {},
+  "conv_preset": "",
+  "conv_ext": "",
+  "conv_wts": 1
+
+}

@@ -66,6 +66,9 @@ $(BUILDDIR)/%_gtk3.o: $(SRCDIR)/%.cpp $(SRCDIR)/%.hpp
 $(BUILDDIR)/%.o: $(SRCDIR)/%.cpp $(SRCDIR)/%.hpp
 	$(CXX) $(CFLAGS) $< -c -o $@
 
+$(BUILDDIR)/%.o: $(SRCDIR)/%.S $(SRCDIR)/%.json
+	$(CC) '-DFNAME="$(SRCDIR)/$*.json"' $< -c -o $@
+
 $(BUILDDIR)/gtkmm-2.4/%.h.pch: $(subst -I,,$(firstword $(GTK2_CFLAGS)))/gtkmm/%.h
 	mkdir -p $(@D)
 	$(CXX) -x c++-header $(CFLAGS) $(GTK2_CFLAGS) $^ -o $@

@@ -449,12 +449,12 @@ void on_cover_fname_entry_changed(GtkEntry* entry, gpointer data) {
 
 void on_rm_check_toggled(GtkToggleButton* toggle, gpointer data) {
     gboolean rm_unref = gtk_toggle_button_get_active(toggle);
-    ddb_ows_plugin->conf.set_rm_unreferenced(rm_unref);
+    ddb_ows_plugin->conf.set_rm_unref(rm_unref);
 }
 
 void on_wt_spinbutton_value_changed(GtkSpinButton* spinbutton, gpointer data) {
     int wt = (int) gtk_spin_button_get_value(spinbutton);
-    ddb_ows_plugin->conf.set_worker_threads(wt);
+    ddb_ows_plugin->conf.set_conv_wts(wt);
 }
 
 /* Clean-up actions */
@@ -536,7 +536,8 @@ int create_ui() {
     Gtk::FileChooserButton* root_chooser = NULL;
     builder->get_widget("target_root_chooser", root_chooser);
     if (root_chooser) {
-        root_chooser->set_filename( ddb_ows_plugin->conf.get_root() );
+        std::string root = ddb_ows_plugin->conf.get_root();
+        root_chooser->set_filename( root );
     }
 
     Gtk::ComboBox* fn_combobox;
