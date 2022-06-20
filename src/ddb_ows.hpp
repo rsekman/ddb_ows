@@ -1,12 +1,11 @@
 #ifndef DDB_OWS_PROJECT_ID
 
-#include <optional>
 #include <string>
-#include <iostream>
 
 #include "deadbeef/deadbeef.h"
 
 #include "config.hpp"
+#include "log.hpp"
 
 #define DDB_OWS_VERSION_MAJOR 0
 #define DDB_OWS_VERSION_MINOR 1
@@ -33,30 +32,10 @@
     "You should have received a copy of the GNU General Public License\n" \
     "along with this program.  If not, see <http://www.gnu.org/licenses/>.\n"
 
-#define DDB_OWS_LOG_NONE  0
-#define DDB_OWS_LOG_ERR   1
-#define DDB_OWS_LOG_WARN  2
-#define DDB_OWS_LOG_DEBUG 3
-
-#define DDB_OWS_LOGLEVEL DDB_OWS_LOG_DEBUG
-
-#define DDB_OWS_ERR \
-    if (DDB_OWS_LOGLEVEL < DDB_OWS_LOG_ERR) {} \
-    else std::cerr << "[ddb_ows] [error] "
-#define DDB_OWS_WARN \
-    if (DDB_OWS_LOGLEVEL < DDB_OWS_LOG_WARN) {} \
-    else std::cerr << "[ddb_ows] [warn] "
-#define DDB_OWS_DEBUG \
-    if (DDB_OWS_LOGLEVEL < DDB_OWS_LOG_DEBUG) {} \
-    else std::cerr << "[ddb_ows] [debug] "
-
 typedef struct {
     DB_misc_t plugin;
     ddb_ows::Configuration& conf;
     std::string (*get_output_path)(DB_playItem_t* it, char* format);
 } ddb_ows_plugin_t;
-
-namespace ddb_ows {
-}
 
 #endif
