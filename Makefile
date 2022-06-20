@@ -28,12 +28,10 @@ GTK3_PCHS=$(patsubst %.h,$(BUILDDIR)/gtkmm-3.0/%.h.pch,$(PCHS))
 GTK3_PCH_FLAGS=$(addprefix -include-pch ,$(GTK3_PCHS))
 GTK3_LDFLAGS=$(shell pkg-config --libs gtkmm-3.0)
 
-SOURCES?=$(addprefix $(SRCDIR)/,ddb_ows.cpp config.cpp)
-UISOURCES?=$(addprefix $(SRCDIR)/, ddb_ows_gui.cpp)
-OBJ?=$(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%.o, $(filter $(SRCDIR)/%.cpp,$(SOURCES)))
-GTK2OBJ?=$(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%_gtk2.o, $(filter $(SRCDIR)/%.cpp,$(UISOURCES)))
-GTK2OBJ+=$(BUILDDIR)/config.o
-GTK3OBJ?=$(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%_gtk3.o, $(filter $(SRCDIR)/%.cpp,$(UISOURCES)))
+OBJ:=ddb_ows.o config.o default_config.o
+GTK2OBJ:=$(addprefix $(BUILDDIR)/, $(OBJ) ddb_ows_gui_gtk2.o)
+GTK3OBJ:=$(addprefix $(BUILDDIR)/, $(OBJ) ddb_ows_gui_gtk3.o)
+OBJ:=$(addprefix $(BUILDDIR)/, $(OBJ))
 
 
 all: $(OUT)
