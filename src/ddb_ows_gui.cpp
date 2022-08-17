@@ -19,7 +19,6 @@
 #include <stdexcept>
 #include <string>
 
-namespace fs = std::filesystem;
 
 #include <deadbeef/deadbeef.h>
 #include <deadbeef/plugins/converter/converter.h>
