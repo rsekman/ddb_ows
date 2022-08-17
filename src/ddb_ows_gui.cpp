@@ -7,6 +7,7 @@
 #include "gtkmm/liststore.h"
 #include "gtkmm/stock.h"
 #include "gtkmm/togglebutton.h"
+#include "gtkmm/spinbutton.h"
 #include "gtkmm/treeview.h"
 #include "gtkmm/window.h"
 
@@ -181,10 +182,17 @@ void cp_populate(Glib::RefPtr<Gtk::ListStore> model) {
     }
     ddb_encoder_preset_t* enc = enc_plug->encoder_preset_get_list();
     Gtk::TreeModel::iterator row;
+    Gtk::ComboBox* cp_combobox;
+    builder->get_widget("cp_combobox", cp_combobox);
+    std::string conf_preset_name = ddb_ows_plugin->conf.get_conv_preset();
     while ( enc != NULL ) {
         row = model->append();
-        row->set_value(0, std::string(enc->title));
+        std::string preset_name = std::string(enc->title);
+        row->set_value(0, preset_name);
         row->set_value(1, enc);
+        if (conf_preset_name == preset_name) {
+            cp_combobox->set_active(row);
+        }
         enc = enc->next;
     }
 }
@@ -248,7 +256,24 @@ void pl_selection_update_model(Glib::RefPtr<Gtk::ListStore> model) {
     ddb_api->pl_unlock();
 }
 
-void ft_populate(
+void conv_fts_save(Glib::RefPtr<Gtk::ListStore> model){
+    std::map<std::string, bool> fts {};
+    model->foreach_iter(
+        [&fts] (const Gtk::TreeIter r) -> bool {
+            std::string name;
+            bool checked;
+            r->get_value(0, checked);
+            r->get_value(1, name);
+            if(checked) {
+                fts[name] = true;
+            }
+            return false;
+        }
+    );
+    ddb_ows_plugin->conf.set_conv_fts(fts);
+}
+
+void conv_fts_populate(
     Glib::RefPtr<Gtk::ListStore> model,
     std::map<std::string, bool> selected={}
 ) {
@@ -257,6 +282,7 @@ void ft_populate(
     int i = 0;
     std::string::size_type n;
     Gtk::TreeModel::iterator row;
+    std::map<std::string, bool> sels = ddb_ows_plugin->conf.get_conv_fts();
     while (decoders[i]) {
         row = model->append();
         std::string s(decoders[i]->plugin.name);
@@ -266,7 +292,7 @@ void ft_populate(
         ) {
             s = s.substr(0, n);
         }
-        row->set_value(0, false);
+        row->set_value(0, sels.count(s) > 0);
         row->set_value(1, s);
         row->set_value(2, decoders[i]);
         i++;
@@ -277,7 +303,7 @@ void ft_populate(
 /* BEGIN EXTERN SIGNAL HANDLERS */
 // TODO consider moving these into their own file
 
-extern "C"{
+extern "C" {
 
 // TODO
 // This method and the following are actually agnostic re: which model we are
@@ -346,9 +372,6 @@ void list_store_check_consistent_on_delete(
 void cp_populate(GtkListStore* ls, gpointer data) {
     Glib::RefPtr<Gtk::ListStore> model = Glib::wrap(ls, true);
     cp_populate(model);
-}
-
-void init_target_root_directory() {
 }
 
 /* Handle config updates */
@@ -437,14 +460,84 @@ void on_fn_format_combobox_changed(GtkComboBox* fn_combobox, gpointer data) {
     }
 }
 
-void on_cover_sync_check_toggled(GtkToggleButton* toggle, gpointer data) {
-    gboolean cover_sync = gtk_toggle_button_get_active(toggle);
-    ddb_ows_plugin->conf.set_cover_sync(cover_sync);
+/* Initialize the UI with values from config */
+
+void on_cover_fname_entry_show(GtkWidget* entry, gpointer data) {
+     gtk_entry_set_text(
+         GTK_ENTRY(widget),
+         ddb_ows_plugin->conf.get_cover_fname()
+    );
 }
+
+void on_conv_ext_entry_show(GtkWidget* widget, gpointer data) {
+    gtk_entry_set_text(
+        GTK_ENTRY(widget),
+        ddb_ows_plugin->conf.get_conv_ext().c_str()
+   );
+}
+
+void on_target_root_chooser_show(GtkWidget* widget, gpointer data) {
+    std::string root = ddb_ows_plugin->conf.get_root();
+    DDB_OWS_DEBUG << "setting root to" << root << std::endl;
+    const char* path = root.c_str();
+    gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(widget), path);
+}
+
+void on_fn_format_combobox_show(GtkWidget* widget, gpointer data) {
+    GtkListStore* model = GTK_LIST_STORE( gtk_combo_box_get_model( GTK_COMBO_BOX(widget)) );
+    auto fn_model = Glib::RefPtr<Gtk::ListStore>::cast_static(
+        Glib::wrap(model)
+    );
+    fn_formats_populate(fn_model);
+    gtk_combo_box_set_active(GTK_COMBO_BOX(widget), 0);
+
+    Gtk::ComboBox* fn_combobox = Glib::wrap(GTK_COMBO_BOX(widget), true);
+    Gtk::Entry* fn_entry = (Gtk::Entry*) fn_combobox->get_child();
+    fn_entry->signal_activate().connect(
+        sigc::bind(
+            sigc::ptr_fun(&on_fn_format_entered),
+            fn_entry
+        )
+    );
+    fn_entry->signal_focus_out_event().connect(
+        sigc::bind(
+            sigc::ptr_fun(&on_fn_format_focus_out),
+            fn_entry
+        )
+    );
+}
+
+void on_cover_sync_check_show(GtkWidget* widget, gpointer data) {
+    gtk_toggle_button_set_active(
+        GTK_TOGGLE_BUTTON(widget),
+        ddb_ows_plugin->conf.get_cover_sync()
+    );
+}
+
+void on_rm_unref_check_show(GtkWidget* widget, gpointer data) {
+    gtk_toggle_button_set_active(
+        GTK_TOGGLE_BUTTON(widget),
+        ddb_ows_plugin->conf.get_rm_unref()
+    );
+}
+
+void on_wt_spinbutton_show(GtkWidget* widget, gpointer data) {
+    gtk_spin_button_set_value(
+        GTK_SPIN_BUTTON(widget),
+        ddb_ows_plugin->conf.get_conv_wts()
+    );
+}
+
+/* Save values to config when changed in the UI */
 
 void on_cover_fname_entry_changed(GtkEntry* entry, gpointer data) {
     const gchar* cover_fname = gtk_entry_get_text(entry);
     ddb_ows_plugin->conf.set_cover_fname(std::string(cover_fname));
+}
+
+void on_cover_sync_check_toggled(GtkToggleButton* toggle, gpointer data) {
+    gboolean cover_sync = gtk_toggle_button_get_active(toggle);
+    ddb_ows_plugin->conf.set_cover_sync(cover_sync);
 }
 
 void on_rm_check_toggled(GtkToggleButton* toggle, gpointer data) {
@@ -454,7 +547,33 @@ void on_rm_check_toggled(GtkToggleButton* toggle, gpointer data) {
 
 void on_wt_spinbutton_value_changed(GtkSpinButton* spinbutton, gpointer data) {
     int wt = (int) gtk_spin_button_get_value(spinbutton);
+    DDB_OWS_DEBUG << "Saving wts " << wt << std::endl;
     ddb_ows_plugin->conf.set_conv_wts(wt);
+}
+
+void conv_fts_save(
+    GtkListStore* ls,
+    GtkTreePath *path,
+    GtkTreeIter *iter,
+    gpointer data
+){
+    Glib::RefPtr<Gtk::ListStore> model = Glib::wrap(ls, true);
+    conv_fts_save(model);
+}
+
+void on_conv_ext_entry_changed(GtkEntry* entry, gpointer data) {
+    const gchar* conv_ext = gtk_entry_get_text(entry);
+    ddb_ows_plugin->conf.set_conv_ext(std::string(conv_ext));
+}
+
+void on_cp_combobox_changed(GtkComboBox* combobox, gpointer data) {
+    DDB_OWS_DEBUG << "Preset changed" << std::endl;
+    Glib::RefPtr<Gtk::ListStore> model = Glib::wrap(GTK_LIST_STORE(data), true);
+    Gtk::ComboBox* cb = Glib::wrap(combobox, true);
+    auto iter = cb->get_active();
+    std::string out;
+    iter->get_value(0, out);
+    ddb_ows_plugin->conf.set_conv_preset(out);
 }
 
 /* Clean-up actions */
@@ -533,21 +652,6 @@ int create_ui() {
         return -1;
     }
 
-    Gtk::FileChooserButton* root_chooser = NULL;
-    builder->get_widget("target_root_chooser", root_chooser);
-    if (root_chooser) {
-        std::string root = ddb_ows_plugin->conf.get_root();
-        root_chooser->set_filename( root );
-    }
-
-    Gtk::ComboBox* fn_combobox;
-    builder->get_widget("fn_format_combobox", fn_combobox);
-    auto fn_model = Glib::RefPtr<Gtk::ListStore>::cast_static(
-        builder->get_object("fn_format_model")
-    );
-    fn_formats_populate(fn_model);
-    fn_combobox->set_active(0);
-
     // Use introspection (backtrace) to figure out which file (.so) we are in.
     // This is necessary because we have to tell gtk to look for the signal
     // handlers in the .so, rather than in the main deadbeef executable.
@@ -571,19 +675,6 @@ int create_ui() {
         gtk_builder_connect_signals_default,
         args);
 
-    Gtk::Entry* fn_entry = (Gtk::Entry*) fn_combobox->get_child();
-    fn_entry->signal_activate().connect(
-        sigc::bind(
-            sigc::ptr_fun(&on_fn_format_entered),
-            fn_entry
-        )
-    );
-    fn_entry->signal_focus_out_event().connect(
-        sigc::bind(
-            sigc::ptr_fun(&on_fn_format_focus_out),
-            fn_entry
-        )
-    );
     auto pl_model = Glib::RefPtr<Gtk::ListStore>::cast_static(
         builder->get_object("pl_selection_model")
     );
@@ -592,7 +683,7 @@ int create_ui() {
     auto ft_model = Glib::RefPtr<Gtk::ListStore>::cast_static(
         builder->get_object("ft_model")
     );
-    ft_populate(ft_model);
+    conv_fts_populate(ft_model);
 
     auto cp_model = Glib::RefPtr<Gtk::ListStore>::cast_static(
         builder->get_object("cp_model")
@@ -606,6 +697,7 @@ int show_ui(DB_plugin_action_t* action, ddb_action_context_t ctx) {
     Gtk::Window* ddb_ows_win = NULL;
     builder->get_widget("ddb_ows", ddb_ows_win);
     ddb_ows_win->present();
+    ddb_ows_win->show_all();
     return 0;
 }
 

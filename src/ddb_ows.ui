@@ -50,6 +50,7 @@
       <column type="gpointer"/>
     </columns>
     <signal name="row-changed" handler="list_store_check_consistent" object="ft_select_all" swapped="no"/>
+    <signal name="row-changed" handler="conv_fts_save" swapped="no"/>
     <signal name="row-deleted" handler="list_store_check_consistent_on_delete" object="ft_select_all" swapped="no"/>
     <signal name="row-inserted" handler="list_store_check_consistent" object="ft_select_all" swapped="no"/>
   </object>
@@ -228,13 +229,13 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                     </child>
                     <child>
                       <object class="GtkComboBox" id="fn_format_combobox">
-                        <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="model">fn_format_model</property>
                         <property name="active">0</property>
                         <property name="has_entry">True</property>
                         <property name="entry_text_column">0</property>
                         <signal name="changed" handler="on_fn_format_combobox_changed" swapped="no"/>
+                        <signal name="show" handler="on_fn_format_combobox_show" swapped="no"/>
                       </object>
                       <packing>
                         <property name="left_attach">1</property>
@@ -310,10 +311,10 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                     <child>
                       <object class="GtkCheckButton" id="cover_sync_check">
                         <property name="label" translatable="yes">Sync cover art</property>
-                        <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">False</property>
                         <property name="draw_indicator">True</property>
+                        <signal name="show" handler="on_cover_sync_check_show" swapped="no"/>
                         <signal name="toggled" handler="on_cover_sync_check_toggled" swapped="no"/>
                       </object>
                       <packing>
@@ -324,13 +325,12 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                     </child>
                     <child>
                       <object class="GtkFileChooserButton" id="target_root_chooser">
-                        <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="action">select-folder</property>
                         <property name="preview_widget_active">False</property>
                         <property name="title" translatable="yes">Select target root directory</property>
                         <signal name="selection-changed" handler="on_target_root_chooser_selection_changed" swapped="no"/>
-                        <signal name="show" handler="init_target_root_directory" swapped="no"/>
+                        <signal name="show" handler="on_target_root_chooser_show" swapped="no"/>
                       </object>
                       <packing>
                         <property name="left_attach">1</property>
@@ -340,7 +340,6 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                     </child>
                     <child>
                       <object class="GtkEntry" id="cover_fname_entry">
-                        <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="buffer">cover_fname_buffer</property>
                         <property name="invisible_char">•</property>
@@ -350,6 +349,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                         <property name="primary_icon_sensitive">True</property>
                         <property name="secondary_icon_sensitive">True</property>
                         <signal name="changed" handler="on_cover_fname_entry_changed" swapped="no"/>
+                        <signal name="show" handler="on_cover_fname_entry_show" swapped="no"/>
                       </object>
                       <packing>
                         <property name="left_attach">1</property>
@@ -365,12 +365,12 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                         <property name="xalign">0</property>
                         <property name="xscale">0</property>
                         <child>
-                          <object class="GtkCheckButton" id="rm_check">
+                          <object class="GtkCheckButton" id="rm_unref_check">
                             <property name="label" translatable="yes">Delete unreferenced files</property>
-                            <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="receives_default">False</property>
                             <property name="draw_indicator">True</property>
+                            <signal name="show" handler="on_rm_unref_check_show" swapped="no"/>
                             <signal name="toggled" handler="on_rm_check_toggled" swapped="no"/>
                           </object>
                         </child>
@@ -482,6 +482,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
             <property name="top_attach">1</property>
             <property name="bottom_attach">2</property>
             <property name="x_options">GTK_FILL</property>
+            <property name="y_options">GTK_EXPAND | GTK_SHRINK | GTK_FILL</property>
           </packing>
         </child>
         <child>
@@ -502,7 +503,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                   <object class="GtkTable" id="convert_opts_table">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="n_rows">2</property>
+                    <property name="n_rows">4</property>
                     <property name="n_columns">3</property>
                     <property name="column_spacing">4</property>
                     <property name="row_spacing">4</property>
@@ -566,37 +567,8 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                         </child>
                       </object>
                       <packing>
-                        <property name="bottom_attach">2</property>
+                        <property name="bottom_attach">4</property>
                         <property name="x_options">GTK_FILL</property>
-                        <property name="y_options">GTK_FILL</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkAlignment" id="cp_alignment">
-                        <property name="height_request">220</property>
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="yalign">0</property>
-                        <property name="yscale">0</property>
-                        <child>
-                          <object class="GtkComboBox" id="cp_combobox">
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="model">cp_model</property>
-                            <child>
-                              <object class="GtkCellRendererText" id="cp_renderer"/>
-                              <attributes>
-                                <attribute name="text">0</attribute>
-                              </attributes>
-                            </child>
-                          </object>
-                        </child>
-                      </object>
-                      <packing>
-                        <property name="left_attach">2</property>
-                        <property name="right_attach">3</property>
-                        <property name="top_attach">1</property>
-                        <property name="bottom_attach">2</property>
                         <property name="y_options">GTK_FILL</property>
                       </packing>
                     </child>
@@ -624,7 +596,6 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                         <child>
                           <object class="GtkSpinButton" id="wt_spinbutton">
                             <property name="width_request">0</property>
-                            <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="invisible_char">•</property>
                             <property name="primary_icon_activatable">False</property>
@@ -634,6 +605,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                             <property name="adjustment">wt_adjustment</property>
                             <property name="numeric">True</property>
                             <signal name="value-changed" handler="on_wt_spinbutton_value_changed" swapped="no"/>
+                            <signal name="show" handler="on_wt_spinbutton_show" swapped="no"/>
                           </object>
                         </child>
                       </object>
@@ -644,27 +616,90 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkAlignment" id="cp_label_alignment">
+                      <object class="GtkLabel" id="conv_ext_label">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="top_padding">6</property>
-                        <child>
-                          <object class="GtkLabel" id="convert_preset_label">
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="xalign">0</property>
-                            <property name="yalign">0</property>
-                            <property name="label" translatable="yes">Converter preset</property>
-                          </object>
-                        </child>
+                        <property name="xalign">1</property>
+                        <property name="yalign">0</property>
+                        <property name="label" translatable="yes">File extension</property>
+                      </object>
+                      <packing>
+                        <property name="left_attach">1</property>
+                        <property name="right_attach">2</property>
+                        <property name="top_attach">2</property>
+                        <property name="bottom_attach">3</property>
+                        <property name="y_options"/>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkEntry" id="conv_ext_entry">
+                        <property name="can_focus">True</property>
+                        <property name="invisible_char">•</property>
+                        <property name="primary_icon_activatable">False</property>
+                        <property name="secondary_icon_activatable">False</property>
+                        <property name="primary_icon_sensitive">True</property>
+                        <property name="secondary_icon_sensitive">True</property>
+                        <signal name="changed" handler="on_conv_ext_entry_changed" swapped="no"/>
+                        <signal name="show" handler="on_conv_ext_entry_show" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="left_attach">2</property>
+                        <property name="right_attach">3</property>
+                        <property name="top_attach">2</property>
+                        <property name="bottom_attach">3</property>
+                        <property name="y_options"/>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="conv_preset_label">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="xalign">1</property>
+                        <property name="yalign">0</property>
+                        <property name="label" translatable="yes">Converter preset</property>
                       </object>
                       <packing>
                         <property name="left_attach">1</property>
                         <property name="right_attach">2</property>
                         <property name="top_attach">1</property>
                         <property name="bottom_attach">2</property>
-                        <property name="x_options">GTK_FILL</property>
-                        <property name="y_options">GTK_SHRINK | GTK_FILL</property>
+                        <property name="y_options"/>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkComboBox" id="cp_combobox">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="model">cp_model</property>
+                        <signal name="changed" handler="on_cp_combobox_changed" swapped="no"/>
+                        <child>
+                          <object class="GtkCellRendererText" id="cp_renderer"/>
+                          <attributes>
+                            <attribute name="text">0</attribute>
+                          </attributes>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="left_attach">2</property>
+                        <property name="right_attach">3</property>
+                        <property name="top_attach">1</property>
+                        <property name="bottom_attach">2</property>
+                        <property name="y_options"/>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkAlignment" id="alignment1">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <child>
+                          <placeholder/>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="left_attach">1</property>
+                        <property name="right_attach">3</property>
+                        <property name="top_attach">3</property>
+                        <property name="bottom_attach">4</property>
                       </packing>
                     </child>
                   </object>
@@ -707,7 +742,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
                     <property name="fraction">0.040000000000000001</property>
                   </object>
                   <packing>
-                    <property name="expand">True</property>
+                    <property name="expand">False</property>
                     <property name="fill">True</property>
                     <property name="position">0</property>
                   </packing>
@@ -764,7 +799,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
           <packing>
             <property name="top_attach">3</property>
             <property name="bottom_attach">4</property>
-            <property name="y_options">GTK_FILL</property>
+            <property name="y_options">GTK_SHRINK</property>
           </packing>
         </child>
       </object>
