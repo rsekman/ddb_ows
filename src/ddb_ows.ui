@@ -23,17 +23,6 @@
       <!-- column-name format -->
       <column type="gchararray"/>
     </columns>
-    <data>
-      <row>
-        <col id="0" translatable="yes">%artist%/%tracknumber%. %title%.$ext(%path%)</col>
-      </row>
-      <row>
-        <col id="0" translatable="yes">%album artist%/%album%/%tracknumber%. %title%.$ext(%path%)</col>
-      </row>
-      <row>
-        <col id="0" translatable="yes">%album artist%/'['%year%']' %album%/%tracknumber%. %title%.$ext(%path%)</col>
-      </row>
-    </data>
     <signal name="row-changed" handler="fn_formats_save" swapped="no"/>
     <signal name="row-deleted" handler="fn_formats_save_on_delete" swapped="no"/>
     <signal name="row-inserted" handler="fn_formats_save" swapped="no"/>
