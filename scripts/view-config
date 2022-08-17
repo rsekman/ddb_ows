@@ -1,0 +1,3 @@
+#!/usr/bin/sh
+
+sed -n -e 's/^ddb_ows\.settings\s*//p' ~/.config/deadbeef/config | jq . -C
