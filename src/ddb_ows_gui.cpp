@@ -462,10 +462,10 @@ void on_fn_format_combobox_changed(GtkComboBox* fn_combobox, gpointer data) {
 
 /* Initialize the UI with values from config */
 
-void on_cover_fname_entry_show(GtkWidget* entry, gpointer data) {
+void on_cover_fname_entry_show(GtkWidget* widget, gpointer data) {
      gtk_entry_set_text(
          GTK_ENTRY(widget),
-         ddb_ows_plugin->conf.get_cover_fname()
+         ddb_ows_plugin->conf.get_cover_fname().c_str()
     );
 }
 
