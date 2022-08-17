@@ -214,7 +214,7 @@ void pl_selection_clear(Glib::RefPtr<Gtk::ListStore> model) {
 
 void pl_selection_populate(
     Glib::RefPtr<Gtk::ListStore> model,
-    std::map<ddb_playlist_t*, bool> selected={}
+    std::unordered_map<ddb_playlist_t*, bool> selected={}
 ) {
     int plt_count = ddb_api->plt_get_count();
     DDB_OWS_DEBUG << "Populating playlist selection model with " << plt_count << " playlists." << std::endl;
@@ -235,7 +235,7 @@ void pl_selection_populate(
 
 void pl_selection_update_model(Glib::RefPtr<Gtk::ListStore> model) {
     // store each playlist's selection status in a map
-    std::map<ddb_playlist_t*, bool> selected = {};
+    std::unordered_map<ddb_playlist_t*, bool> selected = {};
     ddb_api->pl_lock();
     model->foreach_iter(
         [&selected] ( const Gtk::TreeIter r) -> bool {
@@ -256,7 +256,7 @@ void pl_selection_update_model(Glib::RefPtr<Gtk::ListStore> model) {
 }
 
 void conv_fts_save(Glib::RefPtr<Gtk::ListStore> model){
-    std::map<std::string, bool> fts {};
+    std::unordered_map<std::string, bool> fts {};
     model->foreach_iter(
         [&fts] (const Gtk::TreeIter r) -> bool {
             std::string name;
@@ -274,14 +274,14 @@ void conv_fts_save(Glib::RefPtr<Gtk::ListStore> model){
 
 void conv_fts_populate(
     Glib::RefPtr<Gtk::ListStore> model,
-    std::map<std::string, bool> selected={}
+    std::unordered_map<std::string, bool> selected={}
 ) {
     DB_decoder_t **decoders = ddb_api->plug_get_decoder_list ();
     // decoders and decoders[i]->exts are null-terminated arrays
     int i = 0;
     std::string::size_type n;
     Gtk::TreeModel::iterator row;
-    std::map<std::string, bool> sels = ddb_ows_plugin->conf.get_conv_fts();
+    std::unordered_map<std::string, bool> sels = ddb_ows_plugin->conf.get_conv_fts();
     while (decoders[i]) {
         row = model->append();
         std::string s(decoders[i]->plugin.name);

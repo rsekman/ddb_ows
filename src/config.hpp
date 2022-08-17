@@ -48,7 +48,7 @@ class Configuration {
         DDB_OWS_CONFIG_METHODS(cover_sync, bool, DDB_OWS_CONFIG_KEY_COVER_SYNC)
         DDB_OWS_CONFIG_METHODS(cover_fname, std::string, DDB_OWS_CONFIG_KEY_COVER_FNAME)
         DDB_OWS_CONFIG_METHODS(rm_unref, bool, DDB_OWS_CONFIG_KEY_RM_UNREF)
-        #define dummytype std::map<std::string, bool>
+        #define dummytype std::unordered_map<std::string, bool>
         // can't use commas in macro arguments naively
         DDB_OWS_CONFIG_METHODS(conv_fts, dummytype, DDB_OWS_CONFIG_KEY_CONV_FTS)
         #undef dummytype
