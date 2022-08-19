@@ -84,7 +84,6 @@
     <property name="title" translatable="yes">ddb_ows</property>
     <property name="window_position">center</property>
     <property name="default_width">540</property>
-    <property name="default_height">960</property>
     <property name="destroy_with_parent">True</property>
     <property name="type_hint">dialog</property>
     <signal name="destroy" handler="pl_selection_clear" object="pl_selection_model" swapped="yes"/>
