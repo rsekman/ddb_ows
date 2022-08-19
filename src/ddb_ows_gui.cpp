@@ -33,7 +33,7 @@
 
 DB_plugin_t definition_;
 const char* configDialog_ = "";
-static DB_functions_t* ddb_api;
+static DB_functions_t* ddb;
 
 DB_plugin_t* gtkui_plugin;
 ddb_converter_t* converter_plugin;
@@ -134,7 +134,7 @@ void fn_formats_populate(Glib::RefPtr<Gtk::ListStore> model) {
 }
 
 char* validate_fn_format(std::string fmt) {
-    char* bc = ddb_api->tf_compile(fmt.c_str());
+    char* bc = ddb->tf_compile(fmt.c_str());
     Gtk::Image* valid_indicator;
     builder->get_widget("fn_format_valid_indicator", valid_indicator);
     Gtk::BuiltinStockID icon;
@@ -160,28 +160,28 @@ void update_fn_preview(char* format) {
     }
     Gtk::Label* preview_label;
     builder->get_widget("fn_format_preview_label", preview_label);
-    DB_playItem_t* it = ddb_api->streamer_get_playing_track();
+    DB_playItem_t* it = ddb->streamer_get_playing_track();
     if (!it) {
         //Pick a random track from the current playlist
-        ddb_api->pl_lock();
-        ddb_playlist_t* plt = ddb_api->plt_get_curr();
+        ddb->pl_lock();
+        ddb_playlist_t* plt = ddb->plt_get_curr();
         if (!plt) {
-            ddb_api->pl_unlock();
+            ddb->pl_unlock();
             return;
         }
-        it = ddb_api->plt_get_first(plt, PL_MAIN);
-        ddb_api->plt_unref(plt);
-        ddb_api->pl_unlock();
+        it = ddb->plt_get_first(plt, PL_MAIN);
+        ddb->plt_unref(plt);
+        ddb->pl_unlock();
     }
     std::string out = ddb_ows_plugin->get_output_path(it, format);
-    ddb_api->tf_free(format);
-    ddb_api->pl_item_unref(it);
+    ddb->tf_free(format);
+    ddb->pl_item_unref(it);
     preview_label->set_text(out);
     preview_label->queue_resize();
 }
 
 void cp_populate(Glib::RefPtr<Gtk::ListStore> model) {
-    ddb_converter_t* enc_plug = (ddb_converter_t*) ddb_api->plug_get_for_id("converter");
+    ddb_converter_t* enc_plug = (ddb_converter_t*) ddb->plug_get_for_id("converter");
     if (enc_plug == NULL) {
         DDB_OWS_WARN << "Converter plugin not present!" << std::endl;
         return;
@@ -210,7 +210,7 @@ void pl_selection_clear(Glib::RefPtr<Gtk::ListStore> model) {
         [] ( const Gtk::TreeIter r) -> bool {
             ddb_playlist_t* plt;
             r->get_value(2, plt);
-            ddb_api->plt_unref(plt);
+            ddb->plt_unref(plt);
             return false;
         }
     );
@@ -223,15 +223,15 @@ void pl_selection_populate(
     Glib::RefPtr<Gtk::ListStore> model,
     std::unordered_map<ddb_playlist_t*, bool> selected={}
 ) {
-    int plt_count = ddb_api->plt_get_count();
+    int plt_count = ddb->plt_get_count();
     DDB_OWS_DEBUG << "Populating playlist selection model with " << plt_count << " playlists." << std::endl;
     char buf[4096];
     ddb_playlist_t*  plt;
     Gtk::TreeModel::iterator row;
     bool s;
     for(int i=0; i < plt_count; i++) {
-        plt = ddb_api->plt_get_for_idx(i);
-        ddb_api->plt_get_title(plt, buf, sizeof(buf));
+        plt = ddb->plt_get_for_idx(i);
+        ddb->plt_get_title(plt, buf, sizeof(buf));
         row = model->append();
         s = selected.count(plt) ? selected[plt] : false;
         row->set_value(0, s);
@@ -243,7 +243,7 @@ void pl_selection_populate(
 void pl_selection_update_model(Glib::RefPtr<Gtk::ListStore> model) {
     // store each playlist's selection status in a map
     std::unordered_map<ddb_playlist_t*, bool> selected = {};
-    ddb_api->pl_lock();
+    ddb->pl_lock();
     model->foreach_iter(
         [&selected] ( const Gtk::TreeIter r) -> bool {
             bool s;
@@ -259,7 +259,7 @@ void pl_selection_update_model(Glib::RefPtr<Gtk::ListStore> model) {
     builder->get_widget("pl_select_all", toggle);
     pl_selection_clear(model);
     pl_selection_populate(model, selected);
-    ddb_api->pl_unlock();
+    ddb->pl_unlock();
 }
 
 void queue_jobs() {
@@ -308,7 +308,7 @@ void conv_fts_populate(
     Glib::RefPtr<Gtk::ListStore> model,
     std::unordered_map<std::string, bool> selected={}
 ) {
-    DB_decoder_t **decoders = ddb_api->plug_get_decoder_list ();
+    DB_decoder_t **decoders = ddb->plug_get_decoder_list ();
     // decoders and decoders[i]->exts are null-terminated arrays
     int i = 0;
     std::string::size_type n;
@@ -644,7 +644,7 @@ void on_execute_btn_clicked(GtkButton* button, gpointer data){
 
 int read_ui() {
     std::vector<std::string> plugdirs = {
-        std::string( ddb_api->get_system_dir(DDB_SYS_DIR_PLUGIN)),
+        std::string( ddb->get_system_dir(DDB_SYS_DIR_PLUGIN)),
         std::string( LIBDIR ) + "/deadbeef"
     };
     std::string ui_fname;
@@ -765,9 +765,9 @@ int stop() {
 }
 
 int connect (void) {
-    gtkui_plugin = ddb_api->plug_get_for_id (DDB_GTKUI_PLUGIN_ID);
-    converter_plugin = (ddb_converter_t*) ddb_api->plug_get_for_id ("converter");
-    ddb_ows_plugin = (ddb_ows_plugin_t*) ddb_api->plug_get_for_id ("ddb_ows");
+    gtkui_plugin = ddb->plug_get_for_id (DDB_GTKUI_PLUGIN_ID);
+    converter_plugin = (ddb_converter_t*) ddb->plug_get_for_id ("converter");
+    ddb_ows_plugin = (ddb_ows_plugin_t*) ddb->plug_get_for_id ("ddb_ows");
     if(!gtkui_plugin) {
         DDB_OWS_ERR << DDB_OWS_GUI_PLUGIN_NAME
             << ": matching gtkui plugin not found, quitting."
@@ -846,7 +846,7 @@ void init(DB_functions_t* api) {
 }
 
 DB_plugin_t* load(DB_functions_t* api) {
-    ddb_api = api;
+    ddb = api;
     init(api);
     return &definition_;
 }

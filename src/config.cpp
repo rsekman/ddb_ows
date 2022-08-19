@@ -12,13 +12,13 @@ Configuration::Configuration() {
 }
 
 void Configuration::set_api(DB_functions_t* api) {
-    ddb_api = api;
+    ddb = api;
 }
 
 bool Configuration::update_conf() {
-    ddb_api->conf_lock();
+    ddb->conf_lock();
     const char* buf;
-    buf = ddb_api->conf_get_str_fast( DDB_OWS_CONFIG_MAIN, "{}" );
+    buf = ddb->conf_get_str_fast( DDB_OWS_CONFIG_MAIN, "{}" );
     json upd;
     try {
         upd = json::parse(buf);
@@ -27,7 +27,7 @@ bool Configuration::update_conf() {
     } catch (std::exception& e) {
         DDB_OWS_ERR << "Error reading configuration: " << e.what() << std::endl;
     }
-    ddb_api->conf_unlock();
+    ddb->conf_unlock();
     if (!upd.is_object()) {
         DDB_OWS_ERR << "Configuration is not a JSON object. Falling back to default configuration\n.";
         upd = default_conf;
@@ -38,7 +38,7 @@ bool Configuration::update_conf() {
 
 bool Configuration::write_conf() {
     std::string conf_str = conf.dump();
-    ddb_api->conf_set_str( DDB_OWS_CONFIG_MAIN, conf_str.c_str() );
+    ddb->conf_set_str( DDB_OWS_CONFIG_MAIN, conf_str.c_str() );
     return true;
 }
 

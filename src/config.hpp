@@ -57,7 +57,7 @@ class Configuration {
         DDB_OWS_CONFIG_METHODS(conv_wts, int, DDB_OWS_CONFIG_KEY_CONV_WTS)
 
     private:
-        DB_functions_t* ddb_api;
+        DB_functions_t* ddb;
         json conf;
         json default_conf;
         bool write_conf();
