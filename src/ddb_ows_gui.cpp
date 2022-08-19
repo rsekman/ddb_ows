@@ -14,7 +14,9 @@
 #include <execinfo.h>
 
 #include <filesystem>
+#include <gtkmm-2.4/gtkmm/textbuffer.h>
 #include <iostream>
+#include <optional>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -27,6 +29,7 @@
 #include "ddb_ows.hpp"
 #include "ddb_ows_gui.hpp"
 
+#include "textbufferlogger.hpp"
 
 DB_plugin_t definition_;
 const char* configDialog_ = "";
@@ -35,6 +38,9 @@ static DB_functions_t* ddb_api;
 DB_plugin_t* gtkui_plugin;
 ddb_converter_t* converter_plugin;
 ddb_ows_plugin_t* ddb_ows_plugin;
+
+std::optional<TextBufferLogger> gui_logger {};
+StdioLogger terminal_logger {};
 
 Glib::RefPtr<Gtk::Builder> builder;
 
@@ -171,6 +177,7 @@ void update_fn_preview(char* format) {
     ddb_api->tf_free(format);
     ddb_api->pl_item_unref(it);
     preview_label->set_text(out);
+    preview_label->queue_resize();
 }
 
 void cp_populate(Glib::RefPtr<Gtk::ListStore> model) {
@@ -253,6 +260,31 @@ void pl_selection_update_model(Glib::RefPtr<Gtk::ListStore> model) {
     pl_selection_clear(model);
     pl_selection_populate(model, selected);
     ddb_api->pl_unlock();
+}
+
+void queue_jobs() {
+    auto pl_model = Glib::RefPtr<Gtk::ListStore>::cast_static(
+        builder->get_object("pl_selection_model")
+    );
+    auto pls = std::vector<ddb_playlist_t*> {};
+    auto rows = pl_model->children();
+    if(!std::size(rows)){
+        return;
+    }
+    for(auto r = rows.begin(); r != rows.end(); r++) {
+        bool pl_selected;
+        ddb_playlist_t* pl_addr;
+        r->get_value(0, pl_selected);
+        if (pl_selected) {
+            r->get_value(2, pl_addr);
+            pls.push_back(pl_addr);
+        }
+    }
+    if (gui_logger) {
+        ddb_ows_plugin->queue_jobs(pls, gui_logger.value());
+    } else {
+        ddb_ows_plugin->queue_jobs(pls, terminal_logger);
+    }
 }
 
 void conv_fts_save(Glib::RefPtr<Gtk::ListStore> model){
@@ -594,10 +626,14 @@ void on_quit_btn_clicked(){
 void on_cancel_btn_clicked(){
 }
 
-void on_dry_run_btn_clicked(){
+void on_dry_run_btn_clicked(GtkButton* button, gpointer data){
+    queue_jobs();
+    ddb_ows_plugin->run(true);
 }
 
-void on_execute_btn_clicked(){
+void on_execute_btn_clicked(GtkButton* button, gpointer data){
+    queue_jobs();
+    ddb_ows_plugin->run(false);
 }
 
 }
@@ -688,6 +724,13 @@ int create_ui() {
         builder->get_object("cp_model")
     );
     cp_populate(cp_model);
+
+    auto log_buffer = Glib::RefPtr<Gtk::TextBuffer>::cast_static(
+        builder->get_object("job_log_buffer")
+    );
+    if (log_buffer) {
+        gui_logger.emplace( log_buffer );
+    }
 
     return 0;
 }

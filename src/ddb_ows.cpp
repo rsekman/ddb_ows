@@ -1,16 +1,39 @@
 #include <deadbeef/deadbeef.h>
 #include <deadbeef/plugins/converter/converter.h>
+#include <deadbeef/plugins/artwork/artwork.h>
 
+#include <ctime>
+#include <chrono>
+#include <condition_variable>
+#include <filesystem>
+#include <limits.h>
+#include <memory>
 #include <optional>
+#include <random>
 #include <string>
+#include <unordered_set>
 
 #include "ddb_ows.hpp"
 #include "config.hpp"
+#include "database.hpp"
+#include "job.hpp"
+#include "jobsqueue.hpp"
+
+using namespace std::chrono_literals;
+using namespace std::chrono;
+using namespace std::filesystem;
 
 namespace ddb_ows{
 
 static DB_functions_t* ddb_api;
 Configuration conf = Configuration();
+
+ddb_artwork_plugin_t* ddb_artwork = NULL;
+ddb_converter_t* ddb_converter = NULL;
+
+std::random_device rd;
+std::mt19937 mersenne_twister(rd());
+auto dist = std::uniform_int_distribution<long>(LONG_MIN, LONG_MAX);
 
 void escape(std::string& s) {
     for (auto i = s.begin(); i != s.end(); i++) {
@@ -57,6 +80,284 @@ std::string get_output_path(DB_playItem_t* it, char* format) {
     return std::string(out);
 }
 
+JobsQueue* jobs = new JobsQueue();
+
+typedef struct cover_req_s {
+    std::mutex* m;
+    std::condition_variable* c;
+    bool returned;
+    ddb_cover_info_t* cover;
+} cover_req_t;
+
+void callback_cover_art_found (int error, ddb_cover_query_t *query, ddb_cover_info_t *cover) {
+    cover_req_t* creq = (cover_req_t*) (query->user_data);
+    creq->returned = true;
+    std::lock_guard<std::mutex> lock(*creq->m);
+    if (
+        (query->flags & DDB_ARTWORK_FLAG_CANCELLED) ||
+        cover == NULL ||
+        cover->image_filename == NULL
+    ) {
+        creq->cover = NULL;
+    } else {
+        DDB_OWS_DEBUG << "Found cover: " << cover->image_filename << std::endl;
+        creq->cover = cover;
+    }
+    creq->c->notify_all();
+    ddb_api->pl_item_unref(query->track);
+    free(query);
+}
+
+bool queue_cover_jobs(Logger& logger, Database* db, std::queue<DB_playItem_t*> items) {
+    path from;
+    path to;
+    char* fmt = ddb_api->tf_compile(conf.get_fn_formats()[0].c_str());
+    if (fmt == NULL) {
+        return false;
+    }
+    auto root = path(conf.get_root());
+    std::mutex m {};
+    std::condition_variable c {};
+    DB_playItem_t* it;
+    while (!items.empty() ) {
+        it = items.front();
+        from = ddb_api->pl_find_meta (it, ":URI");
+        to = root / get_output_path(it, fmt);
+        path target_dir = to.parent_path();
+        ddb_cover_query_t* cover_query = (ddb_cover_query_t*) calloc(sizeof(ddb_cover_query_t), 1);
+        cover_query->flags = 0;
+        cover_query->track = it;
+        int64_t sid = dist(mersenne_twister);
+        cover_query->source_id = sid;
+        cover_query->_size = sizeof(ddb_cover_query_t);
+        cover_req_t creq = {
+            .m = &m,
+            .c = &c,
+            .returned = false,
+            .cover = NULL
+        };
+        cover_query->user_data = &creq;
+        std::unique_lock<std::mutex> lock(*creq.m);
+        ddb_artwork->cover_get(cover_query, callback_cover_art_found);
+        creq.c->wait_for(
+            lock,
+            DDB_OWS_COVER_TIMEOUT,
+            [&creq] {
+            return creq.returned;
+            }
+        );
+        if (creq.returned && creq.cover != NULL) {
+            path from = creq.cover->image_filename;
+            path to = target_dir / conf.get_cover_fname();
+            if (exists(to) && last_write_time(to) > last_write_time(from)) {
+                logger.log("Cover at " + std::string(to) + " is newer than source " + std::string(from));
+            } else {
+                auto cover_job = std::unique_ptr<Job>(
+                    new CopyJob(
+                        logger,
+                        db,
+                        creq.cover->image_filename,
+                        to
+                    )
+                );
+                jobs->push(std::move(cover_job));
+            }
+        } else if (!creq.returned) {
+            DDB_OWS_DEBUG
+                << "Cover request timed out for" << target_dir
+                << " after "
+                << duration_cast<milliseconds>(DDB_OWS_COVER_TIMEOUT).count()
+                << std::endl;
+        } else {
+            DDB_OWS_DEBUG << "No cover found for " << target_dir << std::endl;
+        }
+        // it is unref'd in the callback; we don't need to do it here
+        items.pop();
+    }
+    return true;
+}
+
+bool cancel_jobs () {
+    jobs->cancel();
+    return true;
+}
+
+ddb_converter_settings_t make_encoder_settings() {
+    auto preset = ddb_converter->encoder_preset_get_list();
+    auto sel = conf.get_conv_preset();
+    ddb_converter_settings_t out {
+        // these two mean to use the same sample format as input
+        .output_bps = -1,
+        .output_is_float = -1,
+        .encoder_preset = NULL,
+        .dsp_preset = NULL,
+        .bypass_conversion_on_same_format = 0,
+        .rewrite_tags_after_copy = 0,
+    };
+    while (preset != NULL) {
+        if (sel == std::string(preset->title) ) {
+            out.encoder_preset = preset;
+            break;
+        }
+        preset = preset->next;
+    }
+    // TODO: DSP preset
+    return out;
+}
+
+bool should_convert(DB_playItem_t* it){
+    DB_decoder_t **decoders = ddb_api->plug_get_decoder_list ();
+    // decoders and decoders[i]->exts are null-terminated arrays
+    int i = 0;
+    std::string::size_type n;
+    std::unordered_map<std::string, bool> sels = conf.get_conv_fts();
+    const char *fname = ddb_api->pl_find_meta (it, ":URI");
+    const char *ext = strrchr (fname, '.');
+    if (ext) {
+        ext++;
+    } else {
+        DDB_OWS_WARN << "Unable to determine filetype for " << fname << std::endl;
+        return false;
+    }
+    while (decoders[i]) {
+        std::string s(decoders[i]->plugin.name);
+        if (
+            (n = s.find(" decoder")) != std::string::npos ||
+            (n = s.find(" player"))  != std::string::npos
+        ) {
+            s = s.substr(0, n);
+        }
+        if (sels.count(s)) {
+            const char **exts = decoders[i]->exts;
+            if (exts) {
+                for (int j = 0; exts[j]; j++) {
+                    if (!strcasecmp (exts[j], ext) || !strcmp (exts[j], "*")) {
+                        return true;
+                    }
+                }
+            }
+        }
+        i++;
+    }
+    return false;
+}
+
+std::unique_ptr<Job> make_job(
+    Database* db,
+    Logger& logger,
+    DB_playItem_t* it,
+    path from,
+    path to,
+    ddb_converter_settings_t conv_settings
+) {
+    auto old = db->find_entry(from);
+    if ( old != db->end()
+        && exists(old->second.destination)
+        && last_write_time(old->second.destination) > last_write_time(from)
+    ) {
+    // This source file was synced previously, and the destination file is newer than the source => move
+        return std::unique_ptr<Job>(
+            new MoveJob(logger, db, old->second.destination, to)
+        );
+    } else if (should_convert(it) ) {
+        return std::unique_ptr<Job>(
+            new ConvertJob(logger, db, ddb_api, conv_settings, it, from, to)
+        );
+    } else {
+        return std::unique_ptr<Job>(
+            new CopyJob(logger, db, from, to)
+        );
+    }
+}
+
+bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
+    if (!jobs->empty()) {
+        // To avoid double-queueing
+        return false;
+    }
+    char* fmt = ddb_api->tf_compile(conf.get_fn_formats()[0].c_str());
+    if (fmt == NULL) {
+        return false;
+    }
+    jobs->open();
+    logger.clear();
+
+    // We need to lock the playlist to avoid data races as we're looping over
+    // it, but cover requests run async in another thread and ALSO need to lock
+    // the playlist. Therefore we have to queue up items to dispatch cover
+    // requests for once we are done traversing the playlist.
+    std::unordered_set<path> cover_dirs {};
+    std::queue<DB_playItem_t*> cover_its {};
+
+    ddb_ows_plugin_t* ddb_ows = (ddb_ows_plugin_t*) ddb_api->plug_get_for_id("ddb_ows");
+    path root(conf.get_root());
+    ddb_ows->db = new Database(root);
+
+    auto conv_settings = make_encoder_settings();
+
+    char plt_title[4096];
+    for(auto plt = playlists.begin(); plt != playlists.end(); plt++) {
+        ddb_api->plt_get_title(*plt, plt_title, sizeof(plt_title));
+        DDB_OWS_DEBUG << "Looking for jobs from playlist " << plt_title << std::endl;
+        DB_playItem_t* it;
+        DB_playItem_t* next;
+        path from;
+        path to;
+        ddb_api->pl_lock();
+        it = ddb_api->plt_get_first(*plt, 0);
+        while (it != NULL) {
+            from = std::string(ddb_api->pl_find_meta (it, ":URI"));
+            to = root / get_output_path(it, fmt);
+            if (!exists(from)) {
+                logger.err("Source file " + std::string(from) + " does not exist!");
+            } else if (exists(to) && last_write_time(to) > last_write_time(from)) {
+                logger.log(
+                    "Destination " + std::string(to)
+                    + " is newer than source " + std::string(from)
+                    + "; skipping."
+                );
+            } else {
+                auto job = make_job(ddb_ows->db, logger, it, from, to, conv_settings);
+                if (job) {
+                    jobs->push(std::move(job));
+                }
+            }
+
+            path target_dir = to.parent_path();
+            if (!cover_dirs.count(target_dir)) {
+                cover_its.push(it);
+                ddb_api->pl_item_ref(it);
+                DDB_OWS_DEBUG << "Copying cover to " << target_dir << std::endl;
+            }
+            cover_dirs.insert(target_dir);
+
+            next = ddb_api->pl_get_next(it, 0);
+            if (it) {
+                ddb_api->pl_item_unref(it);
+            }
+            it = next;
+        }
+        ddb_api->pl_unlock();
+        // Now we can dispatch cover requests
+        queue_cover_jobs(logger, ddb_ows->db, cover_its);
+    }
+    // TODO: delete unreferenced files
+    jobs->close();
+    DDB_OWS_DEBUG << "Found " << jobs->size() << " jobs" << std::endl;
+    free(fmt);
+    return true;
+}
+
+bool run(bool dry) {
+    std::unique_ptr<Job> job;
+    while( (job = jobs->pop()) ) {
+        // unique_ptr is falsey if there is no object
+        job->run(dry);
+    }
+    ddb_ows_plugin_t* ddb_ows = (ddb_ows_plugin_t*) ddb_api->plug_get_for_id("ddb_ows");
+    delete ddb_ows->db;
+    return true;
+}
 
 int start() {
     return 0;
@@ -71,6 +372,9 @@ int disconnect(){
 }
 
 int connect(){
+    ddb_converter = (ddb_converter_t*) ddb_api->plug_get_for_id ("converter");
+    ddb_artwork = (ddb_artwork_plugin_t*) ddb_api->plug_get_for_id ("artwork2");
+    jobs->close();
     return 0;
 }
 
@@ -102,7 +406,10 @@ ddb_ows_plugin_t plugin = {
         },
     },
     .conf = conf,
-    .get_output_path = get_output_path
+    .db = NULL,
+    .get_output_path = get_output_path,
+    .queue_jobs = queue_jobs,
+    .run = run
 };
 
 void init(DB_functions_t* api) {

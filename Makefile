@@ -11,8 +11,8 @@ LIBDIR=$(HOME)/.local/lib
 INSTALLDIR=$(LIBDIR)/deadbeef
 
 CXX=clang++
-CFLAGS+=-Wall --std=c++17 -g -fPIC -DLIBDIR="\"$(LIBDIR)\"" -Wno-deprecated-declarations
-LDFLAGS=-shared -rdynamic
+CFLAGS+=-Wall --std=c++17 -g -fPIC -DLIBDIR="\"$(LIBDIR)\"" -Wno-deprecated-declarations -gdwarf-4
+LDFLAGS=-shared -rdynamic -Wl,-E
 
 PCHS=builder.h
 
@@ -28,9 +28,10 @@ GTK3_PCHS=$(patsubst %.h,$(BUILDDIR)/gtkmm-3.0/%.h.pch,$(PCHS))
 GTK3_PCH_FLAGS=$(addprefix -include-pch ,$(GTK3_PCHS))
 GTK3_LDFLAGS=$(shell pkg-config --libs gtkmm-3.0)
 
-OBJ:=ddb_ows.o config.o default_config.o
-GTK2OBJ:=$(addprefix $(BUILDDIR)/, $(OBJ) ddb_ows_gui_gtk2.o)
-GTK3OBJ:=$(addprefix $(BUILDDIR)/, $(OBJ) ddb_ows_gui_gtk3.o)
+OBJ:=ddb_ows.o config.o default_config.o job.o jobsqueue.o logger.o database.o
+GUIOBJ:=textbufferlogger ddb_ows_gui
+GTK2OBJ:=$(addprefix $(BUILDDIR)/, $(OBJ) $(addsuffix _gtk2.o, $(GUIOBJ)))
+GTK3OBJ:=$(addprefix $(BUILDDIR)/, $(OBJ) $(addsuffix _gtk3.o, $(GUIOBJ)))
 OBJ:=$(addprefix $(BUILDDIR)/, $(OBJ))
 
 
@@ -86,4 +87,5 @@ $(BUILDDIR):
 	mkdir -p $(BUILDDIR)
 
 clean:
+	rm -rf $(BUILDDIR)/gtkmm-2.4/
 	rm $(BUILDDIR)/*.o $(BUILDDIR)/*.so
