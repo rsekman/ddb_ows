@@ -1,4 +1,3 @@
-#include "ddb_ows.hpp"
 #include "config.hpp"
 
 extern char DDB_OWS_CONFIG_DEFAULT;
