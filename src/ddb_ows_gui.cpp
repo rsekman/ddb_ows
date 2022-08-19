@@ -35,9 +35,11 @@ DB_plugin_t definition_;
 const char* configDialog_ = "";
 static DB_functions_t* ddb;
 
-DB_plugin_t* gtkui_plugin;
-ddb_converter_t* converter_plugin;
-ddb_ows_plugin_t* ddb_ows_plugin;
+namespace ddb_ows_gui {
+
+DB_plugin_t* ddb_gtkui;
+ddb_converter_t* ddb_converter;
+ddb_ows_plugin_t* ddb_ows;
 
 std::optional<TextBufferLogger> gui_logger {};
 StdioLogger terminal_logger {};
@@ -114,11 +116,11 @@ void fn_formats_save(Glib::RefPtr<Gtk::ListStore> model){
             return false;
         }
     );
-    ddb_ows_plugin->conf.set_fn_formats(fmts);
+    ddb_ows->conf.set_fn_formats(fmts);
 }
 
 void fn_formats_populate(Glib::RefPtr<Gtk::ListStore> model) {
-    std::vector<std::string> fmts = ddb_ows_plugin->conf.get_fn_formats();
+    std::vector<std::string> fmts = ddb_ows->conf.get_fn_formats();
     if (!fmts.size()) {
         // No formats save in config => use formats from .ui file
         // This has the side effect of bootstrapping the user's config from the .ui file
@@ -173,7 +175,7 @@ void update_fn_preview(char* format) {
         ddb->plt_unref(plt);
         ddb->pl_unlock();
     }
-    std::string out = ddb_ows_plugin->get_output_path(it, format);
+    std::string out = ddb_ows->get_output_path(it, format);
     ddb->tf_free(format);
     ddb->pl_item_unref(it);
     preview_label->set_text(out);
@@ -190,7 +192,7 @@ void cp_populate(Glib::RefPtr<Gtk::ListStore> model) {
     Gtk::TreeModel::iterator row;
     Gtk::ComboBox* cp_combobox;
     builder->get_widget("cp_combobox", cp_combobox);
-    std::string conf_preset_name = ddb_ows_plugin->conf.get_conv_preset();
+    std::string conf_preset_name = ddb_ows->conf.get_conv_preset();
     while ( enc != NULL ) {
         row = model->append();
         std::string preset_name = std::string(enc->title);
@@ -281,9 +283,9 @@ void queue_jobs() {
         }
     }
     if (gui_logger) {
-        ddb_ows_plugin->queue_jobs(pls, gui_logger.value());
+        ddb_ows->queue_jobs(pls, gui_logger.value());
     } else {
-        ddb_ows_plugin->queue_jobs(pls, terminal_logger);
+        ddb_ows->queue_jobs(pls, terminal_logger);
     }
 }
 
@@ -301,7 +303,7 @@ void conv_fts_save(Glib::RefPtr<Gtk::ListStore> model){
             return false;
         }
     );
-    ddb_ows_plugin->conf.set_conv_fts(fts);
+    ddb_ows->conf.set_conv_fts(fts);
 }
 
 void conv_fts_populate(
@@ -313,7 +315,7 @@ void conv_fts_populate(
     int i = 0;
     std::string::size_type n;
     Gtk::TreeModel::iterator row;
-    std::unordered_map<std::string, bool> sels = ddb_ows_plugin->conf.get_conv_fts();
+    std::unordered_map<std::string, bool> sels = ddb_ows->conf.get_conv_fts();
     while (decoders[i]) {
         row = model->append();
         std::string s(decoders[i]->plugin.name);
@@ -413,7 +415,7 @@ void on_target_root_chooser_selection_changed(GtkFileChooserButton* fcb, gpointe
     // menu.
     GFile* root = gtk_file_chooser_get_file( GTK_FILE_CHOOSER(fcb) );
     char* root_path = g_file_get_path(root);
-    ddb_ows_plugin->conf.set_root( std::string(root_path) );
+    ddb_ows->conf.set_root( std::string(root_path) );
     g_free(root_path);
     g_object_unref(root);
 }
@@ -496,19 +498,19 @@ void on_fn_format_combobox_changed(GtkComboBox* fn_combobox, gpointer data) {
 void on_cover_fname_entry_show(GtkWidget* widget, gpointer data) {
      gtk_entry_set_text(
          GTK_ENTRY(widget),
-         ddb_ows_plugin->conf.get_cover_fname().c_str()
+         ddb_ows->conf.get_cover_fname().c_str()
     );
 }
 
 void on_conv_ext_entry_show(GtkWidget* widget, gpointer data) {
     gtk_entry_set_text(
         GTK_ENTRY(widget),
-        ddb_ows_plugin->conf.get_conv_ext().c_str()
+        ddb_ows->conf.get_conv_ext().c_str()
    );
 }
 
 void on_target_root_chooser_show(GtkWidget* widget, gpointer data) {
-    std::string root = ddb_ows_plugin->conf.get_root();
+    std::string root = ddb_ows->conf.get_root();
     DDB_OWS_DEBUG << "setting root to" << root << std::endl;
     const char* path = root.c_str();
     gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(widget), path);
@@ -541,21 +543,21 @@ void on_fn_format_combobox_show(GtkWidget* widget, gpointer data) {
 void on_cover_sync_check_show(GtkWidget* widget, gpointer data) {
     gtk_toggle_button_set_active(
         GTK_TOGGLE_BUTTON(widget),
-        ddb_ows_plugin->conf.get_cover_sync()
+        ddb_ows->conf.get_cover_sync()
     );
 }
 
 void on_rm_unref_check_show(GtkWidget* widget, gpointer data) {
     gtk_toggle_button_set_active(
         GTK_TOGGLE_BUTTON(widget),
-        ddb_ows_plugin->conf.get_rm_unref()
+        ddb_ows->conf.get_rm_unref()
     );
 }
 
 void on_wt_spinbutton_show(GtkWidget* widget, gpointer data) {
     gtk_spin_button_set_value(
         GTK_SPIN_BUTTON(widget),
-        ddb_ows_plugin->conf.get_conv_wts()
+        ddb_ows->conf.get_conv_wts()
     );
 }
 
@@ -563,23 +565,23 @@ void on_wt_spinbutton_show(GtkWidget* widget, gpointer data) {
 
 void on_cover_fname_entry_changed(GtkEntry* entry, gpointer data) {
     const gchar* cover_fname = gtk_entry_get_text(entry);
-    ddb_ows_plugin->conf.set_cover_fname(std::string(cover_fname));
+    ddb_ows->conf.set_cover_fname(std::string(cover_fname));
 }
 
 void on_cover_sync_check_toggled(GtkToggleButton* toggle, gpointer data) {
     gboolean cover_sync = gtk_toggle_button_get_active(toggle);
-    ddb_ows_plugin->conf.set_cover_sync(cover_sync);
+    ddb_ows->conf.set_cover_sync(cover_sync);
 }
 
 void on_rm_check_toggled(GtkToggleButton* toggle, gpointer data) {
     gboolean rm_unref = gtk_toggle_button_get_active(toggle);
-    ddb_ows_plugin->conf.set_rm_unref(rm_unref);
+    ddb_ows->conf.set_rm_unref(rm_unref);
 }
 
 void on_wt_spinbutton_value_changed(GtkSpinButton* spinbutton, gpointer data) {
     int wt = (int) gtk_spin_button_get_value(spinbutton);
     DDB_OWS_DEBUG << "Saving wts " << wt << std::endl;
-    ddb_ows_plugin->conf.set_conv_wts(wt);
+    ddb_ows->conf.set_conv_wts(wt);
 }
 
 void conv_fts_save(
@@ -594,7 +596,7 @@ void conv_fts_save(
 
 void on_conv_ext_entry_changed(GtkEntry* entry, gpointer data) {
     const gchar* conv_ext = gtk_entry_get_text(entry);
-    ddb_ows_plugin->conf.set_conv_ext(std::string(conv_ext));
+    ddb_ows->conf.set_conv_ext(std::string(conv_ext));
 }
 
 void on_cp_combobox_changed(GtkComboBox* combobox, gpointer data) {
@@ -604,7 +606,7 @@ void on_cp_combobox_changed(GtkComboBox* combobox, gpointer data) {
     auto iter = cb->get_active();
     std::string out;
     iter->get_value(0, out);
-    ddb_ows_plugin->conf.set_conv_preset(out);
+    ddb_ows->conf.set_conv_preset(out);
 }
 
 /* Clean-up actions */
@@ -628,12 +630,12 @@ void on_cancel_btn_clicked(){
 
 void on_dry_run_btn_clicked(GtkButton* button, gpointer data){
     queue_jobs();
-    ddb_ows_plugin->run(true);
+    ddb_ows->run(true);
 }
 
 void on_execute_btn_clicked(GtkButton* button, gpointer data){
     queue_jobs();
-    ddb_ows_plugin->run(false);
+    ddb_ows->run(false);
 }
 
 }
@@ -765,20 +767,20 @@ int stop() {
 }
 
 int connect (void) {
-    gtkui_plugin = ddb->plug_get_for_id (DDB_GTKUI_PLUGIN_ID);
-    converter_plugin = (ddb_converter_t*) ddb->plug_get_for_id ("converter");
-    ddb_ows_plugin = (ddb_ows_plugin_t*) ddb->plug_get_for_id ("ddb_ows");
-    if(!gtkui_plugin) {
+    ddb_gtkui = ddb->plug_get_for_id (DDB_GTKUI_PLUGIN_ID);
+    ddb_converter = (ddb_converter_t*) ddb->plug_get_for_id ("converter");
+    ddb_ows = (ddb_ows_plugin_t*) ddb->plug_get_for_id ("ddb_ows");
+    if(!ddb_gtkui) {
         DDB_OWS_ERR << DDB_OWS_GUI_PLUGIN_NAME
             << ": matching gtkui plugin not found, quitting."
             << std::endl;
         return -1;
     }
-    if(!converter_plugin) {
+    if(!ddb_converter) {
         fprintf(stderr, "%s: converter plugin not found\n", DDB_OWS_GUI_PLUGIN_NAME);
         return -1;
     }
-    if(!ddb_ows_plugin) {
+    if(!ddb_ows) {
         fprintf(stderr, "%s: ddb_ows plugin not found\n", DDB_OWS_GUI_PLUGIN_NAME);
         return -1;
     }
@@ -845,9 +847,11 @@ void init(DB_functions_t* api) {
     definition_.configdialog = configDialog_;
 }
 
+}
+
 DB_plugin_t* load(DB_functions_t* api) {
     ddb = api;
-    init(api);
+    ddb_ows_gui::init(api);
     return &definition_;
 }
 
