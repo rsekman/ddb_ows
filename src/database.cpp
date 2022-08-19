@@ -14,43 +14,6 @@ using namespace nlohmann;
 
 namespace ddb_ows {
 
-/* void to_json(json& j, const db_meta_t& ed) {
-    j = json{
-        {"ver", ed.ver},
-        {"last_write", ed.last_write}
-    };
-}
-
-void from_json(const json& j, db_meta_t& e) {
-    j.at("ver").get_to(e.ver);
-    j.at("last_write").get_to(e.last_write);
-}
-
-void to_json(json& j, const db_entry_t& e) {
-    j = json{
-        {"destination", e.destination},
-        {"timestamp", e.timestamp}
-    };
-}
-
-void from_json(const json& j, db_entry_t& e) {
-    j.at("destination").get_to(e.destination);
-    j.at("timestamp").get_to(e.timestamp);
-}
-
-void to_json(json& j, const db_t db) {
-    j = json {
-        {"meta", db.meta},
-        {"entries", db.entries}
-    };
-}
-
-void from_json(const json& j, db_t db) {
-    j.at("entries").get_to(db.entries);
-    j.at("meta").get_to(db.meta);
-}
-
-*/
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(db_meta_t, ver, last_write)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(db_entry_t, destination, timestamp)
