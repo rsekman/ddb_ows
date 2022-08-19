@@ -37,8 +37,6 @@ static DB_functions_t* ddb;
 
 namespace ddb_ows_gui {
 
-DB_plugin_t* ddb_gtkui;
-ddb_converter_t* ddb_converter;
 ddb_ows_plugin_t* ddb_ows;
 
 std::optional<TextBufferLogger> gui_logger {};
@@ -767,8 +765,8 @@ int stop() {
 }
 
 int connect (void) {
-    ddb_gtkui = ddb->plug_get_for_id (DDB_GTKUI_PLUGIN_ID);
-    ddb_converter = (ddb_converter_t*) ddb->plug_get_for_id ("converter");
+    DB_plugin_t* ddb_gtkui = ddb->plug_get_for_id (DDB_GTKUI_PLUGIN_ID);
+    ddb_converter_t* ddb_converter = (ddb_converter_t*) ddb->plug_get_for_id ("converter");
     ddb_ows = (ddb_ows_plugin_t*) ddb->plug_get_for_id ("ddb_ows");
     if(!ddb_gtkui) {
         DDB_OWS_ERR << DDB_OWS_GUI_PLUGIN_NAME
