@@ -18,6 +18,7 @@ namespace ddb_ows {
     typedef struct db_entry_s {
         path destination;
         uint64_t timestamp;
+        std::string converter_preset;
     } db_entry_t;
 
     typedef std::unordered_map<path, db_entry_t> entry_dict;

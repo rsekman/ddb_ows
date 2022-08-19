@@ -14,9 +14,8 @@ using namespace nlohmann;
 
 namespace ddb_ows {
 
-
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(db_meta_t, ver, last_write)
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(db_entry_t, destination, timestamp)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(db_entry_t, destination, timestamp, converter_preset)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(db_t, meta, entries)
 
 Database::Database(path root) {

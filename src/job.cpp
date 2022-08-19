@@ -1,6 +1,7 @@
 #include "job.hpp"
 
 #include <deadbeef/plugins/converter/converter.h>
+#include <iostream>
 #include <filesystem>
 #include <system_error>
 
@@ -8,14 +9,19 @@ using namespace std::filesystem;
 
 namespace ddb_ows {
 
-void Job::register_job() {
-    db->insert_or_update(
-        from,
-        db_entry_t {
+db_entry_t Job::make_entry(){
+    return db_entry_t {
         .destination = to,
-        .timestamp = static_cast<uint64_t>(std::time(nullptr))
-        }
-    );
+        .timestamp = static_cast<uint64_t>(std::time(nullptr)),
+        .converter_preset = ""
+    };
+}
+
+void Job::register_job() {
+    db->insert_or_update( from, make_entry() );
+}
+void Job::register_job(db_entry_t entry) {
+    db->insert_or_update( from, entry );
 }
 
 CopyJob::CopyJob(Logger& _logger, Database* _db, path _from, path _to) :
@@ -53,7 +59,12 @@ bool MoveJob::run(bool dry) {
         if (!dry) {
             create_directories(to.parent_path());
             rename(from, to);
-            register_job();
+            db_entry_t entry = make_entry();
+            auto old = db->find_entry(from);
+            if (old != db->end() ) {
+                entry.converter_preset = old->second.converter_preset;
+            }
+            register_job(entry);
         }
         success = true;
     } catch (filesystem_error& e) {
@@ -84,20 +95,31 @@ ConvertJob::ConvertJob(
     ddb->pl_item_ref(it);
 }
 
+
 bool ConvertJob::run(bool dry) {
-    logger.log("Converting to " + std::string(to) + ".");
+    logger.log(
+        "Converting " + std::string(from)
+        + " using " + settings.encoder_preset->title
+        + " to " + std::string(to));
     if (!dry) {
         auto ddb_conv = (ddb_converter_t*) ddb->plug_get_for_id("converter");
-        int pabort;
+        int pabort = 0;
         // TODO implement cancelling
+        create_directories(to.parent_path());
         int out = ddb_conv->convert2(
             &settings,
             it,
             std::string(to).c_str(),
             &pabort
         );
-        register_job();
-        return out;
+        if (!out) {
+            db_entry_t entry = make_entry();
+            entry.converter_preset = settings.encoder_preset->title;
+            register_job(entry);
+        } else {
+            logger.err("Converting " + std::string(from) + " failed.");
+        }
+        return out == 0;
     } else {
         return true;
     }

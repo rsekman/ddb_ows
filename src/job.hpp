@@ -28,7 +28,9 @@ class Job {
         ddb_ows::Database* db;
         const path from;
         const path to;
+        db_entry_t make_entry();
         void register_job();
+        void register_job(db_entry_t entry);
 };
 
 class CopyJob : public Job {

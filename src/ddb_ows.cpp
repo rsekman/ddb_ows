@@ -28,6 +28,8 @@ namespace ddb_ows{
 static DB_functions_t* ddb;
 Configuration conf = Configuration();
 
+// TODO: move these out of global scope
+
 ddb_artwork_plugin_t* ddb_artwork = NULL;
 ddb_converter_t* ddb_converter = NULL;
 
@@ -242,6 +244,10 @@ bool should_convert(DB_playItem_t* it){
     return false;
 }
 
+bool is_newer(path a, path b) {
+    return last_write_time(a) > last_write_time(b);
+}
+
 std::unique_ptr<Job> make_job(
     Database* db,
     Logger& logger,
@@ -251,22 +257,57 @@ std::unique_ptr<Job> make_job(
     ddb_converter_settings_t conv_settings
 ) {
     auto old = db->find_entry(from);
-    if ( old != db->end()
+    if (should_convert(it) ) {
+        to.replace_extension(conf.get_conv_ext());
+        std::string preset_title = conv_settings.encoder_preset->title;
+        std::unique_ptr<Job> cjob(
+            new ConvertJob(logger, db, ddb, conv_settings, it, from, to)
+        );
+        if(old != db->end() && old->second.converter_preset == preset_title) {
+            // This source file was synced previously and the same encoder preset is selected
+            if ( exists(to) && is_newer(to, from) ) {
+                // The destination exists and is newer than the source
+                logger.log(
+                    "Source " + std::string(from)
+                    + " was already converted with " + preset_title
+                    + "; skipping."
+                );
+                return std::unique_ptr<Job>();
+            } else if(
+                exists(old->second.destination)
+                && is_newer(old->second.destination, from)
+            ) {
+                // The source was previously converted with a different destination, which is newer than the source
+                return std::unique_ptr<Job>(
+                    new MoveJob(logger, db, old->second.destination, to)
+                );
+            } else {
+                return cjob;
+            }
+        } else {
+            return cjob;
+        }
+    } else if ( old != db->end()
         && exists(old->second.destination)
-        && last_write_time(old->second.destination) > last_write_time(from)
+        && is_newer(old->second.destination, from)
     ) {
-    // This source file was synced previously, and the destination file is newer than the source => move
+        // This source file was synced previously, and the destination file is newer than the source => move
         return std::unique_ptr<Job>(
             new MoveJob(logger, db, old->second.destination, to)
         );
-    } else if (should_convert(it) ) {
-        return std::unique_ptr<Job>(
-            new ConvertJob(logger, db, ddb, conv_settings, it, from, to)
-        );
-    } else {
-        return std::unique_ptr<Job>(
-            new CopyJob(logger, db, from, to)
-        );
+    }  else {
+        if (exists(to) && last_write_time(to) > last_write_time(from)) {
+            logger.log(
+                "Destination " + std::string(to)
+                + " is newer than source " + std::string(from)
+                + "; skipping."
+            );
+            return std::unique_ptr<Job>();
+        } else {
+            return std::unique_ptr<Job>(
+                new CopyJob(logger, db, from, to)
+            );
+        }
     }
 }
 
@@ -310,12 +351,6 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
             to = root / get_output_path(it, fmt);
             if (!exists(from)) {
                 logger.err("Source file " + std::string(from) + " does not exist!");
-            } else if (exists(to) && last_write_time(to) > last_write_time(from)) {
-                logger.log(
-                    "Destination " + std::string(to)
-                    + " is newer than source " + std::string(from)
-                    + "; skipping."
-                );
             } else {
                 auto job = make_job(ddb_ows->db, logger, it, from, to, conv_settings);
                 if (job) {
