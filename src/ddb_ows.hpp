@@ -1,6 +1,9 @@
+#include <condition_variable>
 #ifndef DDB_OWS_PROJECT_ID
 
+#include <future>
 #include <string>
+#include <thread>
 
 #include "deadbeef/deadbeef.h"
 
@@ -12,15 +15,26 @@
 #include "job.hpp"
 
 typedef std::function<void(std::unique_ptr<ddb_ows::Job>)> job_cb_t;
+typedef std::function<void()> cancel_cb_t;
+
+typedef std::packaged_task<bool(bool, job_cb_t)> worker_thread_t;
+
+typedef struct wt_futures_s {
+    std::mutex m;
+    std::condition_variable c;
+    std::vector<std::shared_future<bool>> futures;
+} wt_futures_t;
 
 typedef struct {
     DB_misc_t plugin;
     ddb_ows::Configuration& conf;
     ddb_ows::Database* db;
+    wt_futures_t worker_thread_futures;
     std::string (*get_output_path)(DB_playItem_t* it, char* format);
     bool (*queue_jobs)(std::vector<ddb_playlist_t*> playlists, Logger& logger);
     int (*jobs_count)();
     bool (*run)(bool dry, job_cb_t callback);
+    bool (*cancel)(cancel_cb_t callback);
 } ddb_ows_plugin_t;
 
 #endif

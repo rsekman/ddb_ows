@@ -5,11 +5,12 @@
 #include <functional>
 #include <limits.h>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <random>
 #include <string>
-#include <thread>
 #include <unordered_set>
+#include <vector>
 
 #include "ddb_ows.hpp"
 #include "config.hpp"
@@ -393,7 +394,7 @@ int jobs_count() {
     }
 }
 
-void worker_thread(bool dry, job_cb_t callback) {
+bool worker_thread(bool dry, job_cb_t callback) {
     std::unique_ptr<Job> job;
     while( (job = jobs->pop()) ) {
         // unique_ptr is falsey if there is no object
@@ -403,22 +404,59 @@ void worker_thread(bool dry, job_cb_t callback) {
             callback(std::move(job));
         }
     }
+    return true;
 }
 
 bool run(bool dry, job_cb_t callback) {
-    int n_wts = conf.get_conv_wts();
-    std::vector<std::thread> wts {};
-    int i;
-    for(i = 0; i < n_wts; i++) {
-        wts.push_back(
-            std::thread(worker_thread, dry, callback)
-        );
-    }
-    for(auto t = wts.begin(); t != wts.end(); t++){
-        t->join();
-    }
     ddb_ows_plugin_t* ddb_ows = (ddb_ows_plugin_t*) ddb->plug_get_for_id("ddb_ows");
+    int n_wts = conf.get_conv_wts();
+    ddb_ows->worker_thread_futures.futures.clear();
+    for(int i = 0; i < n_wts; i++) {
+        auto task = worker_thread_t(worker_thread);
+        ddb_ows->worker_thread_futures.futures.push_back(
+            task.get_future()
+        );
+        std::thread t(std::move(task), dry, callback);
+        t.detach();
+    }
+    int i = 0;
+    std::lock_guard lock(ddb_ows->worker_thread_futures.m);
+    DDB_OWS_DEBUG << "run: there are " << ddb_ows->worker_thread_futures.futures.size() << " threads..." << std::endl;
+    for(
+        auto t = ddb_ows->worker_thread_futures.futures.begin();
+        t != ddb_ows->worker_thread_futures.futures.end();
+        t++
+    ){
+        t->wait();
+        DDB_OWS_DEBUG << "run: Worker thread " << i++ << " joined..." << std::endl;
+    }
+    ddb_ows->worker_thread_futures.c.notify_all();
     delete ddb_ows->db;
+    return true;
+}
+
+void cancel_thread(cancel_cb_t callback) {
+    ddb_ows_plugin_t* ddb_ows = (ddb_ows_plugin_t*) ddb->plug_get_for_id("ddb_ows");
+    jobs->cancel();
+    int i = 0;
+    std::lock_guard lock(ddb_ows->worker_thread_futures.m);
+    DDB_OWS_DEBUG << "cancel: there are " << ddb_ows->worker_thread_futures.futures.size() << " threads..." << std::endl;
+    for(
+        auto t = ddb_ows->worker_thread_futures.futures.begin();
+        t != ddb_ows->worker_thread_futures.futures.end();
+        t++
+    ){
+        t->wait();
+        DDB_OWS_DEBUG << "cancel: Worker thread " << i++ << " joined..." << std::endl;
+    }
+    callback();
+    DDB_OWS_DEBUG << "cancel: all worker threads joined" << std::endl;
+    ddb_ows->worker_thread_futures.c.notify_all();
+}
+
+bool cancel(cancel_cb_t callback) {
+    auto t = std::thread(cancel_thread, callback);
+    t.detach();
     return true;
 }
 
@@ -470,10 +508,16 @@ ddb_ows_plugin_t plugin = {
     },
     .conf = conf,
     .db = NULL,
+    .worker_thread_futures = wt_futures_t {
+        .m = std::mutex(),
+        .c = std::condition_variable(),
+        .futures = std::vector<std::shared_future<bool>> {}
+     },
     .get_output_path = get_output_path,
     .queue_jobs = queue_jobs,
     .jobs_count = jobs_count,
-    .run = run
+    .run = run,
+    .cancel = cancel,
 };
 
 void init(DB_functions_t* api) {

@@ -348,7 +348,6 @@ job_cb_t make_progress_callback() {
     int n_jobs = ddb_ows->jobs_count();
     Gtk::ProgressBar* pb;
     builder->get_widget("progress_bar", pb);
-    job_cb_t callback;
     if (pb != NULL) {
         return [n_jobs, ddb_ows, pb](std::unique_ptr<Job>) {
             int r_jobs = ddb_ows->jobs_count();
@@ -362,6 +361,21 @@ job_cb_t make_progress_callback() {
     } else {
         return job_cb_t();
     }
+}
+
+cancel_cb_t make_cancel_callback() {
+    Gtk::ProgressBar* pb;
+    builder->get_widget("progress_bar", pb);
+    job_cb_t callback;
+    if (pb != NULL) {
+        return [pb] {
+            DDB_OWS_DEBUG << "Execution cancelled; setting pb to 0" << std::endl;
+            pb->set_fraction(0);
+            pb->set_text("Cancelled");
+            pb->queue_draw();
+        };
+    }
+    return cancel_cb_t();
 }
 
 void execute(bool dry) {
@@ -666,7 +680,8 @@ void on_quit_btn_clicked(){
     gtk_widget_destroy(cwin);
 }
 
-void on_cancel_btn_clicked(){
+void on_cancel_btn_clicked(GtkButton* button, gpointer data){
+    ddb_ows->cancel(make_cancel_callback());
 }
 
 void on_dry_run_btn_clicked(GtkButton* button, gpointer data){
