@@ -369,7 +369,6 @@ cancel_cb_t make_cancel_callback() {
     job_cb_t callback;
     if (pb != NULL) {
         return [pb] {
-            DDB_OWS_DEBUG << "Execution cancelled; setting pb to 0" << std::endl;
             pb->set_fraction(0);
             pb->set_text("Cancelled");
             pb->queue_draw();

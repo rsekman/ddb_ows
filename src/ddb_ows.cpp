@@ -419,16 +419,13 @@ bool run(bool dry, job_cb_t callback) {
         std::thread t(std::move(task), dry, callback);
         t.detach();
     }
-    int i = 0;
     std::lock_guard lock(ddb_ows->worker_thread_futures.m);
-    DDB_OWS_DEBUG << "run: there are " << ddb_ows->worker_thread_futures.futures.size() << " threads..." << std::endl;
     for(
         auto t = ddb_ows->worker_thread_futures.futures.begin();
         t != ddb_ows->worker_thread_futures.futures.end();
         t++
     ){
         t->wait();
-        DDB_OWS_DEBUG << "run: Worker thread " << i++ << " joined..." << std::endl;
     }
     ddb_ows->worker_thread_futures.c.notify_all();
     delete ddb_ows->db;
@@ -438,19 +435,15 @@ bool run(bool dry, job_cb_t callback) {
 void cancel_thread(cancel_cb_t callback) {
     ddb_ows_plugin_t* ddb_ows = (ddb_ows_plugin_t*) ddb->plug_get_for_id("ddb_ows");
     jobs->cancel();
-    int i = 0;
     std::lock_guard lock(ddb_ows->worker_thread_futures.m);
-    DDB_OWS_DEBUG << "cancel: there are " << ddb_ows->worker_thread_futures.futures.size() << " threads..." << std::endl;
     for(
         auto t = ddb_ows->worker_thread_futures.futures.begin();
         t != ddb_ows->worker_thread_futures.futures.end();
         t++
     ){
         t->wait();
-        DDB_OWS_DEBUG << "cancel: Worker thread " << i++ << " joined..." << std::endl;
     }
     callback();
-    DDB_OWS_DEBUG << "cancel: all worker threads joined" << std::endl;
     ddb_ows->worker_thread_futures.c.notify_all();
 }
 
