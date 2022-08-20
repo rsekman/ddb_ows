@@ -15,8 +15,9 @@ bool TextBufferLogger::log(std::string message) {
     bool success;
     DDB_OWS_DEBUG << message << std::endl;
     std::unique_lock<std::mutex> lock(m);
-    success = buffer->insert(buffer->end(), message + "\n");
-    view->scroll_to(buffer->get_mark("END"));
+    auto end = buffer->get_mark("END");
+    success = buffer->insert(end->get_iter(), message + "\n");
+    view->scroll_to(end);
     c.notify_one();
     return success;
 }
@@ -25,8 +26,9 @@ bool TextBufferLogger::err(std::string message) {
     bool success;
     DDB_OWS_ERR << message << std::endl;
     std::unique_lock<std::mutex> lock(m);
-    success = buffer->insert_with_tag(buffer->end(), message + "\n", err_tag);
-    view->scroll_to(buffer->get_mark("END"));
+    auto end = buffer->get_mark("END");
+    success = buffer->insert_with_tag(end->get_iter(), message + "\n", err_tag);
+    view->scroll_to(end);
     c.notify_one();
     return success;
 }
