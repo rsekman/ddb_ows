@@ -288,8 +288,8 @@ std::unique_ptr<Job> make_job(
             return cjob;
         }
     } else if ( old != db->end()
-        && exists(old->second.destination)
-        && is_newer(old->second.destination, from)
+        && old->second.destination != to
+        && exists(old->second.destination) && is_newer(old->second.destination, from)
     ) {
         // This source file was synced previously, and the destination file is newer than the source => move
         return std::unique_ptr<Job>(
