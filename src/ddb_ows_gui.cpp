@@ -17,6 +17,7 @@
 #include <execinfo.h>
 
 #include <filesystem>
+#include <fmt/core.h>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -349,8 +350,11 @@ job_cb_t make_progress_callback() {
     job_cb_t callback;
     if (pb != NULL) {
         return [n_jobs, ddb_ows, pb](std::unique_ptr<Job>) {
-            pb->set_fraction(
-                ((float) n_jobs - (float)ddb_ows->jobs_count()) / (float)n_jobs
+            int r_jobs = ddb_ows->jobs_count();
+            float pct = ((float) n_jobs - (float) r_jobs) / (float) n_jobs;
+            pb->set_fraction(pct);
+            pb->set_text(
+                fmt::format("{}/{} ({:.0f}%)", n_jobs - r_jobs, n_jobs, 100*pct)
             );
             pb->queue_draw();
         };

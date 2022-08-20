@@ -12,7 +12,7 @@ INSTALLDIR=$(LIBDIR)/deadbeef
 
 CXX=clang++
 CFLAGS+=-Wall --std=c++17 -g -fPIC -DLIBDIR="\"$(LIBDIR)\"" -Wno-deprecated-declarations -gdwarf-4
-LDFLAGS=-shared -rdynamic -Wl,-E
+LDFLAGS=-shared -rdynamic -Wl,-E -lfmt
 
 PCHS=builder.h
 
@@ -50,13 +50,13 @@ $(INSTALLDIR)/%: $(BUILDDIR)/%
 	cp -t $(INSTALLDIR) $<
 
 $(BUILDDIR)/$(PROJECT).so: $(OBJ)
-	$(CXX) $(CFLAGS) $(LDFLAGS) $(OBJ) -o $@
+	$(CXX) $^ $(CFLAGS) $(LDFLAGS) -o $@
 
 $(BUILDDIR)/$(PROJECT)_gtk2.so: $(GTK2OBJ)
-	$(CXX) $(CFLAGS) $(LDFLAGS) $(GTK2_CFLAGS) $(GTK2_LDFLAGS) $^ -o $@
+	$(CXX) $^ $(CFLAGS) $(LDFLAGS) $(GTK2_CFLAGS) $(GTK2_LDFLAGS) -o $@
 
 $(BUILDDIR)/$(PROJECT)_gtk3.so: $(GTK3OBJ)
-	$(CXX) $(CFLAGS) $(LDFLAGS) $(GTK3_CFLAGS) $(GTK3_LDFLAGS) $^ -o $@
+	$(CXX) $^ $(CFLAGS) $(LDFLAGS) $(GTK3_CFLAGS) $(GTK3_LDFLAGS) -o $@
 
 $(BUILDDIR)/%_gtk2.o: $(SRCDIR)/%.cpp $(SRCDIR)/%.hpp $(GTK2_PCHS)
 	$(CXX) $(CFLAGS) $(GTK2_CFLAGS) $(GTK2_PCH_FLAGS) $< -c -o $@
