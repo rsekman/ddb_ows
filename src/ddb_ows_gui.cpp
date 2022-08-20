@@ -29,12 +29,12 @@
 #include <thread>
 
 
-#include <deadbeef/deadbeef.h>
-#include <deadbeef/plugins/converter/converter.h>
-#include <deadbeef/plugins/gtkui/gtkui_api.h>
-
 #include "ddb_ows.hpp"
 #include "ddb_ows_gui.hpp"
+
+#include <deadbeef/converter.h>
+#include <deadbeef/gtkui_api.h>
+
 
 #include "textbufferlogger.hpp"
 

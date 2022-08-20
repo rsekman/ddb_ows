@@ -1,7 +1,3 @@
-#include <deadbeef/deadbeef.h>
-#include <deadbeef/plugins/converter/converter.h>
-#include <deadbeef/plugins/artwork/artwork.h>
-
 #include <ctime>
 #include <chrono>
 #include <condition_variable>
@@ -20,6 +16,10 @@
 #include "database.hpp"
 #include "job.hpp"
 #include "jobsqueue.hpp"
+
+#include <deadbeef/converter.h>
+#include <deadbeef/artwork.h>
+
 
 using namespace std::chrono_literals;
 using namespace std::chrono;

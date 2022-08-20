@@ -1,6 +1,5 @@
 #include "job.hpp"
 
-#include <deadbeef/plugins/converter/converter.h>
 #include <iostream>
 #include <filesystem>
 #include <system_error>

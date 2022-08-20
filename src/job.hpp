@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <string>
 #include <deadbeef/deadbeef.h>
-#include <deadbeef/plugins/converter/converter.h>
+#include <deadbeef/converter.h>
 
 #include "database.hpp"
 #include "logger.hpp"

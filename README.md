@@ -14,18 +14,16 @@ Inspired by foo_ows
 ## Building
 
 Requirements
-- DeaDBeeF
+- `ddb_ows` requires DeaDBeeF headers >= [`788d277`](https://github.com/DeaDBeeF-Player/deadbeef/commit/788d277ac08ecaed5b8a215b0e7146d7630c71df) to build as-is.
+It can be built with older headers by cloning the DeaDBeeF repository to your `CPATH` and modifying the relevant includes to read from there.
 - gtk headers
 - `make`
 - `gcc`
 
 ```sh
-export CPATH=/path/to/deadbeef/
 export DDB_OWS_DEBUG_LEVEL=n
 make install
 ```
-`ddb_ows` uses interfaces with plugins bundled with DeaDBeeF and needs to be able to find their headers.
-Clone https://github.com/DeaDBeeF-Player/deadbeef and add it to your `CPATH`
 Set `n = 0, 1, 2, 3` for increasingly verbose console logging on `stderr`;
 the default is `3`.
 
@@ -77,7 +75,3 @@ Run `fatsort` on the target filesystem after each sync.
 ## License
 
 GPL 3
-
-## Requirements:
-
-- DeaDBeeF >= 0.7.2 (API >= 1.9) Probably works fine with older versions. Caveat compiler.
