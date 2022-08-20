@@ -71,7 +71,7 @@ You can mogrify your format with string replacing functions, but the best soluti
 
 Many portable music players do not sort filesystem entries in any way, going entirely by directory entry order in the filesystem.
 As you add tracks or move them between playlists, or even just as a result of multithreading, this may increasingly diverge from what you want.
-If your target filesystem is FAT the `[fatsort](https://fatsort.sourceforge.io/)` tool addresses precisely this problem.
+If your target filesystem is FAT the [`fatsort`](https://fatsort.sourceforge.io/) tool addresses precisely this problem.
 Run `fatsort` on the target filesystem after each sync.
 
 ## License
