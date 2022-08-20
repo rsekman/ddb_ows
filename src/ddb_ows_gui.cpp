@@ -1,4 +1,5 @@
 #include "glibmm/refptr.h"
+#include "gdk/gdkkeysyms.h"
 #include "gtkmm/builder.h"
 #include "gtkmm/checkbutton.h"
 #include "gtkmm/combobox.h"
@@ -676,9 +677,17 @@ void on_execute_btn_clicked(GtkButton* button, gpointer data){
     execute(false);
 }
 
+gboolean on_ddb_ows_key_press_event(GtkWidget* widget, GdkEventKey* key, gpointer data) {
+    if (key->keyval == GDK_KEY_Escape) {
+        gtk_widget_hide(widget);
+        return TRUE;
+    }
+    return FALSE;
 }
 
 /* END EXTERN SIGNAL HANDLERS */
+
+}
 
 /* Build the UI from .ui */
 

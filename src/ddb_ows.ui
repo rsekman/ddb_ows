@@ -87,6 +87,7 @@
     <property name="destroy_with_parent">True</property>
     <property name="type_hint">dialog</property>
     <signal name="destroy" handler="pl_selection_clear" object="pl_selection_model" swapped="yes"/>
+    <signal name="key-press-event" handler="on_ddb_ows_key_press_event" swapped="no"/>
     <child>
       <object class="GtkTable" id="ddb_ows_table">
         <property name="visible">True</property>
