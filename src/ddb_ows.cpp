@@ -12,6 +12,7 @@
 #include <optional>
 #include <random>
 #include <string>
+#include <thread>
 #include <unordered_set>
 
 #include "ddb_ows.hpp"
@@ -392,10 +393,7 @@ int jobs_count() {
     }
 }
 
-bool run(bool dry, job_cb_t callback) {
-    // TODO: this needs to dispatch a controller thread that in turn launches
-    // worker threads, waiting for them to join, and only then closes the
-    // database
+void worker_thread(bool dry, job_cb_t callback) {
     std::unique_ptr<Job> job;
     while( (job = jobs->pop()) ) {
         // unique_ptr is falsey if there is no object
@@ -404,6 +402,20 @@ bool run(bool dry, job_cb_t callback) {
             // callback is falsy if the function object is empty
             callback(std::move(job));
         }
+    }
+}
+
+bool run(bool dry, job_cb_t callback) {
+    int n_wts = conf.get_conv_wts();
+    std::vector<std::thread> wts {};
+    int i;
+    for(i = 0; i < n_wts; i++) {
+        wts.push_back(
+            std::thread(worker_thread, dry, callback)
+        );
+    }
+    for(auto t = wts.begin(); t != wts.end(); t++){
+        t->join();
     }
     ddb_ows_plugin_t* ddb_ows = (ddb_ows_plugin_t*) ddb->plug_get_for_id("ddb_ows");
     delete ddb_ows->db;
