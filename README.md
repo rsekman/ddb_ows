@@ -67,6 +67,13 @@ This is not an issue on case-insensitive file systems such as vfat.
 On, e.g., ext3, though, this may not be what you want.
 You can mogrify your format with string replacing functions, but the best solution is probably to retag your files using consistent capitalisation.
 
+## Sorting
+
+Many portable music players do not sort filesystem entries in any way, going entirely by directory entry order in the filesystem.
+As you add tracks or move them between playlists, or even just as a result of multithreading, this may increasingly diverge from what you want.
+If your target filesystem is FAT the `[fatsort](https://fatsort.sourceforge.io/)` tool addresses precisely this problem.
+Run `fatsort` on the target filesystem after each sync.
+
 ## License
 
 GPL 3
