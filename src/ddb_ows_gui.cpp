@@ -7,6 +7,8 @@
 #include "gtkmm/main.h"
 #include "gtkmm/progressbar.h"
 #include "gtkmm/stock.h"
+#include "gtkmm/textbuffer.h"
+#include "gtkmm/textview.h"
 #include "gtkmm/togglebutton.h"
 #include "gtkmm/spinbutton.h"
 #include "gtkmm/treeview.h"
@@ -16,7 +18,6 @@
 
 #include <filesystem>
 #include <functional>
-#include <gtkmm-2.4/gtkmm/textbuffer.h>
 #include <iostream>
 #include <memory>
 #include <optional>
@@ -760,11 +761,14 @@ int create_ui() {
     );
     cp_populate(cp_model);
 
-    auto log_buffer = Glib::RefPtr<Gtk::TextBuffer>::cast_static(
-        builder->get_object("job_log_buffer")
-    );
-    if (log_buffer) {
-        gui_logger.emplace( log_buffer );
+    Gtk::TextView* job_log;
+    builder->get_widget("job_log", job_log);
+    if (job_log) {
+        auto log_buffer = Glib::RefPtr<Gtk::TextBuffer>::cast_static(
+            builder->get_object("job_log_buffer")
+        );
+        gui_logger.emplace( log_buffer, job_log );
+        log_buffer->create_mark("END", log_buffer->end(), false);
     }
 
     return 0;
