@@ -6,6 +6,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <filesystem>
+#include <functional>
 #include <limits.h>
 #include <memory>
 #include <optional>
@@ -383,14 +384,26 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
     return true;
 }
 
-bool run(bool dry) {
+int jobs_count() {
+    if (jobs) {
+        return jobs->size();
+    } else {
+        return 0;
+    }
+}
+
+bool run(bool dry, job_cb_t callback) {
     // TODO: this needs to dispatch a controller thread that in turn launches
     // worker threads, waiting for them to join, and only then closes the
     // database
     std::unique_ptr<Job> job;
     while( (job = jobs->pop()) ) {
         // unique_ptr is falsey if there is no object
-        job->run(dry);
+        bool status = job->run(dry);
+        if ( status && callback ) {
+            // callback is falsy if the function object is empty
+            callback(std::move(job));
+        }
     }
     ddb_ows_plugin_t* ddb_ows = (ddb_ows_plugin_t*) ddb->plug_get_for_id("ddb_ows");
     delete ddb_ows->db;
@@ -447,6 +460,7 @@ ddb_ows_plugin_t plugin = {
     .db = NULL,
     .get_output_path = get_output_path,
     .queue_jobs = queue_jobs,
+    .jobs_count = jobs_count,
     .run = run
 };
 

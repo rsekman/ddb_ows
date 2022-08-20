@@ -3,8 +3,9 @@
 #include "gtkmm/checkbutton.h"
 #include "gtkmm/combobox.h"
 #include "gtkmm/filechooserbutton.h"
-#include "gtkmm/main.h"
 #include "gtkmm/liststore.h"
+#include "gtkmm/main.h"
+#include "gtkmm/progressbar.h"
 #include "gtkmm/stock.h"
 #include "gtkmm/togglebutton.h"
 #include "gtkmm/spinbutton.h"
@@ -14,12 +15,15 @@
 #include <execinfo.h>
 
 #include <filesystem>
+#include <functional>
 #include <gtkmm-2.4/gtkmm/textbuffer.h>
 #include <iostream>
+#include <memory>
 #include <optional>
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <thread>
 
 
 #include <deadbeef/deadbeef.h>
@@ -36,6 +40,8 @@ const char* configDialog_ = "";
 static DB_functions_t* ddb;
 
 namespace ddb_ows_gui {
+
+using namespace ddb_ows;
 
 ddb_ows_plugin_t* ddb_ows;
 
@@ -334,6 +340,37 @@ void conv_fts_populate(
 /* BEGIN EXTERN SIGNAL HANDLERS */
 // TODO consider moving these into their own file
 
+job_cb_t make_progress_callback() {
+    ddb_ows_plugin_t* ddb_ows = (ddb_ows_plugin_t*) ddb->plug_get_for_id("ddb_ows");
+    int n_jobs = ddb_ows->jobs_count();
+    Gtk::ProgressBar* pb;
+    builder->get_widget("progress_bar", pb);
+    job_cb_t callback;
+    if (pb != NULL) {
+        return [n_jobs, ddb_ows, pb](std::unique_ptr<Job>) {
+            pb->set_fraction(
+                ((float) n_jobs - (float)ddb_ows->jobs_count()) / (float)n_jobs
+            );
+            pb->queue_draw();
+        };
+    } else {
+        return job_cb_t();
+    }
+}
+
+void execute(bool dry) {
+    queue_jobs();
+    Gtk::ProgressBar* pb;
+    builder->get_widget("progress_bar", pb);
+    if (pb != NULL) {
+        pb->set_fraction(0);
+    }
+    ddb_ows_plugin_t* ddb_ows = (ddb_ows_plugin_t*) ddb->plug_get_for_id("ddb_ows");
+    std::thread( [ddb_ows, dry]{
+        ddb_ows->run(dry, make_progress_callback());
+    }).detach();
+}
+
 extern "C" {
 
 // TODO
@@ -627,13 +664,11 @@ void on_cancel_btn_clicked(){
 }
 
 void on_dry_run_btn_clicked(GtkButton* button, gpointer data){
-    queue_jobs();
-    ddb_ows->run(true);
+    execute(true);
 }
 
 void on_execute_btn_clicked(GtkButton* button, gpointer data){
-    queue_jobs();
-    ddb_ows->run(false);
+    execute(false);
 }
 
 }
