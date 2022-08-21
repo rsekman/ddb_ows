@@ -18,7 +18,8 @@ Requirements
 It can be built with older headers by cloning the DeaDBeeF repository to your `CPATH` and modifying the relevant includes to read from there.
 - gtk headers
 - `make`
-- `gcc`
+- `clang`
+- [`fmt`](https://github.com/fmtlib/fmt)
 
 ```sh
 export DDB_OWS_DEBUG_LEVEL=n
