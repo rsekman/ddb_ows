@@ -5,6 +5,7 @@
 
 #include <unordered_map>
 #include <filesystem>
+#include <mutex>
 #include <string>
 
 using namespace std::filesystem;
@@ -39,6 +40,7 @@ namespace ddb_ows {
             entry_dict::iterator end();
             void insert_or_update(path key, db_entry_t entry);
         private:
+            std::mutex m;
             bool read();
             path fname;
             db_t db;

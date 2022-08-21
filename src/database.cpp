@@ -6,6 +6,7 @@
 #include <exception>
 #include <fstream>
 #include <iostream>
+#include <mutex>
 #include <nlohmann/json.hpp>
 #include <sstream>
 #include <stdexcept>
@@ -18,7 +19,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(db_meta_t, ver, last_write)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(db_entry_t, destination, timestamp, converter_preset)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(db_t, meta, entries)
 
-Database::Database(path root) {
+Database::Database(path root) : m() {
     fname = root / DDB_OWS_DATABASE_FNAME;
     read();
 }
@@ -65,22 +66,27 @@ Database::~Database() {
 }
 
 int Database::count(path key) {
-   return db.entries.count(key);
+    std::lock_guard lock(m);
+    return db.entries.count(key);
 }
 
 entry_dict::iterator Database::begin() {
+    std::lock_guard lock(m);
     return db.entries.begin();
 }
 
 entry_dict::iterator Database::end() {
+    std::lock_guard lock(m);
     return db.entries.end();
 }
 
 entry_dict::iterator Database::find_entry(path key) {
+    std::lock_guard lock(m);
     return db.entries.find(key);
 }
 
 void Database::insert_or_update(path key, db_entry_t entry) {
+    std::lock_guard lock(m);
     db.entries.insert_or_assign(key, entry);
 }
 
