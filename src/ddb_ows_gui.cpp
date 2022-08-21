@@ -374,6 +374,7 @@ void execute(job_cb_t cb, bool dry) {
     queue_jobs();
     queueing_complete = true;
     t.join();
+    pm->tick();
     ddb_ows_plugin_t* ddb_ows = (ddb_ows_plugin_t*) ddb->plug_get_for_id("ddb_ows");
     plugin.pm->set_n_jobs(ddb_ows->jobs_count());
     if  (ddb_ows->jobs_count() == 0) {
