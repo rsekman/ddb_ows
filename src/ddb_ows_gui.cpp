@@ -385,9 +385,7 @@ void execute(bool dry) {
         pb->set_fraction(0);
     }
     ddb_ows_plugin_t* ddb_ows = (ddb_ows_plugin_t*) ddb->plug_get_for_id("ddb_ows");
-    std::thread( [ddb_ows, dry]{
-        ddb_ows->run(dry, make_progress_callback());
-    }).detach();
+    ddb_ows->run(dry, make_progress_callback());
 }
 
 extern "C" {
@@ -684,11 +682,11 @@ void on_cancel_btn_clicked(GtkButton* button, gpointer data){
 }
 
 void on_dry_run_btn_clicked(GtkButton* button, gpointer data){
-    execute(true);
+    std::thread( [] { execute(true); }).detach();
 }
 
 void on_execute_btn_clicked(GtkButton* button, gpointer data){
-    execute(false);
+    std::thread( [] { execute(false); }).detach();
 }
 
 gboolean on_ddb_ows_key_press_event(GtkWidget* widget, GdkEventKey* key, gpointer data) {
