@@ -36,18 +36,17 @@
 #include <deadbeef/converter.h>
 #include <deadbeef/gtkui_api.h>
 
-
-#include "textbufferlogger.hpp"
-
 using namespace std::chrono_literals;
 
-DB_plugin_t definition_;
-const char* configDialog_ = "";
 static DB_functions_t* ddb;
 
 namespace ddb_ows_gui {
 
 using namespace ddb_ows;
+
+ddb_ows_gui_plugin_t plugin {
+    .pm = NULL
+};
 
 ddb_ows_plugin_t* ddb_ows;
 
@@ -346,59 +345,40 @@ void conv_fts_populate(
 /* BEGIN EXTERN SIGNAL HANDLERS */
 // TODO consider moving these into their own file
 
+
 job_cb_t make_progress_callback() {
-    ddb_ows_plugin_t* ddb_ows = (ddb_ows_plugin_t*) ddb->plug_get_for_id("ddb_ows");
-    int n_jobs = ddb_ows->jobs_count();
-    Gtk::ProgressBar* pb;
-    builder->get_widget("progress_bar", pb);
-    if (pb != NULL) {
-        return [n_jobs, ddb_ows, pb](std::unique_ptr<Job>) {
-            int r_jobs = ddb_ows->jobs_count();
-            float pct = ((float) n_jobs - (float) r_jobs) / (float) n_jobs;
-            pb->set_fraction(pct);
-            pb->set_text(
-                fmt::format("{}/{} ({:.0f}%)", n_jobs - r_jobs, n_jobs, 100*pct)
-            );
-            pb->queue_draw();
-        };
-    } else {
-        return job_cb_t();
-    }
-}
-
-cancel_cb_t make_cancel_callback() {
-    Gtk::ProgressBar* pb;
-    builder->get_widget("progress_bar", pb);
-    job_cb_t callback;
-    if (pb != NULL) {
-        return [pb] {
-            pb->set_fraction(0);
-            pb->set_text("Cancelled");
-            pb->queue_draw();
+    job_cb_t cb {};
+    if (plugin.pm != NULL) {
+        auto pm = plugin.pm;
+        cb = [pm] (std::unique_ptr<Job>) {
+            pm->tick();
         };
     }
-    return cancel_cb_t();
+    return cb;
 }
 
-void execute(bool dry) {
+void execute(job_cb_t cb, bool dry) {
     Gtk::ProgressBar* pb;
     builder->get_widget("progress_bar", pb);
     if (pb != NULL) {
         pb->set_text("Queueing jobs");
     }
     bool queueing_complete = false;
-    std::thread t ( [&queueing_complete, pb] {
+    auto pm = plugin.pm;
+    std::thread t ( [&queueing_complete, pm] {
         while (!queueing_complete) {
             std::this_thread::sleep_for(5000ms/60);
-            pb->pulse();
+            pm->pulse();
         }
     });
     queue_jobs();
     queueing_complete = true;
     t.join();
-    pb->set_text("0%");
-    pb->set_fraction(0);
     ddb_ows_plugin_t* ddb_ows = (ddb_ows_plugin_t*) ddb->plug_get_for_id("ddb_ows");
+    plugin.pm->set_n_jobs(ddb_ows->jobs_count());
+    if  (ddb_ows->jobs_count() == 0) {
+        plugin.pm->no_jobs();
+    }
     ddb_ows->run(dry, make_progress_callback());
 }
 
@@ -692,15 +672,18 @@ void on_quit_btn_clicked(){
 }
 
 void on_cancel_btn_clicked(GtkButton* button, gpointer data){
-    ddb_ows->cancel(make_cancel_callback());
+    plugin.pm->cancel();
+    ddb_ows->cancel(cancel_cb_t {});
 }
 
 void on_dry_run_btn_clicked(GtkButton* button, gpointer data){
-    std::thread( [] { execute(true); }).detach();
+    job_cb_t cb = make_progress_callback();
+    std::thread( [cb] { execute(cb, true); }).detach();
 }
 
 void on_execute_btn_clicked(GtkButton* button, gpointer data){
-    std::thread( [] { execute(false); }).detach();
+    job_cb_t cb = make_progress_callback();
+    std::thread( [cb] { execute(cb, false); }).detach();
 }
 
 gboolean on_ddb_ows_key_press_event(GtkWidget* widget, GdkEventKey* key, gpointer data) {
@@ -810,6 +793,12 @@ int create_ui() {
         log_buffer->create_mark("END", log_buffer->end(), false);
     }
 
+    Gtk::ProgressBar* pb;
+    builder->get_widget("progress_bar", pb);
+    if (pb) {
+        plugin.pm = new ProgressMonitor(ddb_ows, pb);
+    }
+
     return 0;
 }
 
@@ -873,6 +862,7 @@ int disconnect(){
         );
         pl_selection_clear(model);
     }
+    delete plugin.pm;
     return 0;
 }
 
@@ -904,23 +894,27 @@ int handleMessage(uint32_t id, uintptr_t ctx, uint32_t p1, uint32_t p2){
 }
 
 void init(DB_functions_t* api) {
-    definition_.api_vmajor = 1;
-    definition_.api_vminor = 8;
-    definition_.version_major = DDB_OWS_VERSION_MAJOR;
-    definition_.version_minor = DDB_OWS_VERSION_MINOR;
-    definition_.type = DB_PLUGIN_MISC;
-    definition_.id = DDB_OWS_GUI_PLUGIN_ID;
-    definition_.name = DDB_OWS_GUI_PLUGIN_NAME;
-    definition_.descr = DDB_OWS_PROJECT_DESC;
-    definition_.copyright = DDB_OWS_LICENSE_TEXT;
-    definition_.website = DDB_OWS_PROJECT_URL;
-    definition_.start = start;
-    definition_.stop = stop;
-    definition_.connect = connect;
-    definition_.disconnect = disconnect;
-    definition_.message = handleMessage;
-    definition_.get_actions = get_actions;
-    definition_.configdialog = configDialog_;
+    plugin.plugin = {
+        .plugin = {
+            .type = DB_PLUGIN_MISC,
+            .api_vmajor = 1,
+            .api_vminor = 8,
+            .version_major = DDB_OWS_VERSION_MAJOR,
+            .version_minor = DDB_OWS_VERSION_MINOR,
+            .id = DDB_OWS_GUI_PLUGIN_ID,
+            .name = DDB_OWS_GUI_PLUGIN_NAME,
+            .descr = DDB_OWS_PROJECT_DESC,
+            .copyright = DDB_OWS_LICENSE_TEXT,
+            .website = DDB_OWS_PROJECT_URL,
+            .start = start,
+            .stop = stop,
+            .connect = connect,
+            .disconnect = disconnect,
+            .get_actions = get_actions,
+            .message = handleMessage,
+            .configdialog = "",
+        },
+    };
 }
 
 }
@@ -928,7 +922,7 @@ void init(DB_functions_t* api) {
 DB_plugin_t* load(DB_functions_t* api) {
     ddb = api;
     ddb_ows_gui::init(api);
-    return &definition_;
+    return (DB_plugin_t*) &ddb_ows_gui::plugin;
 }
 
 

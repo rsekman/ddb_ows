@@ -29,7 +29,7 @@ GTK3_PCH_FLAGS=$(addprefix -include-pch ,$(GTK3_PCHS))
 GTK3_LDFLAGS=$(shell pkg-config --libs gtkmm-3.0)
 
 OBJ:=ddb_ows.o config.o default_config.o job.o jobsqueue.o logger.o database.o
-GUIOBJ:=textbufferlogger ddb_ows_gui
+GUIOBJ:=textbufferlogger progressmonitor ddb_ows_gui
 GTK2OBJ:=$(addprefix $(BUILDDIR)/, $(OBJ) $(addsuffix _gtk2.o, $(GUIOBJ)))
 GTK3OBJ:=$(addprefix $(BUILDDIR)/, $(OBJ) $(addsuffix _gtk3.o, $(GUIOBJ)))
 OBJ:=$(addprefix $(BUILDDIR)/, $(OBJ))

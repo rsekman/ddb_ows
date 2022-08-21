@@ -3,7 +3,11 @@
 
 #include <gtk/gtk.h>
 
+#include <deadbeef/deadbeef.h>
+
 #include "constants.hpp"
+#include "progressmonitor.hpp"
+#include "textbufferlogger.hpp"
 
 #if GTK_CHECK_VERSION(3,0,0)
 #define DDB_OWS_GUI_PLUGIN_ID "ddb_ows_gtk3"
@@ -15,5 +19,10 @@
 
 #define DDB_OWS_GUI_GLADE "ddb_ows.ui"
 
+typedef struct {
+    DB_misc_t plugin;
+    ProgressMonitor* pm;
+
+} ddb_ows_gui_plugin_t;
 
 #endif
