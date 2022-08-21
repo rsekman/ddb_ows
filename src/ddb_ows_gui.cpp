@@ -17,6 +17,7 @@
 
 #include <execinfo.h>
 
+#include <chrono>
 #include <filesystem>
 #include <fmt/core.h>
 #include <functional>
@@ -37,6 +38,8 @@
 
 
 #include "textbufferlogger.hpp"
+
+using namespace std::chrono_literals;
 
 DB_plugin_t definition_;
 const char* configDialog_ = "";
@@ -378,12 +381,23 @@ cancel_cb_t make_cancel_callback() {
 }
 
 void execute(bool dry) {
-    queue_jobs();
     Gtk::ProgressBar* pb;
     builder->get_widget("progress_bar", pb);
     if (pb != NULL) {
-        pb->set_fraction(0);
+        pb->set_text("Queueing jobs");
     }
+    bool queueing_complete = false;
+    std::thread t ( [&queueing_complete, pb] {
+        while (!queueing_complete) {
+            std::this_thread::sleep_for(5000ms/60);
+            pb->pulse();
+        }
+    });
+    queue_jobs();
+    queueing_complete = true;
+    t.join();
+    pb->set_text("0%");
+    pb->set_fraction(0);
     ddb_ows_plugin_t* ddb_ows = (ddb_ows_plugin_t*) ddb->plug_get_for_id("ddb_ows");
     ddb_ows->run(dry, make_progress_callback());
 }
