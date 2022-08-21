@@ -45,12 +45,12 @@ namespace ddb_ows_gui {
 using namespace ddb_ows;
 
 ddb_ows_gui_plugin_t plugin {
-    .pm = NULL
+    .pm = NULL,
+    .gui_logger = NULL
 };
 
 ddb_ows_plugin_t* ddb_ows;
 
-std::optional<TextBufferLogger> gui_logger {};
 StdioLogger terminal_logger {};
 
 Glib::RefPtr<Gtk::Builder> builder;
@@ -291,8 +291,8 @@ void queue_jobs() {
             pls.push_back(pl_addr);
         }
     }
-    if (gui_logger) {
-        ddb_ows->queue_jobs(pls, gui_logger.value());
+    if (plugin.gui_logger) {
+        ddb_ows->queue_jobs(pls, *plugin.gui_logger);
     } else {
         ddb_ows->queue_jobs(pls, terminal_logger);
     }
@@ -790,7 +790,7 @@ int create_ui() {
         auto log_buffer = Glib::RefPtr<Gtk::TextBuffer>::cast_static(
             builder->get_object("job_log_buffer")
         );
-        gui_logger.emplace( log_buffer, job_log );
+        plugin.gui_logger = new TextBufferLogger( log_buffer, job_log );
         log_buffer->create_mark("END", log_buffer->end(), false);
     }
 
@@ -864,6 +864,7 @@ int disconnect(){
         pl_selection_clear(model);
     }
     delete plugin.pm;
+    delete plugin.gui_logger;
     return 0;
 }
 

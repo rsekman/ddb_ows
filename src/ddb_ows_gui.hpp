@@ -22,6 +22,7 @@
 typedef struct {
     DB_misc_t plugin;
     ProgressMonitor* pm;
+    TextBufferLogger* gui_logger;
 
 } ddb_ows_gui_plugin_t;
 
