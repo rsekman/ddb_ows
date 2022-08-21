@@ -797,7 +797,7 @@ int create_ui() {
     Gtk::ProgressBar* pb;
     builder->get_widget("progress_bar", pb);
     if (pb) {
-        plugin.pm = new ProgressMonitor(ddb_ows, pb);
+        plugin.pm = new ProgressMonitor(ddb_ows->jobs_count, pb);
     }
 
     return 0;

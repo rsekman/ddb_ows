@@ -6,11 +6,9 @@
 
 #include <fmt/format.h>
 
-#include "ddb_ows.hpp"
-
 class ProgressMonitor {
     public:
-        ProgressMonitor(ddb_ows_plugin_t* _ddb_ows, Gtk::ProgressBar* _pb);
+        ProgressMonitor(int (*r_jobs_)(), Gtk::ProgressBar* _pb);
         int set_n_jobs(int n);
         void tick();
         void pulse();
@@ -23,7 +21,7 @@ class ProgressMonitor {
         void _cancel();
         int n_jobs;
         bool cancelled = false;
-        ddb_ows_plugin_t* ddb_ows;
+        int (*r_jobs)();
         Gtk::ProgressBar* pb;
         Glib::Dispatcher sig_tick, sig_pulse, sig_no_jobs, sig_cancel;
 };
