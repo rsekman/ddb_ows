@@ -25,7 +25,6 @@ class TextBufferLogger : public Logger {
         Gtk::TextView* view;
         Glib::Dispatcher sig_log;
         Glib::Dispatcher sig_err;
-        std::string _message;
         void _log();
         void _err();
         std::mutex m;

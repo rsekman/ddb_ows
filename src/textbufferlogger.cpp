@@ -6,7 +6,6 @@ TextBufferLogger::TextBufferLogger(Glib::RefPtr<Gtk::TextBuffer> _buffer, Gtk::T
     view(_view),
     sig_log(),
     sig_err(),
-    _message(""),
     m(),
     q_log(), q_err()
 {
@@ -45,7 +44,7 @@ void TextBufferLogger::_log() {
     DDB_OWS_DEBUG << message << std::endl;
     auto end = buffer->get_mark("END");
     if(!end->get_deleted()){
-        buffer->insert(end->get_iter(), _message + "\n");
+        buffer->insert(end->get_iter(), message + "\n");
         view->scroll_to(end);
     }
 }
@@ -62,7 +61,7 @@ void TextBufferLogger::_err() {
     DDB_OWS_ERR << message << std::endl;
     auto end = buffer->get_mark("END");
     if(!end->get_deleted()){
-        buffer->insert_with_tag(end->get_iter(), _message + "\n", err_tag);
+        buffer->insert_with_tag(end->get_iter(), message + "\n", err_tag);
         view->scroll_to(end);
     }
 }
