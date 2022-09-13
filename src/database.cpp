@@ -33,12 +33,12 @@ bool Database::read() {
         in_file.open(fname, std::ifstream::in);
         in_file >> j;
         db = j;
+        DDB_OWS_DEBUG << "Successfully read database from " << fname << "." << std::endl;
         return true;
     } catch (std::ifstream::failure e) {
         DDB_OWS_WARN << "Could not read " << fname << "." << std::endl;
     } catch (json::exception e) {
         DDB_OWS_ERR << "Malformed database " << fname << ": " << e.what() << std::endl;
-        DDB_OWS_ERR << "Malformed database " << j << std::endl;
     }
     db = db_t {
         .meta = db_meta_t {
@@ -47,6 +47,7 @@ bool Database::read() {
         },
         .entries = entry_dict {}
     };
+    DDB_OWS_DEBUG << "Set default database" << "." << std::endl;
     return false;
 }
 
@@ -63,6 +64,7 @@ Database::~Database() {
             << ": " << e.what()
             << std::endl;
     }
+    DDB_OWS_DEBUG << "Wrote database " << fname << std::endl;
 }
 
 int Database::count(path key) {
