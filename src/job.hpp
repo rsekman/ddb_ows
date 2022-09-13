@@ -22,6 +22,7 @@ class Job {
             to(_to)
         {} ;
         virtual bool run(bool dry=false) = 0;
+        virtual void abort() = 0;
         virtual ~Job() {};
     protected:
         Logger& logger;
@@ -37,12 +38,16 @@ class CopyJob : public Job {
     public:
         CopyJob( Logger& logger, ddb_ows::Database* db, path from, path to );
         bool run(bool dry=false);
+        void abort() {
+        }
 };
 
 class MoveJob : public Job {
     public:
         MoveJob( Logger& logger, ddb_ows::Database* db, std::string from, std::string to );
         bool run(bool dry=false);
+        void abort() {
+        }
 };
 
 class ConvertJob : public Job {
@@ -58,10 +63,12 @@ class ConvertJob : public Job {
         );
         ~ConvertJob();
         bool run(bool dry=false);
+        void abort();
     private:
         DB_functions_t* ddb;
         ddb_converter_settings_t settings;
         DB_playItem_t* it;
+        int pabort;
 };
 
 }

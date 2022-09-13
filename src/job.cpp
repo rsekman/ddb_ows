@@ -89,7 +89,8 @@ ConvertJob::ConvertJob(
     Job(_logger, _db, _from, _to),
     ddb(_ddb),
     settings(_settings),
-    it(_it)
+    it(_it),
+    pabort(0)
 {
     ddb->pl_item_ref(it);
 }
@@ -102,7 +103,6 @@ bool ConvertJob::run(bool dry) {
         + " to " + std::string(to));
     if (!dry) {
         auto ddb_conv = (ddb_converter_t*) ddb->plug_get_for_id("converter");
-        int pabort = 0;
         // TODO implement cancelling
         create_directories(to.parent_path());
         int out = ddb_conv->convert2(
@@ -122,6 +122,10 @@ bool ConvertJob::run(bool dry) {
     } else {
         return true;
     }
+}
+
+void ConvertJob::abort(){
+    pabort = 1;
 }
 
 }

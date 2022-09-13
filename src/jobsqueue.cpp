@@ -41,7 +41,12 @@ void JobsQueue::open () {
 void JobsQueue::cancel () {
     std::lock_guard<std::mutex> lock(m);
     isOpen = false;
-    q.clear();
+    std::unique_ptr<Job> val;
+    while( !q.empty() ){
+        val = std::move(q.front());
+        val->abort();
+        q.pop_front();
+    }
     c.notify_all();
 }
 
