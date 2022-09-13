@@ -1,5 +1,4 @@
 #include "progressmonitor.hpp"
-#include "log.hpp"
 
 ProgressMonitor::ProgressMonitor(int (*r_jobs_)(), Gtk::ProgressBar* _pb) :
     r_jobs(r_jobs_), pb(_pb){
@@ -10,7 +9,6 @@ ProgressMonitor::ProgressMonitor(int (*r_jobs_)(), Gtk::ProgressBar* _pb) :
 }
 
 int ProgressMonitor::set_n_jobs(int n) {
-    DDB_OWS_DEBUG << "ProgressMonitor set n_jobs = " << n << "..." << std::endl;
     return n_jobs = n;
 }
 
@@ -36,7 +34,12 @@ void ProgressMonitor::_tick() {
         return;
     }
     int r = r_jobs();
-    float pct = ((float) n_jobs - (float) r) / (float) n_jobs;
+    float pct;
+    if (n_jobs) {
+        pct = ((float) n_jobs - (float) r) / (float) n_jobs;
+    } else {
+        pct = 1.0;
+    }
     pb->set_fraction(pct);
     pb->set_text(
         fmt::format("{}/{} ({:.0f}%)", n_jobs - r, n_jobs, 100*pct)
