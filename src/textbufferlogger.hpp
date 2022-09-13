@@ -25,8 +25,10 @@ class TextBufferLogger : public Logger {
         Gtk::TextView* view;
         Glib::Dispatcher sig_log;
         Glib::Dispatcher sig_err;
+        Glib::Dispatcher sig_clear;
         void _log();
         void _err();
+        void _clear();
         std::mutex m;
         std::queue<std::string> q_log;
         std::queue<std::string> q_err;

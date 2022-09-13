@@ -12,6 +12,7 @@ TextBufferLogger::TextBufferLogger(Glib::RefPtr<Gtk::TextBuffer> _buffer, Gtk::T
     err_tag = buffer->create_tag("error");
     sig_log.connect(sigc::mem_fun(*this, &TextBufferLogger::_log));
     sig_err.connect(sigc::mem_fun(*this, &TextBufferLogger::_err));
+    sig_clear.connect(sigc::mem_fun(*this, &TextBufferLogger::_clear));
 } ;
 
 bool TextBufferLogger::log(std::string message) {
@@ -67,5 +68,9 @@ void TextBufferLogger::_err() {
 }
 
 void TextBufferLogger::clear() {
+    sig_clear();
+}
+
+void TextBufferLogger::_clear() {
     buffer->set_text("");
 }
