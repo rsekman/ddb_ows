@@ -362,12 +362,12 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
             }
 
             path target_dir = to.parent_path();
-            if (!cover_dirs.count(target_dir)) {
+            if ( ddb_ows->conf.get_cover_sync()  && !cover_dirs.count(target_dir)) {
                 cover_its.push(it);
                 ddb->pl_item_ref(it);
                 DDB_OWS_DEBUG << "Copying cover to " << target_dir << std::endl;
+                cover_dirs.insert(target_dir);
             }
-            cover_dirs.insert(target_dir);
 
             next = ddb->pl_get_next(it, 0);
             if (it) {
