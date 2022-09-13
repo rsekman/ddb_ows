@@ -34,7 +34,7 @@ bool CopyJob::run(bool dry) {
     try {
         if (!dry) {
             create_directories(to.parent_path());
-            success = copy_file(from, to);
+            success = copy_file(from, to, copy_options::update_existing);
             register_job();
         } else {
             success = true;
