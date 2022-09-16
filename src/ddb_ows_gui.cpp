@@ -176,7 +176,7 @@ void update_fn_preview(char* format) {
         //Pick a random track from the current playlist
         ddb->pl_lock();
         ddb_playlist_t* plt = ddb->plt_get_curr();
-        if (!plt) {
+        if (!plt || !ddb->plt_get_item_count(plt, PL_MAIN)) {
             ddb->pl_unlock();
             return;
         }
