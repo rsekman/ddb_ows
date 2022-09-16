@@ -1,5 +1,6 @@
 #include <ctime>
 #include <chrono>
+#include <cstring>
 #include <condition_variable>
 #include <filesystem>
 #include <functional>
@@ -215,7 +216,7 @@ bool should_convert(DB_playItem_t* it){
     // decoders and decoders[i]->exts are null-terminated arrays
     int i = 0;
     std::string::size_type n;
-    std::unordered_map<std::string, bool> sels = conf.get_conv_fts();
+    std::set<std::string> sels = conf.get_conv_fts();
     const char *fname = ddb->pl_find_meta (it, ":URI");
     const char *ext = strrchr (fname, '.');
     if (ext) {

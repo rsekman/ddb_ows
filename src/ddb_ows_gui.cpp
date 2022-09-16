@@ -299,7 +299,7 @@ void queue_jobs() {
 }
 
 void conv_fts_save(Glib::RefPtr<Gtk::ListStore> model){
-    std::unordered_map<std::string, bool> fts {};
+    std::set<std::string> fts {};
     model->foreach_iter(
         [&fts] (const Gtk::TreeIter r) -> bool {
             std::string name;
@@ -307,7 +307,7 @@ void conv_fts_save(Glib::RefPtr<Gtk::ListStore> model){
             r->get_value(0, checked);
             r->get_value(1, name);
             if(checked) {
-                fts[name] = true;
+                fts.insert(name);
             }
             return false;
         }
@@ -324,7 +324,7 @@ void conv_fts_populate(
     int i = 0;
     std::string::size_type n;
     Gtk::TreeModel::iterator row;
-    std::unordered_map<std::string, bool> sels = ddb_ows->conf.get_conv_fts();
+    std::set<std::string> sels = ddb_ows->conf.get_conv_fts();
     while (decoders[i]) {
         row = model->append();
         std::string s(decoders[i]->plugin.name);

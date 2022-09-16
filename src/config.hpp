@@ -5,36 +5,37 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <set>
 
-#include <nlohmann/json.hpp>
 #include "deadbeef/deadbeef.h"
 
 #include "log.hpp"
 
 #define DDB_OWS_CONFIG_MAIN "ddb_ows.settings"
-#define DDB_OWS_CONFIG_KEY_ROOT "root"
-#define DDB_OWS_CONFIG_KEY_FN_FORMATS "fn_formats"
-#define DDB_OWS_CONFIG_KEY_COVER_SYNC "cover_sync"
-#define DDB_OWS_CONFIG_KEY_COVER_FNAME "cover_fname"
-#define DDB_OWS_CONFIG_KEY_RM_UNREF "rm_unref"
-#define DDB_OWS_CONFIG_KEY_CONV_FTS "conv_fts"
-#define DDB_OWS_CONFIG_KEY_CONV_PRESET "conv_preset"
-#define DDB_OWS_CONFIG_KEY_CONV_EXT "conv_ext"
-#define DDB_OWS_CONFIG_KEY_CONV_WTS "conv_wts"
 
-#define DDB_OWS_CONFIG_METHODS(name, type, key) \
+#define DDB_OWS_CONFIG_METHODS(name, type) \
     type get_ ## name () { \
-        return get_typesafe<type>(key); \
+        return _conf.name; \
     }; \
     bool set_ ## name (type val) { \
-        conf[key] = val; \
+        _conf.name = val; \
         write_conf(); \
         return true; \
     };
 
-using nlohmann::json;
-
 namespace ddb_ows {
+
+typedef struct {
+    std::string root;
+    std::vector<std::string> fn_formats;
+    bool cover_sync;
+    std::string cover_fname;
+    bool rm_unref;
+    std::set<std::string> conv_fts;
+    std::string conv_preset;
+    std::string conv_ext;
+    int conv_wts;
+} ddb_ows_config;
 
 class Configuration {
     public:
@@ -43,33 +44,21 @@ class Configuration {
         void set_api(DB_functions_t* api);
         bool update_conf();
 
-        DDB_OWS_CONFIG_METHODS(root, std::string, DDB_OWS_CONFIG_KEY_ROOT)
-        DDB_OWS_CONFIG_METHODS(fn_formats, std::vector<std::string>, DDB_OWS_CONFIG_KEY_FN_FORMATS)
-        DDB_OWS_CONFIG_METHODS(cover_sync, bool, DDB_OWS_CONFIG_KEY_COVER_SYNC)
-        DDB_OWS_CONFIG_METHODS(cover_fname, std::string, DDB_OWS_CONFIG_KEY_COVER_FNAME)
-        DDB_OWS_CONFIG_METHODS(rm_unref, bool, DDB_OWS_CONFIG_KEY_RM_UNREF)
-        #define dummytype std::unordered_map<std::string, bool>
-        // can't use commas in macro arguments naively
-        DDB_OWS_CONFIG_METHODS(conv_fts, dummytype, DDB_OWS_CONFIG_KEY_CONV_FTS)
-        #undef dummytype
-        DDB_OWS_CONFIG_METHODS(conv_preset, std::string, DDB_OWS_CONFIG_KEY_CONV_PRESET)
-        DDB_OWS_CONFIG_METHODS(conv_ext, std::string, DDB_OWS_CONFIG_KEY_CONV_EXT)
-        DDB_OWS_CONFIG_METHODS(conv_wts, int, DDB_OWS_CONFIG_KEY_CONV_WTS)
+        DDB_OWS_CONFIG_METHODS(root, std::string)
+        DDB_OWS_CONFIG_METHODS(fn_formats, std::vector<std::string>)
+        DDB_OWS_CONFIG_METHODS(cover_sync, bool)
+        DDB_OWS_CONFIG_METHODS(cover_fname, std::string)
+        DDB_OWS_CONFIG_METHODS(rm_unref, bool)
+        DDB_OWS_CONFIG_METHODS(conv_fts, std::set<std::string>)
+        DDB_OWS_CONFIG_METHODS(conv_preset, std::string)
+        DDB_OWS_CONFIG_METHODS(conv_ext, std::string)
+        DDB_OWS_CONFIG_METHODS(conv_wts, int)
 
     private:
         DB_functions_t* ddb;
-        json conf;
-        json default_conf;
+        ddb_ows_config _conf;
+        bool _update_conf(const char* buf);
         bool write_conf();
-        template<typename T> T get_typesafe(const char* key){
-            try {
-                return conf.at(key);
-            } catch (json::exception& e) {
-                DDB_OWS_ERR << "Configuration type error: " << key << "; " << e.what() << "\n";
-            }
-            return default_conf.at(key);
-        }
-
 };
 
 }
