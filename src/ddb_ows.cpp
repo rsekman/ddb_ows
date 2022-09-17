@@ -479,7 +479,7 @@ int handleMessage(uint32_t id, uintptr_t ctx, uint32_t p1, uint32_t p2){
     return 0;
 }
 
-std::string _plt_get_uuid(ddb_playlist_t* plt) {
+plt_uuid _plt_get_uuid(ddb_playlist_t* plt) {
     return plt_get_uuid(plt, ddb);
 }
 

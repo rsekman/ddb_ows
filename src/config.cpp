@@ -1,5 +1,6 @@
 #include "config.hpp"
 
+#include <stdexcept>
 #include <nlohmann/json.hpp>
 
 using nlohmann::json;
@@ -7,6 +8,23 @@ using nlohmann::json;
 extern char DDB_OWS_CONFIG_DEFAULT;
 
 namespace ddb_ows{
+
+void to_json(json& j, const plt_uuid& uuid) {
+    j = uuid.str();
+}
+
+void from_json(const json& j, plt_uuid& uuid) {
+    if(!j.is_string()){
+        auto e = std::invalid_argument("plt_uuid: uuid must be string but is " + std::string(j.type_name()));
+        throw e;
+    }
+    uuid_t id;
+    if( uuid_parse(std::string(j).c_str(), id) < 0) {
+        throw std::invalid_argument("plt_uuid: provided uuid is invalid.");
+    } else {
+        uuid = plt_uuid(id);
+    }
+}
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
     ddb_ows_config,

@@ -262,7 +262,7 @@ void pl_selection_populate(
         plt = ddb->plt_get_for_idx(i);
         ddb->plt_get_title(plt, buf, sizeof(buf));
         row = model->append();
-        std::string uuid = ddb_ows->plt_get_uuid(plt);
+        plt_uuid uuid = ddb_ows->plt_get_uuid(plt);
         s = selected_uuids.count(uuid) > 0;
         row->set_value(0, s);
         row->set_value(1, std::string(buf));

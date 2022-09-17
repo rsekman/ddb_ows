@@ -14,13 +14,28 @@ namespace ddb_ows {
 // retrieve the uuid of *plt, if it exists
 // if it does not, generate it and return it
 
-// TODO use a wrapper class around uuid_t for type safety
-// this is written with std::string for memory management
-// but we need extra code to put the wrapper class in stdlib containers
+class plt_uuid {
+    public:
+		plt_uuid() {
+		}
+        plt_uuid(uuid_t);
+        std::string str() const;
+		void get(uuid_t out) const;
+        bool operator==(const plt_uuid& other) const;
+        std::size_t hash() const noexcept;
+    private:
+        uuid_t uuid;
+};
 
-typedef std::string plt_uuid;
 plt_uuid plt_get_uuid(ddb_playlist_t* plt, DB_functions_t* ddb);
 
 }
+
+template<>
+struct std::hash<ddb_ows::plt_uuid> {
+    std::size_t operator()(ddb_ows::plt_uuid const& uuid) const noexcept {
+        return uuid.hash();
+    }
+};
 
 #endif

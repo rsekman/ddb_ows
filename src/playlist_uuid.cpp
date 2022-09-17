@@ -2,6 +2,30 @@
 
 namespace ddb_ows {
 
+plt_uuid::plt_uuid(uuid_t id) {
+    uuid_copy(uuid, id);
+}
+
+bool plt_uuid::operator==(const plt_uuid& other) const {
+    uuid_t out;
+    other.get(out);
+    return uuid_compare(out, uuid) == 0;
+}
+
+void plt_uuid::get(uuid_t out) const {
+    uuid_copy(out, uuid);
+}
+
+std::size_t plt_uuid::hash() const noexcept {
+    return std::hash<std::string>{}(str());
+}
+
+std::string plt_uuid::str() const {
+    char buf[37];
+    uuid_unparse(uuid, buf);
+    return std::string(buf);
+}
+
 plt_uuid plt_get_uuid(ddb_playlist_t* plt, DB_functions_t* ddb) {
     char buf[37] ;
     uuid_t id;
@@ -14,7 +38,7 @@ plt_uuid plt_get_uuid(ddb_playlist_t* plt, DB_functions_t* ddb) {
         // mark playlist as modified so it is saved
         ddb->plt_modified(plt);
     }
-    return buf;
+    return plt_uuid(id);
 }
 
 }
