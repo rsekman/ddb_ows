@@ -69,6 +69,7 @@
       <column type="gpointer"/>
     </columns>
     <signal name="row-changed" handler="list_store_check_consistent" object="pl_select_all" swapped="no"/>
+    <signal name="row-changed" handler="pl_selection_save" swapped="no"/>
     <signal name="row-deleted" handler="list_store_check_consistent_on_delete" object="pl_select_all" swapped="no"/>
     <signal name="row-inserted" handler="list_store_check_consistent" object="pl_select_all" swapped="no"/>
   </object>

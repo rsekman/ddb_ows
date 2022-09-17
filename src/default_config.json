@@ -1,5 +1,6 @@
 {
   "root": "",
+  "pl_selection": [],
   "fn_formats": [
     "$replace($stripprefix(%album artist%,The),&,and)/'['$year(%year%)']' %album%/%tracknumber%. %title%.$ext(%path%)",
     "$stripprefix(%album artist%,The)/'['$year(%year%)']' %album%/%tracknumber%. %title%.$ext(%path%)",

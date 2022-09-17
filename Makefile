@@ -12,7 +12,7 @@ INSTALLDIR=$(LIBDIR)/deadbeef
 
 CXX=clang++
 CFLAGS+=-Wall --std=c++17 -g -fPIC -DLIBDIR="\"$(LIBDIR)\"" -Wno-deprecated-declarations -gdwarf-4
-LDFLAGS=-shared -rdynamic -Wl,-E -lfmt
+LDFLAGS=-shared -rdynamic -Wl,-E -lfmt -luuid
 
 PCHS=builder.h
 
@@ -28,7 +28,7 @@ GTK3_PCHS=$(patsubst %.h,$(BUILDDIR)/gtkmm-3.0/%.h.pch,$(PCHS))
 GTK3_PCH_FLAGS=$(addprefix -include-pch ,$(GTK3_PCHS))
 GTK3_LDFLAGS=$(shell pkg-config --libs gtkmm-3.0)
 
-OBJ:=ddb_ows.o config.o default_config.o job.o jobsqueue.o logger.o database.o
+OBJ:=ddb_ows.o config.o default_config.o job.o jobsqueue.o logger.o database.o playlist_uuid.o
 GUIOBJ:=textbufferlogger progressmonitor ddb_ows_gui
 GTK2OBJ:=$(addprefix $(BUILDDIR)/, $(OBJ) $(addsuffix _gtk2.o, $(GUIOBJ)))
 GTK3OBJ:=$(addprefix $(BUILDDIR)/, $(OBJ) $(addsuffix _gtk3.o, $(GUIOBJ)))

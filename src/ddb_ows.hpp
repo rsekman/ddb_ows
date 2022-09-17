@@ -30,6 +30,7 @@ typedef struct {
     ddb_ows::Configuration& conf;
     ddb_ows::Database* db;
     wt_futures_t worker_thread_futures;
+    std::string (*plt_get_uuid) (ddb_playlist_t* plt);
     std::string (*get_output_path)(DB_playItem_t* it, char* format);
     bool (*queue_jobs)(std::vector<ddb_playlist_t*> playlists, Logger& logger);
     int (*jobs_count)();

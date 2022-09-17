@@ -33,6 +33,8 @@
 #include "ddb_ows.hpp"
 #include "ddb_ows_gui.hpp"
 
+#include "playlist_uuid.hpp"
+
 #include <deadbeef/converter.h>
 #include <deadbeef/gtkui_api.h>
 
@@ -230,9 +232,25 @@ void pl_selection_clear(Glib::RefPtr<Gtk::ListStore> model) {
     model->clear();
 }
 
+void pl_selection_save(Glib::RefPtr<Gtk::ListStore> model){
+    std::unordered_set<plt_uuid> pls {};
+    model->foreach_iter(
+        [&pls] (const Gtk::TreeIter r) -> bool {
+            bool checked;
+            r->get_value(0, checked);
+            ddb_playlist_t* p;
+            r->get_value(2, p);
+            if(checked && p != NULL) {
+                pls.insert(ddb_ows->plt_get_uuid(p));
+            }
+            return false;
+        }
+    );
+    ddb_ows->conf.set_pl_selection(pls);
+}
 void pl_selection_populate(
     Glib::RefPtr<Gtk::ListStore> model,
-    std::unordered_map<ddb_playlist_t*, bool> selected={}
+    std::unordered_set<plt_uuid> selected_uuids={}
 ) {
     int plt_count = ddb->plt_get_count();
     DDB_OWS_DEBUG << "Populating playlist selection model with " << plt_count << " playlists." << std::endl;
@@ -244,7 +262,8 @@ void pl_selection_populate(
         plt = ddb->plt_get_for_idx(i);
         ddb->plt_get_title(plt, buf, sizeof(buf));
         row = model->append();
-        s = selected.count(plt) ? selected[plt] : false;
+        std::string uuid = ddb_ows->plt_get_uuid(plt);
+        s = selected_uuids.count(uuid) > 0;
         row->set_value(0, s);
         row->set_value(1, std::string(buf));
         row->set_value(2, plt);
@@ -253,15 +272,15 @@ void pl_selection_populate(
 
 void pl_selection_update_model(Glib::RefPtr<Gtk::ListStore> model) {
     // store each playlist's selection status in a map
-    std::unordered_map<ddb_playlist_t*, bool> selected = {};
+    std::unordered_set<plt_uuid> selected_uuids = {};
     ddb->pl_lock();
     model->foreach_iter(
-        [&selected] ( const Gtk::TreeIter r) -> bool {
+        [&selected_uuids] ( const Gtk::TreeIter r) -> bool {
             bool s;
             r->get_value(0, s);
             ddb_playlist_t* p;
             r->get_value(2, p);
-            selected[p] = s;
+            selected_uuids.insert(ddb_ows->plt_get_uuid(p));
             return false;
         }
     );
@@ -269,7 +288,7 @@ void pl_selection_update_model(Glib::RefPtr<Gtk::ListStore> model) {
     Gtk::CheckButton* toggle;
     builder->get_widget("pl_select_all", toggle);
     pl_selection_clear(model);
-    pl_selection_populate(model, selected);
+    pl_selection_populate(model, selected_uuids);
     ddb->pl_unlock();
 }
 
@@ -610,6 +629,16 @@ void on_wt_spinbutton_show(GtkWidget* widget, gpointer data) {
 
 /* Save values to config when changed in the UI */
 
+void pl_selection_save(
+    GtkListStore* ls,
+    GtkTreePath *path,
+    GtkTreeIter *iter,
+    gpointer data
+){
+    Glib::RefPtr<Gtk::ListStore> model = Glib::wrap(ls, true);
+    pl_selection_save(model);
+}
+
 void on_cover_fname_entry_changed(GtkEntry* entry, gpointer data) {
     const gchar* cover_fname = gtk_entry_get_text(entry);
     ddb_ows->conf.set_cover_fname(std::string(cover_fname));
@@ -772,7 +801,7 @@ int create_ui() {
     auto pl_model = Glib::RefPtr<Gtk::ListStore>::cast_static(
         builder->get_object("pl_selection_model")
     );
-    pl_selection_update_model(pl_model);
+    pl_selection_populate(pl_model, ddb_ows->conf.get_pl_selection());
 
     auto ft_model = Glib::RefPtr<Gtk::ListStore>::cast_static(
         builder->get_object("ft_model")

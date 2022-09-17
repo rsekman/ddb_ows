@@ -11,6 +11,7 @@ namespace ddb_ows{
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
     ddb_ows_config,
     root,
+    pl_selection,
     fn_formats,
     cover_sync,
     cover_fname,
