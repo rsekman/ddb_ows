@@ -4,65 +4,56 @@
 TextBufferLogger::TextBufferLogger(Glib::RefPtr<Gtk::TextBuffer> _buffer, Gtk::TextView* _view) :
     buffer(_buffer),
     view(_view),
-    sig_log(),
-    sig_err(),
-    m(),
-    q_log(), q_err()
+    log_stream( {} ),
+    err_stream( {} ),
+    m()
 {
-    err_tag = buffer->create_tag("error");
-    sig_log.connect(sigc::mem_fun(*this, &TextBufferLogger::_log));
-    sig_err.connect(sigc::mem_fun(*this, &TextBufferLogger::_err));
+    auto err_tag = buffer->create_tag("error");
+    err_stream.tag = err_tag;
+    log_stream.sig.connect(sigc::mem_fun(*this, &TextBufferLogger::_log));
+    err_stream.sig.connect(sigc::mem_fun(*this, &TextBufferLogger::_err));
     sig_clear.connect(sigc::mem_fun(*this, &TextBufferLogger::_clear));
 } ;
 
 bool TextBufferLogger::log(std::string message) {
-    {
-        std::lock_guard <std::mutex> lock(m);
-        q_log.push(message);
-    }
-    sig_log();
-    return true;
+    return enqueue(message, log_stream);
 }
 
 bool TextBufferLogger::err(std::string message) {
-    {
-        std::lock_guard <std::mutex> lock(m);
-        q_err.push(message);
+    return enqueue(message, err_stream);
+}
+
+bool TextBufferLogger::enqueue(std::string message, TextBufferLoggerStream& stream) {
+    std::lock_guard <std::mutex> lock(m);
+    bool was_empty = stream.q.empty();
+    stream.q.push(message);
+    if (was_empty) {
+        stream.sig();
     }
-    sig_err();
     return true;
 }
 
 void TextBufferLogger::_log() {
-    std::string message = "";
-    std::lock_guard<std::mutex> lock(m);
-    if (q_log.empty()) {
-        return;
-    } else {
-        message = q_log.front();
-        q_log.pop();
-    }
-    DDB_OWS_DEBUG << message << std::endl;
-    auto end = buffer->get_mark("END");
-    if(!end->get_deleted()){
-        buffer->insert(end->get_iter(), message + "\n");
-        view->scroll_to(end);
-    }
+    flush(log_stream);
+}
+void TextBufferLogger::_err() {
+    flush(err_stream);
 }
 
-void TextBufferLogger::_err() {
+void TextBufferLogger::flush(TextBufferLoggerStream& stream) {
     std::string message = "";
     std::lock_guard<std::mutex> lock(m);
-    if (q_err.empty()) {
-        return;
-    } else {
-        message = q_err.front();
-        q_err.pop();
-    }
-    DDB_OWS_ERR << message << std::endl;
     auto end = buffer->get_mark("END");
-    if(!end->get_deleted()){
-        buffer->insert_with_tag(end->get_iter(), message + "\n", err_tag);
+    bool logged = false;
+    while (!stream.q.empty()) {
+        message = stream.q.front();
+        stream.q.pop();
+        if(!end->get_deleted()){
+            buffer->insert(end->get_iter(), message + "\n");
+        }
+        logged = true;
+    }
+    if(logged && !end->get_deleted()){
         view->scroll_to(end);
     }
 }

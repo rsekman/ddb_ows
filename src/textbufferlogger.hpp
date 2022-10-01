@@ -12,6 +12,16 @@
 
 #include "logger.hpp"
 
+class TextBufferLoggerStream {
+    public:
+        TextBufferLoggerStream(Glib::RefPtr<Gtk::TextBuffer::Tag> _tag) :
+            q(), sig(), tag(_tag)
+        {} ;
+        std::queue<std::string> q;
+        Glib::Dispatcher sig;
+        Glib::RefPtr<Gtk::TextBuffer::Tag> tag;
+};
+
 class TextBufferLogger : public Logger {
     public:
         TextBufferLogger(Glib::RefPtr<Gtk::TextBuffer> _buffer, Gtk::TextView* view) ;
@@ -21,17 +31,16 @@ class TextBufferLogger : public Logger {
         void clear();
     private :
         Glib::RefPtr<Gtk::TextBuffer> buffer;
-        Glib::RefPtr<Gtk::TextBuffer::Tag> err_tag;
         Gtk::TextView* view;
-        Glib::Dispatcher sig_log;
-        Glib::Dispatcher sig_err;
+        TextBufferLoggerStream log_stream;
+        TextBufferLoggerStream err_stream;
         Glib::Dispatcher sig_clear;
+        bool enqueue(std::string message, TextBufferLoggerStream& stream);
+        void flush(TextBufferLoggerStream& stream);
         void _log();
         void _err();
         void _clear();
         std::mutex m;
-        std::queue<std::string> q_log;
-        std::queue<std::string> q_err;
 };
 
 #endif
