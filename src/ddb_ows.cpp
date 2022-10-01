@@ -343,6 +343,7 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
     auto conv_settings = make_encoder_settings();
 
     char plt_title[4096];
+    ddb->pl_lock();
     for(auto plt = playlists.begin(); plt != playlists.end(); plt++) {
         ddb->plt_get_title(*plt, plt_title, sizeof(plt_title));
         DDB_OWS_DEBUG << "Looking for jobs from playlist " << plt_title << std::endl;
@@ -350,7 +351,6 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
         DB_playItem_t* next;
         path from;
         path to;
-        ddb->pl_lock();
         it = ddb->plt_get_first(*plt, 0);
         while (it != NULL) {
             from = std::string(ddb->pl_find_meta (it, ":URI"));
@@ -373,15 +373,13 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
             }
 
             next = ddb->pl_get_next(it, 0);
-            if (it) {
-                ddb->pl_item_unref(it);
-            }
+            ddb->pl_item_unref(it);
             it = next;
         }
-        ddb->pl_unlock();
-        // Now we can dispatch cover requests
-        queue_cover_jobs(logger, ddb_ows->db, cover_its);
     }
+    ddb->pl_unlock();
+    // Now we can dispatch cover requests
+    queue_cover_jobs(logger, ddb_ows->db, cover_its);
     // TODO: delete unreferenced files
     jobs->close();
     DDB_OWS_DEBUG << "Found " << jobs->size() << " jobs" << std::endl;
