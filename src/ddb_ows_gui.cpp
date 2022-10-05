@@ -386,8 +386,8 @@ void execute(job_cb_t cb, bool dry) {
     auto pm = plugin.pm;
     std::thread t ( [&queueing_complete, pm] {
         while (!queueing_complete) {
-            std::this_thread::sleep_for(5000ms/60);
             pm->pulse();
+            std::this_thread::sleep_for(5000ms/60);
         }
     });
     queue_jobs();
