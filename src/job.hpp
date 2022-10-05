@@ -44,7 +44,7 @@ class CopyJob : public Job {
 
 class MoveJob : public Job {
     public:
-        MoveJob( Logger& logger, ddb_ows::Database* db, std::string from, std::string to );
+        MoveJob( Logger& logger, ddb_ows::Database* db, path from, path to );
         bool run(bool dry=false);
         void abort() {
         }

@@ -46,7 +46,7 @@ bool CopyJob::run(bool dry) {
     return success;
 }
 
-MoveJob::MoveJob(Logger& _logger, Database* _db, std::string _from, std::string _to) :
+MoveJob::MoveJob(Logger& _logger, Database* _db, path _from, path _to) :
     Job(_logger, _db, _from, _to)
 {
 } ;
