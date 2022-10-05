@@ -301,19 +301,17 @@ std::unique_ptr<Job> make_job(
         return std::unique_ptr<Job>(
             new MoveJob(logger, db, old->second.destination, to)
         );
-    }  else {
-        if (exists(to) && last_write_time(to) > last_write_time(from)) {
+    }  else if (exists(to) && last_write_time(to) > last_write_time(from)) {
             logger.log(
                 "Destination " + std::string(to)
                 + " is newer than source " + std::string(from)
                 + "; skipping."
             );
             return std::unique_ptr<Job>();
-        } else {
-            return std::unique_ptr<Job>(
-                new CopyJob(logger, db, from, to)
-            );
-        }
+    } else {
+        return std::unique_ptr<Job>(
+            new CopyJob(logger, db, from, to)
+        );
     }
 }
 
