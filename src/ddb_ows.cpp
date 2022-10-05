@@ -116,6 +116,10 @@ void callback_cover_art_found (int error, ddb_cover_query_t *query, ddb_cover_in
     free(query);
 }
 
+bool is_newer(path a, path b) {
+    return last_write_time(a) > last_write_time(b);
+}
+
 bool queue_cover_jobs(Logger& logger, Database* db, std::queue<DB_playItem_t*> items) {
     path from;
     path to;
@@ -157,8 +161,18 @@ bool queue_cover_jobs(Logger& logger, Database* db, std::queue<DB_playItem_t*> i
         if (creq.returned && creq.cover != NULL) {
             path from = creq.cover->image_filename;
             path to = target_dir / conf.get_cover_fname();
+            auto old = db->find_entry(from);
             if (exists(to) && last_write_time(to) > last_write_time(from)) {
                 logger.log("Cover at " + std::string(to) + " is newer than source " + std::string(from));
+            } else if ( old != db->end()
+                && old->second.destination != to
+                && exists(old->second.destination)
+                && is_newer(old->second.destination, from)
+            ) {
+                auto cover_job = std::unique_ptr<Job> (
+                    new MoveJob(logger, db, old->second.destination, to)
+                );
+                jobs->push(std::move(cover_job));
             } else {
                 auto cover_job = std::unique_ptr<Job>(
                     new CopyJob(
@@ -248,10 +262,6 @@ bool should_convert(DB_playItem_t* it){
         i++;
     }
     return false;
-}
-
-bool is_newer(path a, path b) {
-    return last_write_time(a) > last_write_time(b);
 }
 
 std::vector<std::unique_ptr<Job>> make_job(
