@@ -39,6 +39,7 @@ namespace ddb_ows {
             entry_dict::iterator begin();
             entry_dict::iterator end();
             void insert_or_update(path key, db_entry_t entry);
+            void erase(path key);
         private:
             std::mutex m;
             bool read();

@@ -128,4 +128,33 @@ void ConvertJob::abort(){
     pabort = 1;
 }
 
+DeleteJob::DeleteJob(Logger& _logger, ddb_ows::Database* _db, path _target) :
+   Job(_logger, _db, "", ""),
+   target(_target)
+{
+};
+
+bool DeleteJob::run(bool dry) {
+    logger.log ( "Deleting " + std::string(target) + "." );
+    bool success;
+    if (!dry) {
+        try {
+            success = remove(target);
+        } catch (filesystem_error& e) {
+            logger.err(e.what());
+            success = false;
+        }
+        if (success) {
+            register_job();
+        }
+    } else {
+        success = true;
+    }
+    return success;
+}
+
+void DeleteJob::register_job() {
+    db->erase(target);
+}
+
 }

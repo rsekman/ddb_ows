@@ -71,6 +71,16 @@ class ConvertJob : public Job {
         int pabort;
 };
 
+class DeleteJob : public Job {
+    public:
+        DeleteJob( Logger& logger, ddb_ows::Database* db, path target);
+        bool run(bool dry = false);
+        void abort() {};
+    private:
+        path target;
+        void register_job();
+};
+
 }
 
 #endif

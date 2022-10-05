@@ -92,4 +92,9 @@ void Database::insert_or_update(path key, db_entry_t entry) {
     db.entries.insert_or_assign(key, entry);
 }
 
+void Database::erase(path key) {
+    std::lock_guard lock(m);
+    db.entries.erase(key);
+}
+
 }
