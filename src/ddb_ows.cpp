@@ -254,7 +254,7 @@ bool is_newer(path a, path b) {
     return last_write_time(a) > last_write_time(b);
 }
 
-std::unique_ptr<Job> make_job(
+std::vector<std::unique_ptr<Job>> make_job(
     Database* db,
     Logger& logger,
     DB_playItem_t* it,
@@ -263,6 +263,7 @@ std::unique_ptr<Job> make_job(
     ddb_converter_settings_t conv_settings
 ) {
     auto old = db->find_entry(from);
+    std::vector<std::unique_ptr<Job>> out {};
     if (should_convert(it) ) {
         to.replace_extension(conf.get_conv_ext());
         std::string preset_title = conv_settings.encoder_preset->title;
@@ -278,41 +279,55 @@ std::unique_ptr<Job> make_job(
                     + " was already converted with " + preset_title
                     + "; skipping."
                 );
-                return std::unique_ptr<Job>();
+                return {};
             } else if(
                 exists(old->second.destination)
                 && is_newer(old->second.destination, from)
             ) {
                 // The source was previously converted with a different destination, which is newer than the source
-                return std::unique_ptr<Job>(
+                out.push_back( std::unique_ptr<Job>(
                     new MoveJob(logger, db, old->second.destination, to)
-                );
+                ));
             } else {
-                return cjob;
+                // The source is newer => reconvert with new destination and delete the old destination
+                out.push_back(std::move(cjob));
+                out.push_back( std::unique_ptr<Job> (
+                    new DeleteJob(logger, db, old->second.destination)
+                ));
             }
         } else {
-            return cjob;
+            out.push_back(std::move(cjob));
         }
     } else if ( old != db->end()
         && old->second.destination != to
-        && exists(old->second.destination) && is_newer(old->second.destination, from)
+        && exists(old->second.destination)
     ) {
-        // This source file was synced previously, and the destination file is newer than the source => move
-        return std::unique_ptr<Job>(
-            new MoveJob(logger, db, old->second.destination, to)
-        );
+        // This source file was synced previously,
+        if (is_newer(old->second.destination, from)) {
+            // the destination file is newer than the source => move
+            out.push_back( std::unique_ptr<Job>(
+                new MoveJob(logger, db, old->second.destination, to)
+            ));
+        } else {
+            // the source file is newer than the old copy => copy anew and delete the old copy
+            out.push_back( std::unique_ptr<Job> (
+                new CopyJob(logger, db, from, to)
+            ));
+            DDB_OWS_DEBUG << "Making delete job" << std::endl;
+            out.push_back( std::unique_ptr<Job> (
+                new DeleteJob(logger, db, old->second.destination)
+            ));
+        }
     }  else if (exists(to) && last_write_time(to) > last_write_time(from)) {
             logger.log(
                 "Destination " + std::string(to)
                 + " is newer than source " + std::string(from)
                 + "; skipping."
             );
-            return std::unique_ptr<Job>();
     } else {
-        return std::unique_ptr<Job>(
-            new CopyJob(logger, db, from, to)
-        );
+        out.push_back(std::unique_ptr<Job>( new CopyJob(logger, db, from, to)));
     }
+    return out;
 }
 
 bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
@@ -356,9 +371,9 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
             if (!exists(from)) {
                 logger.err("Source file " + std::string(from) + " does not exist!");
             } else {
-                auto job = make_job(ddb_ows->db, logger, it, from, to, conv_settings);
-                if (job) {
-                    jobs->push(std::move(job));
+                auto new_jobs = make_job(ddb_ows->db, logger, it, from, to, conv_settings);
+                for (auto j = new_jobs.begin(); j != new_jobs.end(); j++) {
+                    jobs->push(std::move(*j));
                 }
             }
 
