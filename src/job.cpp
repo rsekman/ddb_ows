@@ -46,11 +46,15 @@ bool CopyJob::run(bool dry) {
     return success;
 }
 
-MoveJob::MoveJob(Logger& _logger, Database* _db, path _from, path _to) :
-    Job(_logger, _db, _from, _to)
+MoveJob::MoveJob(Logger& _logger, Database* _db, path _from, path _to, path _source) :
+    Job(_logger, _db, _from, _to),
+    source(_source)
 {
 } ;
 
+void MoveJob::register_job(db_entry_t entry) {
+    db->insert_or_update( source, entry );
+}
 bool MoveJob::run(bool dry) {
     logger.log("Moving from " + std::string(from) + " to " + std::string(to) + ".");
     bool success;

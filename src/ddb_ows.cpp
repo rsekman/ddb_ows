@@ -170,7 +170,7 @@ bool queue_cover_jobs(Logger& logger, Database* db, std::queue<DB_playItem_t*> i
                 && is_newer(old->second.destination, from)
             ) {
                 auto cover_job = std::unique_ptr<Job> (
-                    new MoveJob(logger, db, old->second.destination, to)
+                    new MoveJob(logger, db, old->second.destination, to, from)
                 );
                 jobs->push(std::move(cover_job));
             } else {
@@ -296,7 +296,7 @@ std::vector<std::unique_ptr<Job>> make_job(
             ) {
                 // The source was previously converted with a different destination, which is newer than the source
                 out.push_back( std::unique_ptr<Job>(
-                    new MoveJob(logger, db, old->second.destination, to)
+                    new MoveJob(logger, db, old->second.destination, to, from)
                 ));
             } else {
                 // The source is newer => reconvert with new destination and delete the old destination
@@ -316,7 +316,7 @@ std::vector<std::unique_ptr<Job>> make_job(
         if (is_newer(old->second.destination, from)) {
             // the destination file is newer than the source => move
             out.push_back( std::unique_ptr<Job>(
-                new MoveJob(logger, db, old->second.destination, to)
+                new MoveJob(logger, db, old->second.destination, to, from)
             ));
         } else {
             // the source file is newer than the old copy => copy anew and delete the old copy

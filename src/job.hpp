@@ -44,10 +44,13 @@ class CopyJob : public Job {
 
 class MoveJob : public Job {
     public:
-        MoveJob( Logger& logger, ddb_ows::Database* db, path from, path to );
+        MoveJob( Logger& logger, ddb_ows::Database* db, path from, path to , path source );
         bool run(bool dry=false);
         void abort() {
         }
+    private:
+        path source;
+        void register_job(db_entry_t entry);
 };
 
 class ConvertJob : public Job {
