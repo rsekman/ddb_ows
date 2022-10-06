@@ -8,6 +8,16 @@ using namespace std::filesystem;
 
 namespace ddb_ows {
 
+void clean_parents(path p) {
+    std::error_code e;
+    if (!is_directory(p, e)) {
+        return;
+    }
+    if (remove(p, e) ) {
+        clean_parents(p.parent_path());
+    }
+}
+
 db_entry_t Job::make_entry(){
     return db_entry_t {
         .destination = to,
@@ -68,6 +78,7 @@ bool MoveJob::run(bool dry) {
                 entry.converter_preset = old->second.converter_preset;
             }
             register_job(entry);
+            clean_parents(from.parent_path());
         }
         success = true;
     } catch (filesystem_error& e) {
@@ -150,6 +161,7 @@ bool DeleteJob::run(bool dry) {
         }
         if (success) {
             register_job();
+            clean_parents(to.parent_path());
         }
     } else {
         success = true;
