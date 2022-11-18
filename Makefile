@@ -14,6 +14,10 @@ CXX=clang++
 CFLAGS+=-Wall --std=c++17 -g -fPIC -DLIBDIR="\"$(LIBDIR)\"" -Wno-deprecated-declarations -gdwarf-4
 LDFLAGS=-shared -rdynamic -Wl,-E -lfmt -luuid
 
+ifneq ($(DDB_OWS_LOGLEVEL),)
+	CFLAGS+=-DDDB_OWS_LOGLEVEL=$(DDB_OWS_LOGLEVEL)
+endif
+
 PCHS=builder.h
 
 GTK2_CFLAGS=$(shell pkg-config --cflags-only-I gtkmm-2.4)

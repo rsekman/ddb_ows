@@ -22,7 +22,7 @@ It can be built with older headers by cloning the DeaDBeeF repository to your `C
 - [`fmt`](https://github.com/fmtlib/fmt)
 
 ```sh
-export DDB_OWS_DEBUG_LEVEL=n
+export DDB_OWS_LOGLEVEL=n
 make install
 ```
 Set `n = 0, 1, 2, 3` for increasingly verbose console logging on `stderr`;

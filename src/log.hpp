@@ -7,7 +7,9 @@
 #define DDB_OWS_LOG_WARN  2
 #define DDB_OWS_LOG_DEBUG 3
 
+#ifndef DDB_OWS_LOGLEVEL
 #define DDB_OWS_LOGLEVEL DDB_OWS_LOG_DEBUG
+#endif
 
 #define DDB_OWS_ERR \
     if (DDB_OWS_LOGLEVEL < DDB_OWS_LOG_ERR) {} \
