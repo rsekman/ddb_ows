@@ -300,10 +300,12 @@ std::vector<std::unique_ptr<Job>> make_job(
                 ));
             } else {
                 // The source is newer => reconvert with new destination and delete the old destination
+                if (old->second.destination != to) {
+                    out.push_back( std::unique_ptr<Job> (
+                        new DeleteJob(logger, db, old->second.destination)
+                    ));
+                }
                 out.push_back(std::move(cjob));
-                out.push_back( std::unique_ptr<Job> (
-                    new DeleteJob(logger, db, old->second.destination)
-                ));
             }
         } else {
             out.push_back(std::move(cjob));
