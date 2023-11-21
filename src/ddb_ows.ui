@@ -175,27 +175,6 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkComboBox" id="fn_format_combobox">
-                            <property name="can-focus">False</property>
-                            <property name="model">fn_format_model</property>
-                            <property name="active">0</property>
-                            <property name="has-entry">True</property>
-                            <property name="entry-text-column">0</property>
-                            <signal name="changed" handler="on_fn_format_combobox_changed" swapped="no"/>
-                            <signal name="show" handler="on_fn_format_combobox_show" swapped="no"/>
-                            <child internal-child="entry">
-                              <object class="GtkEntry">
-                                <property name="can-focus">False</property>
-                              </object>
-                            </child>
-                          </object>
-                          <packing>
-                            <property name="left-attach">1</property>
-                            <property name="top-attach">1</property>
-                            <property name="width">2</property>
-                          </packing>
-                        </child>
-                        <child>
                           <object class="GtkLabel" id="example_label">
                             <property name="visible">True</property>
                             <property name="can-focus">False</property>
@@ -279,6 +258,26 @@
                           <packing>
                             <property name="left-attach">1</property>
                             <property name="top-attach">3</property>
+                            <property name="width">2</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkComboBox" id="fn_format_combobox">
+                            <property name="can-focus">True</property>
+                            <property name="model">fn_format_model</property>
+                            <property name="has-entry">True</property>
+                            <property name="entry-text-column">0</property>
+                            <signal name="changed" handler="on_fn_format_combobox_changed" swapped="no"/>
+                            <signal name="show" handler="on_fn_format_combobox_show" swapped="no"/>
+                            <child internal-child="entry">
+                              <object class="GtkEntry">
+                                <property name="can-focus">True</property>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="left-attach">1</property>
+                            <property name="top-attach">1</property>
                             <property name="width">2</property>
                           </packing>
                         </child>
