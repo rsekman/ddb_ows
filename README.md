@@ -17,16 +17,18 @@ Requirements
 - `ddb_ows` requires DeaDBeeF headers >= [`788d277`](https://github.com/DeaDBeeF-Player/deadbeef/commit/788d277ac08ecaed5b8a215b0e7146d7630c71df) to build as-is.
 It can be built with older headers by cloning the DeaDBeeF repository to your `CPATH` and modifying the relevant includes to read from there.
 - gtk headers
-- `make`
+- `meson`
 - `clang`
 - [`fmt`](https://github.com/fmtlib/fmt)
 
 ```sh
 export DDB_OWS_LOGLEVEL=n
-make install
+meson setup build && cd build
+meson install
 ```
 Set `n = 0, 1, 2, 3` for increasingly verbose console logging on `stderr`;
 the default is `3`.
+To install for the current user only, pass `--libir ~/.local/lib` to `meson setup`.
 
 `ddb_ows` is Linux only with no plans to support other operating systems.
 
