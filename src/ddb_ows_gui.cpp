@@ -17,15 +17,10 @@
 
 #include <execinfo.h>
 
-#include <chrono>
-#include <filesystem>
 #include <fmt/core.h>
-#include <functional>
 #include <iostream>
 #include <memory>
-#include <optional>
 #include <set>
-#include <stdexcept>
 #include <string>
 #include <thread>
 

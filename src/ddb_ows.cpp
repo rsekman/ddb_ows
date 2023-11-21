@@ -7,7 +7,6 @@
 #include <limits.h>
 #include <memory>
 #include <mutex>
-#include <optional>
 #include <random>
 #include <string>
 #include <unordered_set>

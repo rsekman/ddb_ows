@@ -3,13 +3,10 @@
 #include "log.hpp"
 
 #include <ctime>
-#include <exception>
 #include <fstream>
 #include <iostream>
 #include <mutex>
 #include <nlohmann/json.hpp>
-#include <sstream>
-#include <stdexcept>
 
 using namespace nlohmann;
 

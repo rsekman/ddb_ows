@@ -1,5 +1,4 @@
 #include "textbufferlogger.hpp"
-#include "log.hpp"
 
 TextBufferLogger::TextBufferLogger(Glib::RefPtr<Gtk::TextBuffer> _buffer, Gtk::TextView* _view) :
     buffer(_buffer),
