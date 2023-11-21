@@ -5,7 +5,6 @@
 #include <string>
 #include <uuid/uuid.h>
 #include "constants.hpp"
-#include "log.hpp"
 
 #define DDB_OWS_PL_UUID_KEY DDB_OWS_PROJECT_ID "_uuid"
 

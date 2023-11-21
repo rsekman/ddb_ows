@@ -27,6 +27,7 @@
 
 #include "ddb_ows.hpp"
 #include "ddb_ows_gui.hpp"
+#include "log.hpp"
 
 #include "playlist_uuid.hpp"
 
@@ -644,7 +645,7 @@ void on_cover_sync_check_toggled(GtkToggleButton* toggle, gpointer data) {
     ddb_ows->conf.set_cover_sync(cover_sync);
 }
 
-void on_rm_check_toggled(GtkToggleButton* toggle, gpointer data) {
+void on_rm_unref_check_toggled(GtkToggleButton* toggle, gpointer data) {
     gboolean rm_unref = gtk_toggle_button_get_active(toggle);
     ddb_ows->conf.set_rm_unref(rm_unref);
 }

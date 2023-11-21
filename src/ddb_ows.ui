@@ -258,7 +258,7 @@
                             <property name="margin-bottom">2</property>
                             <property name="draw-indicator">True</property>
                             <signal name="show" handler="on_rm_unref_check_show" swapped="no"/>
-                            <signal name="toggled" handler="on_rm_check_toggled" swapped="no"/>
+                            <signal name="toggled" handler="on_rm_unref_check_toggled" swapped="no"/>
                           </object>
                           <packing>
                             <property name="left-attach">0</property>

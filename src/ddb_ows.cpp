@@ -1,5 +1,4 @@
 #include <ctime>
-#include <chrono>
 #include <cstring>
 #include <condition_variable>
 #include <filesystem>
@@ -13,10 +12,12 @@
 #include <vector>
 
 #include "ddb_ows.hpp"
+#include "constants.hpp"
 #include "config.hpp"
 #include "database.hpp"
 #include "job.hpp"
 #include "jobsqueue.hpp"
+#include "log.hpp"
 #include "playlist_uuid.hpp"
 
 #include <deadbeef/converter.h>
@@ -119,7 +120,7 @@ bool is_newer(path a, path b) {
     return last_write_time(a) > last_write_time(b);
 }
 
-bool queue_cover_jobs(Logger& logger, Database* db, std::queue<DB_playItem_t*> items) {
+bool queue_cover_jobs(Logger& logger, Database* db, std::deque<DB_playItem_t*> items) {
     path from;
     path to;
     char* fmt = ddb->tf_compile(conf.get_fn_formats()[0].c_str());
@@ -193,7 +194,7 @@ bool queue_cover_jobs(Logger& logger, Database* db, std::queue<DB_playItem_t*> i
             DDB_OWS_DEBUG << "No cover found for " << target_dir << std::endl;
         }
         // it is unref'd in the callback; we don't need to do it here
-        items.pop();
+        items.pop_front();
     }
     return true;
 }
@@ -358,7 +359,7 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
     // the playlist. Therefore we have to queue up items to dispatch cover
     // requests for once we are done traversing the playlist.
     std::unordered_set<path> cover_dirs {};
-    std::queue<DB_playItem_t*> cover_its {};
+    std::deque<DB_playItem_t*> cover_its {};
 
     ddb_ows_plugin_t* ddb_ows = (ddb_ows_plugin_t*) ddb->plug_get_for_id("ddb_ows");
     path root(conf.get_root());
@@ -390,7 +391,7 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
 
             path target_dir = to.parent_path();
             if ( ddb_ows->conf.get_cover_sync()  && !cover_dirs.count(target_dir)) {
-                cover_its.push(it);
+                cover_its.push_back(it);
                 ddb->pl_item_ref(it);
                 DDB_OWS_DEBUG << "Copying cover to " << target_dir << std::endl;
                 cover_dirs.insert(target_dir);

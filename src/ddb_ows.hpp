@@ -3,14 +3,11 @@
 
 #include <future>
 #include <string>
-#include <thread>
 
 #include "deadbeef/deadbeef.h"
 
 #include "config.hpp"
-#include "constants.hpp"
 #include "database.hpp"
-#include "log.hpp"
 #include "logger.hpp"
 #include "job.hpp"
 

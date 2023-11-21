@@ -2,10 +2,9 @@
 #define DDB_OWS_JOBSQUEUE_HPP
 
 #include <condition_variable>
+#include <deque>
 #include <memory>
 #include <mutex>
-#include <optional>
-#include <queue>
 #include "job.hpp"
 
 namespace ddb_ows {

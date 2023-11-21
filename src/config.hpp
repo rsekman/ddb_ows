@@ -4,13 +4,11 @@
 
 #include <string>
 #include <vector>
-#include <map>
 #include <set>
 #include <unordered_set>
 
 #include "deadbeef/deadbeef.h"
 
-#include "log.hpp"
 #include "playlist_uuid.hpp"
 
 #define DDB_OWS_CONFIG_MAIN "ddb_ows.settings"

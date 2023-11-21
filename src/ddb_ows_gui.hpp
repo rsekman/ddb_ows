@@ -5,7 +5,6 @@
 
 #include <deadbeef/deadbeef.h>
 
-#include "constants.hpp"
 #include "progressmonitor.hpp"
 #include "textbufferlogger.hpp"
 

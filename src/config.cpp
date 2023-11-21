@@ -1,4 +1,5 @@
 #include "config.hpp"
+#include "log.hpp"
 
 #include <stdexcept>
 #include <nlohmann/json.hpp>
