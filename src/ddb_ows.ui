@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated with glade 3.40.0 -->
 <interface>
-  <requires lib="gtk+" version="2.24"/>
-  <!-- interface-naming-policy toplevel-contextual -->
+  <requires lib="gtk+" version="3.24"/>
+  <object class="GtkImage" id="cancel_img">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="icon-name">gtk-cancel</property>
+  </object>
   <object class="GtkEntryBuffer" id="cover_fname_buffer">
     <property name="text" translatable="yes">cover.jpg</property>
   </object>
@@ -15,8 +20,13 @@
   </object>
   <object class="GtkImage" id="dry_run_icon">
     <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="stock">gtk-spell-check</property>
+    <property name="can-focus">False</property>
+    <property name="icon-name">gtk-edit</property>
+  </object>
+  <object class="GtkImage" id="execute_img">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="icon-name">system-run</property>
   </object>
   <object class="GtkListStore" id="fn_format_model">
     <columns>
@@ -38,26 +48,25 @@
       <!-- column-name ft_ddb_id -->
       <column type="gpointer"/>
     </columns>
-    <signal name="row-changed" handler="list_store_check_consistent" object="ft_select_all" swapped="no"/>
     <signal name="row-changed" handler="conv_fts_save" swapped="no"/>
+    <signal name="row-changed" handler="list_store_check_consistent" object="ft_select_all" swapped="no"/>
     <signal name="row-deleted" handler="list_store_check_consistent_on_delete" object="ft_select_all" swapped="no"/>
     <signal name="row-inserted" handler="list_store_check_consistent" object="ft_select_all" swapped="no"/>
   </object>
   <object class="GtkCheckButton" id="ft_select_all">
-    <property name="label" translatable="yes">checkbutton</property>
     <property name="visible">True</property>
-    <property name="can_focus">True</property>
-    <property name="receives_default">False</property>
-    <property name="draw_indicator">True</property>
+    <property name="can-focus">True</property>
+    <property name="receives-default">False</property>
+    <property name="draw-indicator">True</property>
   </object>
   <object class="GtkTextBuffer" id="job_log_buffer"/>
   <object class="GtkCheckButton" id="pl_select_all">
     <property name="visible">True</property>
-    <property name="can_focus">True</property>
-    <property name="receives_default">False</property>
+    <property name="can-focus">True</property>
+    <property name="receives-default">False</property>
+    <property name="margin-end">4</property>
     <property name="relief">none</property>
-    <property name="yalign">0.49000000953674316</property>
-    <property name="draw_indicator">True</property>
+    <property name="draw-indicator">True</property>
   </object>
   <object class="GtkListStore" id="pl_selection_model">
     <columns>
@@ -73,457 +82,265 @@
     <signal name="row-deleted" handler="list_store_check_consistent_on_delete" object="pl_select_all" swapped="no"/>
     <signal name="row-inserted" handler="list_store_check_consistent" object="pl_select_all" swapped="no"/>
   </object>
+  <object class="GtkImage" id="quit_img">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="icon-name">application-exit-symbolic</property>
+  </object>
   <object class="GtkAdjustment" id="wt_adjustment">
     <property name="lower">1</property>
-    <property name="upper">16</property>
-    <property name="value">1</property>
-    <property name="step_increment">1</property>
-    <property name="page_increment">10</property>
+    <property name="upper">100</property>
+    <property name="step-increment">1</property>
+    <property name="page-increment">10</property>
   </object>
   <object class="GtkWindow" id="ddb_ows">
-    <property name="can_focus">False</property>
+    <property name="can-focus">False</property>
     <property name="title" translatable="yes">ddb_ows</property>
-    <property name="window_position">center</property>
-    <property name="default_width">540</property>
-    <property name="destroy_with_parent">True</property>
-    <property name="type_hint">dialog</property>
+    <property name="window-position">center</property>
+    <property name="default-width">540</property>
+    <property name="destroy-with-parent">True</property>
+    <property name="type-hint">dialog</property>
     <signal name="destroy" handler="pl_selection_clear" object="pl_selection_model" swapped="yes"/>
     <signal name="key-press-event" handler="on_ddb_ows_key_press_event" swapped="no"/>
     <child>
-      <object class="GtkTable" id="ddb_ows_table">
+      <object class="GtkBox">
         <property name="visible">True</property>
-        <property name="can_focus">False</property>
-        <property name="border_width">4</property>
-        <property name="n_rows">5</property>
-        <property name="column_spacing">4</property>
-        <property name="row_spacing">6</property>
+        <property name="can-focus">False</property>
+        <property name="orientation">vertical</property>
         <child>
-          <object class="GtkHButtonBox" id="button_box">
+          <object class="GtkNotebook">
             <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="spacing">1</property>
-            <property name="layout_style">end</property>
+            <property name="can-focus">True</property>
             <child>
-              <object class="GtkButton" id="quit_btn">
-                <property name="label">gtk-quit</property>
+              <object class="GtkBox">
                 <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="use_stock">True</property>
-                <property name="xalign">0</property>
-                <signal name="clicked" handler="on_quit_btn_clicked" swapped="no"/>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">False</property>
-                <property name="position">0</property>
-                <property name="secondary">True</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkButton" id="cancel_btn">
-                <property name="label">gtk-cancel</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="use_stock">True</property>
-                <property name="xalign">1</property>
-                <signal name="clicked" handler="on_cancel_btn_clicked" swapped="no"/>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">False</property>
-                <property name="position">1</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkButton" id="dry_run_btn">
-                <property name="label" translatable="yes">Dry run</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="image">dry_run_icon</property>
-                <signal name="clicked" handler="on_dry_run_btn_clicked" swapped="no"/>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">False</property>
-                <property name="position">2</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkButton" id="execute_btn">
-                <property name="label">gtk-execute</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="use_stock">True</property>
-                <signal name="clicked" handler="on_execute_btn_clicked" swapped="no"/>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">False</property>
-                <property name="position">3</property>
-              </packing>
-            </child>
-          </object>
-          <packing>
-            <property name="top_attach">4</property>
-            <property name="bottom_attach">5</property>
-            <property name="y_options"/>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkFrame" id="gen_opts_frame">
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="label_xalign">0.019999999552965164</property>
-            <property name="shadow_type">in</property>
-            <child>
-              <object class="GtkAlignment" id="gen_opts_alignment">
-                <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <property name="top_padding">8</property>
-                <property name="bottom_padding">8</property>
-                <property name="left_padding">8</property>
-                <property name="right_padding">8</property>
+                <property name="can-focus">False</property>
+                <property name="orientation">vertical</property>
                 <child>
-                  <object class="GtkTable" id="gen_opts_table">
+                  <object class="GtkFrame" id="gen_opts_frame">
                     <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="n_rows">5</property>
-                    <property name="n_columns">3</property>
-                    <property name="column_spacing">4</property>
-                    <property name="row_spacing">4</property>
+                    <property name="can-focus">False</property>
+                    <property name="label-xalign">0.019999999552965164</property>
+                    <property name="shadow-type">in</property>
                     <child>
-                      <object class="GtkLabel" id="fn_format_preview_label">
+                      <!-- n-columns=3 n-rows=5 -->
+                      <object class="GtkGrid" id="gen_opts_table">
                         <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="xalign">0</property>
-                        <property name="wrap">True</property>
-                      </object>
-                      <packing>
-                        <property name="left_attach">1</property>
-                        <property name="right_attach">2</property>
-                        <property name="top_attach">2</property>
-                        <property name="bottom_attach">3</property>
-                        <property name="y_options">GTK_FILL</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkComboBox" id="fn_format_combobox">
-                        <property name="can_focus">False</property>
-                        <property name="model">fn_format_model</property>
-                        <property name="active">0</property>
-                        <property name="has_entry">True</property>
-                        <property name="entry_text_column">0</property>
-                        <signal name="changed" handler="on_fn_format_combobox_changed" swapped="no"/>
-                        <signal name="show" handler="on_fn_format_combobox_show" swapped="no"/>
-                      </object>
-                      <packing>
-                        <property name="left_attach">1</property>
-                        <property name="right_attach">3</property>
-                        <property name="top_attach">1</property>
-                        <property name="bottom_attach">2</property>
-                        <property name="y_options">GTK_FILL</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkLabel" id="target_dir_label">
-                        <property name="visible">True</property>
-                        <property name="sensitive">False</property>
-                        <property name="can_focus">False</property>
-                        <property name="tooltip_text" translatable="yes">The root directory of the destination</property>
-                        <property name="xalign">1</property>
-                        <property name="label" translatable="yes">Destination root</property>
-                      </object>
-                      <packing>
-                        <property name="x_options">GTK_SHRINK</property>
-                        <property name="y_options">GTK_FILL</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkLabel" id="example_label">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="xalign">1</property>
-                        <property name="label" translatable="yes">Preview</property>
-                        <property name="justify">right</property>
-                      </object>
-                      <packing>
-                        <property name="top_attach">2</property>
-                        <property name="bottom_attach">3</property>
-                        <property name="x_options">GTK_SHRINK | GTK_FILL</property>
-                        <property name="y_options">GTK_FILL</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkLabel" id="fname_format_label">
-                        <property name="visible">True</property>
-                        <property name="sensitive">False</property>
-                        <property name="can_focus">False</property>
-                        <property name="tooltip_text" translatable="yes">ddb_ows can determine the destination filename with a title formatting string. See DeaDBeeF documentation for details.</property>
-                        <property name="xalign">1</property>
-                        <property name="label" translatable="yes">File name format</property>
-                      </object>
-                      <packing>
-                        <property name="top_attach">1</property>
-                        <property name="bottom_attach">2</property>
-                        <property name="x_options">GTK_SHRINK | GTK_FILL</property>
-                        <property name="y_options">GTK_FILL</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkImage" id="fn_format_valid_indicator">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="tooltip_text" translatable="yes">The selected format string is valid</property>
-                        <property name="ypad">4</property>
-                        <property name="stock">gtk-yes</property>
-                      </object>
-                      <packing>
-                        <property name="left_attach">2</property>
-                        <property name="right_attach">3</property>
-                        <property name="top_attach">2</property>
-                        <property name="bottom_attach">3</property>
-                        <property name="x_options">GTK_FILL</property>
-                        <property name="y_options">GTK_FILL</property>
-                        <property name="x_padding">4</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkCheckButton" id="cover_sync_check">
-                        <property name="label" translatable="yes">Sync cover art</property>
-                        <property name="can_focus">True</property>
-                        <property name="receives_default">False</property>
-                        <property name="draw_indicator">True</property>
-                        <signal name="show" handler="on_cover_sync_check_show" swapped="no"/>
-                        <signal name="toggled" handler="on_cover_sync_check_toggled" swapped="no"/>
-                      </object>
-                      <packing>
-                        <property name="top_attach">3</property>
-                        <property name="bottom_attach">4</property>
-                        <property name="x_options">GTK_FILL</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkFileChooserButton" id="target_root_chooser">
-                        <property name="can_focus">False</property>
-                        <property name="action">select-folder</property>
-                        <property name="preview_widget_active">False</property>
-                        <property name="title" translatable="yes">Select target root directory</property>
-                        <signal name="selection-changed" handler="on_target_root_chooser_selection_changed" swapped="no"/>
-                        <signal name="show" handler="on_target_root_chooser_show" swapped="no"/>
-                      </object>
-                      <packing>
-                        <property name="left_attach">1</property>
-                        <property name="right_attach">3</property>
-                        <property name="y_options">GTK_FILL</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkEntry" id="cover_fname_entry">
-                        <property name="can_focus">True</property>
-                        <property name="buffer">cover_fname_buffer</property>
-                        <property name="invisible_char">•</property>
-                        <property name="invisible_char_set">True</property>
-                        <property name="primary_icon_activatable">False</property>
-                        <property name="secondary_icon_activatable">False</property>
-                        <property name="primary_icon_sensitive">True</property>
-                        <property name="secondary_icon_sensitive">True</property>
-                        <signal name="changed" handler="on_cover_fname_entry_changed" swapped="no"/>
-                        <signal name="show" handler="on_cover_fname_entry_show" swapped="no"/>
-                      </object>
-                      <packing>
-                        <property name="left_attach">1</property>
-                        <property name="right_attach">3</property>
-                        <property name="top_attach">3</property>
-                        <property name="bottom_attach">4</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkAlignment" id="rm_alignment">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="xalign">0</property>
-                        <property name="xscale">0</property>
+                        <property name="can-focus">False</property>
+                        <property name="margin-start">8</property>
+                        <property name="margin-end">12</property>
+                        <property name="margin-top">8</property>
+                        <property name="margin-bottom">8</property>
+                        <property name="column-spacing">8</property>
+                        <child>
+                          <object class="GtkLabel" id="target_dir_label">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="tooltip-text" translatable="yes">The root directory of the destination</property>
+                            <property name="halign">end</property>
+                            <property name="label" translatable="yes">Destination root</property>
+                          </object>
+                          <packing>
+                            <property name="left-attach">0</property>
+                            <property name="top-attach">0</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkFileChooserButton" id="target_root_chooser">
+                            <property name="can-focus">False</property>
+                            <property name="action">select-folder</property>
+                            <property name="preview-widget-active">False</property>
+                            <property name="use-preview-label">False</property>
+                            <property name="title" translatable="yes">Select target root directory</property>
+                            <signal name="selection-changed" handler="on_target_root_chooser_selection_changed" swapped="no"/>
+                            <signal name="show" handler="on_target_root_chooser_show" swapped="no"/>
+                          </object>
+                          <packing>
+                            <property name="left-attach">1</property>
+                            <property name="top-attach">0</property>
+                            <property name="width">2</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="fname_format_label">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="tooltip-text" translatable="yes">ddb_ows can determine the destination filename with a title formatting string. See DeaDBeeF documentation for details.</property>
+                            <property name="halign">end</property>
+                            <property name="label" translatable="yes">File name format</property>
+                          </object>
+                          <packing>
+                            <property name="left-attach">0</property>
+                            <property name="top-attach">1</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkComboBox" id="fn_format_combobox">
+                            <property name="can-focus">False</property>
+                            <property name="model">fn_format_model</property>
+                            <property name="active">0</property>
+                            <property name="has-entry">True</property>
+                            <property name="entry-text-column">0</property>
+                            <signal name="changed" handler="on_fn_format_combobox_changed" swapped="no"/>
+                            <signal name="show" handler="on_fn_format_combobox_show" swapped="no"/>
+                            <child internal-child="entry">
+                              <object class="GtkEntry">
+                                <property name="can-focus">False</property>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="left-attach">1</property>
+                            <property name="top-attach">1</property>
+                            <property name="width">2</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="example_label">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="halign">end</property>
+                            <property name="label" translatable="yes">Preview</property>
+                            <property name="justify">right</property>
+                          </object>
+                          <packing>
+                            <property name="left-attach">0</property>
+                            <property name="top-attach">2</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkImage" id="fn_format_valid_indicator">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="tooltip-text" translatable="yes">The selected format string is valid</property>
+                            <property name="ypad">4</property>
+                            <property name="icon-name">gtk-yes</property>
+                          </object>
+                          <packing>
+                            <property name="left-attach">2</property>
+                            <property name="top-attach">2</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="fn_format_preview_label">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="hexpand">True</property>
+                            <property name="wrap">True</property>
+                            <property name="ellipsize">middle</property>
+                            <property name="xalign">1</property>
+                          </object>
+                          <packing>
+                            <property name="left-attach">1</property>
+                            <property name="top-attach">2</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkCheckButton" id="cover_sync_check">
+                            <property name="label" translatable="yes">Sync cover art</property>
+                            <property name="can-focus">True</property>
+                            <property name="receives-default">False</property>
+                            <property name="draw-indicator">True</property>
+                            <signal name="show" handler="on_cover_sync_check_show" swapped="no"/>
+                            <signal name="toggled" handler="on_cover_sync_check_toggled" swapped="no"/>
+                          </object>
+                          <packing>
+                            <property name="left-attach">0</property>
+                            <property name="top-attach">3</property>
+                          </packing>
+                        </child>
                         <child>
                           <object class="GtkCheckButton" id="rm_unref_check">
                             <property name="label" translatable="yes">Delete unreferenced files</property>
-                            <property name="can_focus">True</property>
-                            <property name="receives_default">False</property>
-                            <property name="draw_indicator">True</property>
+                            <property name="can-focus">True</property>
+                            <property name="receives-default">False</property>
+                            <property name="margin-top">2</property>
+                            <property name="margin-bottom">2</property>
+                            <property name="draw-indicator">True</property>
                             <signal name="show" handler="on_rm_unref_check_show" swapped="no"/>
                             <signal name="toggled" handler="on_rm_check_toggled" swapped="no"/>
                           </object>
-                        </child>
-                      </object>
-                      <packing>
-                        <property name="right_attach">3</property>
-                        <property name="top_attach">4</property>
-                        <property name="bottom_attach">5</property>
-                      </packing>
-                    </child>
-                  </object>
-                </child>
-              </object>
-            </child>
-            <child type="label">
-              <object class="GtkLabel" id="gen_opts_label">
-                <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <property name="label" translatable="yes">&lt;b&gt;General options&lt;/b&gt;</property>
-                <property name="use_markup">True</property>
-              </object>
-            </child>
-          </object>
-          <packing>
-            <property name="y_options">GTK_FILL</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkFrame" id="pl_selection_frame">
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="label_xalign">0.019999999552965164</property>
-            <property name="shadow_type">in</property>
-            <child>
-              <object class="GtkAlignment" id="pl_selection_alignment">
-                <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <property name="top_padding">8</property>
-                <property name="bottom_padding">8</property>
-                <property name="left_padding">8</property>
-                <property name="right_padding">12</property>
-                <child>
-                  <object class="GtkScrolledWindow" id="playlists_sw">
-                    <property name="height_request">240</property>
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="no_show_all">True</property>
-                    <property name="hscrollbar_policy">automatic</property>
-                    <property name="vscrollbar_policy">automatic</property>
-                    <child>
-                      <object class="GtkTreeView" id="playlists_tv">
-                        <property name="visible">True</property>
-                        <property name="can_focus">True</property>
-                        <property name="model">pl_selection_model</property>
-                        <property name="headers_clickable">False</property>
-                        <property name="expander_column">pl_name</property>
-                        <property name="rules_hint">True</property>
-                        <property name="enable_search">False</property>
-                        <property name="search_column">0</property>
-                        <property name="fixed_height_mode">True</property>
-                        <child>
-                          <object class="GtkTreeViewColumn" id="playlist_selected">
-                            <property name="sizing">fixed</property>
-                            <property name="fixed_width">24</property>
-                            <property name="clickable">True</property>
-                            <property name="widget">pl_select_all</property>
-                            <property name="alignment">0.5</property>
-                            <signal name="clicked" handler="on_select_all_toggled" object="pl_selection_model" swapped="yes"/>
-                            <child>
-                              <object class="GtkCellRendererToggle" id="pl_selected_rend">
-                                <signal name="toggled" handler="on_selected_rend_toggled" object="pl_selection_model" swapped="no"/>
-                              </object>
-                              <attributes>
-                                <attribute name="active">0</attribute>
-                              </attributes>
-                            </child>
-                          </object>
+                          <packing>
+                            <property name="left-attach">0</property>
+                            <property name="top-attach">4</property>
+                            <property name="width">3</property>
+                          </packing>
                         </child>
                         <child>
-                          <object class="GtkTreeViewColumn" id="pl_name">
-                            <property name="sizing">fixed</property>
-                            <property name="expand">True</property>
-                            <child>
-                              <object class="GtkCellRendererText" id="pl_name_rend">
-                                <property name="xalign">0</property>
-                              </object>
-                              <attributes>
-                                <attribute name="text">1</attribute>
-                              </attributes>
-                            </child>
+                          <object class="GtkEntry" id="cover_fname_entry">
+                            <property name="can-focus">True</property>
+                            <property name="buffer">cover_fname_buffer</property>
+                            <property name="invisible-char">•</property>
+                            <property name="primary-icon-activatable">False</property>
+                            <property name="secondary-icon-activatable">False</property>
+                            <signal name="changed" handler="on_cover_fname_entry_changed" swapped="no"/>
+                            <signal name="show" handler="on_cover_fname_entry_show" swapped="no"/>
                           </object>
+                          <packing>
+                            <property name="left-attach">1</property>
+                            <property name="top-attach">3</property>
+                            <property name="width">2</property>
+                          </packing>
                         </child>
                       </object>
                     </child>
-                  </object>
-                </child>
-              </object>
-            </child>
-            <child type="label">
-              <object class="GtkLabel" id="pl_selection_label">
-                <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <property name="label" translatable="yes">&lt;b&gt;Select playlists to sync&lt;/b&gt;</property>
-                <property name="use_markup">True</property>
-              </object>
-            </child>
-          </object>
-          <packing>
-            <property name="top_attach">1</property>
-            <property name="bottom_attach">2</property>
-            <property name="x_options">GTK_FILL</property>
-            <property name="y_options">GTK_EXPAND | GTK_SHRINK | GTK_FILL</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkFrame" id="convert_opts_frame">
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="label_xalign">0.019999999552965164</property>
-            <property name="shadow_type">in</property>
-            <child>
-              <object class="GtkAlignment" id="convert_opts_alignment">
-                <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <property name="top_padding">8</property>
-                <property name="bottom_padding">8</property>
-                <property name="left_padding">8</property>
-                <property name="right_padding">8</property>
-                <child>
-                  <object class="GtkTable" id="convert_opts_table">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="n_rows">3</property>
-                    <property name="n_columns">4</property>
-                    <property name="column_spacing">4</property>
-                    <property name="row_spacing">4</property>
-                    <child>
-                      <object class="GtkScrolledWindow" id="convert_ft_sw">
-                        <property name="width_request">240</property>
-                        <property name="height_request">220</property>
+                    <child type="label">
+                      <object class="GtkLabel" id="gen_opts_label">
                         <property name="visible">True</property>
-                        <property name="can_focus">True</property>
-                        <property name="no_show_all">True</property>
-                        <property name="hscrollbar_policy">automatic</property>
-                        <property name="vscrollbar_policy">automatic</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">&lt;b&gt;General options&lt;/b&gt;</property>
+                        <property name="use-markup">True</property>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkFrame" id="pl_selection_frame">
+                    <property name="height-request">240</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="label-xalign">0.019999999552965164</property>
+                    <property name="shadow-type">in</property>
+                    <child>
+                      <object class="GtkScrolledWindow" id="playlists_sw">
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="no-show-all">True</property>
+                        <property name="margin-start">8</property>
+                        <property name="margin-end">12</property>
+                        <property name="margin-top">8</property>
+                        <property name="margin-bottom">8</property>
+                        <property name="kinetic-scrolling">False</property>
+                        <property name="overlay-scrolling">False</property>
                         <child>
-                          <object class="GtkTreeView" id="convert_ft_tv">
-                            <property name="width_request">240</property>
-                            <property name="height_request">240</property>
+                          <object class="GtkTreeView" id="playlists_tv">
                             <property name="visible">True</property>
-                            <property name="can_focus">True</property>
-                            <property name="tooltip_text" translatable="yes">ddb_ows can insert a conversion step in the source to destination pipeline. Useful to save destination space through lossy compression of lossless files, for example.  Select a decoder plugin to indicate that files handled by that plugin should be converted.</property>
-                            <property name="model">ft_model</property>
-                            <property name="headers_clickable">False</property>
-                            <property name="expander_column">ft_filetype</property>
-                            <property name="rules_hint">True</property>
-                            <property name="enable_search">False</property>
-                            <property name="search_column">0</property>
-                            <property name="fixed_height_mode">True</property>
+                            <property name="can-focus">True</property>
+                            <property name="model">pl_selection_model</property>
+                            <property name="headers-clickable">False</property>
+                            <property name="expander-column">pl_name</property>
+                            <property name="enable-search">False</property>
+                            <property name="search-column">0</property>
+                            <property name="fixed-height-mode">True</property>
+                            <child internal-child="selection">
+                              <object class="GtkTreeSelection"/>
+                            </child>
                             <child>
-                              <object class="GtkTreeViewColumn" id="ft_selected">
+                              <object class="GtkTreeViewColumn" id="playlist_selected">
                                 <property name="sizing">fixed</property>
-                                <property name="fixed_width">24</property>
+                                <property name="fixed-width">30</property>
                                 <property name="clickable">True</property>
-                                <property name="widget">ft_select_all</property>
+                                <property name="widget">pl_select_all</property>
                                 <property name="alignment">0.5</property>
-                                <signal name="clicked" handler="on_select_all_toggled" object="ft_model" swapped="yes"/>
+                                <signal name="clicked" handler="on_select_all_toggled" object="pl_selection_model" swapped="yes"/>
                                 <child>
-                                  <object class="GtkCellRendererToggle" id="ft_selected_rend">
-                                    <signal name="toggled" handler="on_selected_rend_toggled" object="ft_model" swapped="no"/>
+                                  <object class="GtkCellRendererToggle" id="pl_selected_rend">
+                                    <signal name="toggled" handler="on_selected_rend_toggled" object="pl_selection_model" swapped="no"/>
                                   </object>
                                   <attributes>
                                     <attribute name="active">0</attribute>
@@ -532,12 +349,11 @@
                               </object>
                             </child>
                             <child>
-                              <object class="GtkTreeViewColumn" id="ft_filetype">
+                              <object class="GtkTreeViewColumn" id="pl_name">
                                 <property name="sizing">fixed</property>
-                                <property name="title" translatable="yes">Formats to convert</property>
                                 <property name="expand">True</property>
                                 <child>
-                                  <object class="GtkCellRendererText" id="ft_filetype_rend">
+                                  <object class="GtkCellRendererText" id="pl_name_rend">
                                     <property name="xalign">0</property>
                                   </object>
                                   <attributes>
@@ -549,291 +365,375 @@
                           </object>
                         </child>
                       </object>
-                      <packing>
-                        <property name="bottom_attach">3</property>
-                        <property name="x_options">GTK_FILL</property>
-                        <property name="y_options">GTK_FILL</property>
-                      </packing>
                     </child>
-                    <child>
-                      <object class="GtkAlignment" id="wt_spinbutton_alignment">
+                    <child type="label">
+                      <object class="GtkLabel" id="pl_selection_label">
                         <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="xalign">0</property>
-                        <property name="xscale">0</property>
-                        <child>
-                          <object class="GtkSpinButton" id="wt_spinbutton">
-                            <property name="width_request">0</property>
-                            <property name="can_focus">True</property>
-                            <property name="invisible_char">•</property>
-                            <property name="primary_icon_activatable">False</property>
-                            <property name="secondary_icon_activatable">False</property>
-                            <property name="primary_icon_sensitive">True</property>
-                            <property name="secondary_icon_sensitive">True</property>
-                            <property name="adjustment">wt_adjustment</property>
-                            <property name="numeric">True</property>
-                            <signal name="value-changed" handler="on_wt_spinbutton_value_changed" swapped="no"/>
-                            <signal name="show" handler="on_wt_spinbutton_show" swapped="no"/>
-                          </object>
-                        </child>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">&lt;b&gt;Select playlists to sync&lt;/b&gt;</property>
+                        <property name="use-markup">True</property>
                       </object>
-                      <packing>
-                        <property name="left_attach">2</property>
-                        <property name="right_attach">3</property>
-                        <property name="x_options">GTK_FILL</property>
-                        <property name="y_options">GTK_FILL</property>
-                      </packing>
                     </child>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkFrame" id="convert_opts_frame">
+                    <property name="height-request">240</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="label-xalign">0.019999999552965164</property>
+                    <property name="shadow-type">in</property>
                     <child>
-                      <object class="GtkAlignment" id="conv_wt_label_alignment">
+                      <!-- n-columns=3 n-rows=4 -->
+                      <object class="GtkGrid">
                         <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="xalign">1</property>
-                        <property name="xscale">0</property>
-                        <child>
-                          <object class="GtkLabel" id="wt_label">
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="tooltip_text" translatable="yes">ddb_ows can parallelise jobs. This can achieve speedups if the bottleneck is CPU speed for conversions. (Encoders and decoders work single-threaded.) Can cause slowdowns if the bottleneck is read and write speed.</property>
-                            <property name="xalign">1</property>
-                            <property name="label" translatable="yes">Worker threads</property>
-                          </object>
-                        </child>
-                      </object>
-                      <packing>
-                        <property name="left_attach">1</property>
-                        <property name="right_attach">2</property>
-                        <property name="x_options">GTK_SHRINK | GTK_FILL</property>
-                        <property name="y_options"/>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkAlignment" id="conv_preset_alignment">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="xscale">0</property>
-                        <child>
-                          <object class="GtkLabel" id="conv_preset_label">
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="xalign">1</property>
-                            <property name="yalign">0</property>
-                            <property name="label" translatable="yes">Converter preset</property>
-                          </object>
-                        </child>
-                      </object>
-                      <packing>
-                        <property name="left_attach">1</property>
-                        <property name="right_attach">2</property>
-                        <property name="top_attach">1</property>
-                        <property name="bottom_attach">2</property>
-                        <property name="x_options">GTK_SHRINK | GTK_FILL</property>
-                        <property name="y_options"/>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkAlignment" id="conv_ext_label_alignment">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="xalign">1</property>
-                        <property name="xscale">0</property>
-                        <child>
-                          <object class="GtkLabel" id="conv_ext_label">
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="xalign">1</property>
-                            <property name="yalign">0</property>
-                            <property name="label" translatable="yes">File extension</property>
-                          </object>
-                        </child>
-                      </object>
-                      <packing>
-                        <property name="left_attach">1</property>
-                        <property name="right_attach">2</property>
-                        <property name="top_attach">2</property>
-                        <property name="bottom_attach">3</property>
-                        <property name="x_options">GTK_SHRINK | GTK_FILL</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkAlignment" id="conv_ext_entry_alignment">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="xalign">0</property>
-                        <property name="yalign">0</property>
-                        <property name="xscale">0</property>
-                        <property name="yscale">0</property>
+                        <property name="can-focus">False</property>
+                        <property name="margin-start">8</property>
+                        <property name="margin-end">8</property>
+                        <property name="margin-top">8</property>
+                        <property name="margin-bottom">12</property>
+                        <property name="column-spacing">8</property>
                         <child>
                           <object class="GtkEntry" id="conv_ext_entry">
-                            <property name="can_focus">True</property>
-                            <property name="invisible_char">•</property>
-                            <property name="primary_icon_activatable">False</property>
-                            <property name="secondary_icon_activatable">False</property>
-                            <property name="primary_icon_sensitive">True</property>
-                            <property name="secondary_icon_sensitive">True</property>
+                            <property name="can-focus">True</property>
+                            <property name="valign">start</property>
+                            <property name="invisible-char">•</property>
+                            <property name="width-chars">12</property>
+                            <property name="primary-icon-activatable">False</property>
+                            <property name="secondary-icon-activatable">False</property>
                             <signal name="changed" handler="on_conv_ext_entry_changed" swapped="no"/>
                             <signal name="show" handler="on_conv_ext_entry_show" swapped="no"/>
                           </object>
+                          <packing>
+                            <property name="left-attach">2</property>
+                            <property name="top-attach">2</property>
+                          </packing>
                         </child>
-                      </object>
-                      <packing>
-                        <property name="left_attach">2</property>
-                        <property name="right_attach">3</property>
-                        <property name="top_attach">2</property>
-                        <property name="bottom_attach">3</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkAlignment" id="conv_fill_alignment">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
                         <child>
-                          <placeholder/>
+                          <object class="GtkLabel" id="conv_ext_label">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="halign">end</property>
+                            <property name="valign">baseline</property>
+                            <property name="ypad">6</property>
+                            <property name="label" translatable="yes">File extension</property>
+                          </object>
+                          <packing>
+                            <property name="left-attach">1</property>
+                            <property name="top-attach">2</property>
+                          </packing>
                         </child>
-                      </object>
-                      <packing>
-                        <property name="left_attach">3</property>
-                        <property name="right_attach">4</property>
-                        <property name="bottom_attach">3</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkAlignment" id="conv_preset_cb_alignment">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="xalign">0</property>
-                        <property name="xscale">0</property>
+                        <child>
+                          <object class="GtkLabel" id="conv_preset_label">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="halign">end</property>
+                            <property name="valign">baseline</property>
+                            <property name="label" translatable="yes">Converter preset</property>
+                          </object>
+                          <packing>
+                            <property name="left-attach">1</property>
+                            <property name="top-attach">1</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkScrolledWindow" id="convert_ft_sw">
+                            <property name="visible">True</property>
+                            <property name="can-focus">True</property>
+                            <property name="no-show-all">True</property>
+                            <property name="hexpand">True</property>
+                            <property name="min-content-width">180</property>
+                            <property name="kinetic-scrolling">False</property>
+                            <property name="overlay-scrolling">False</property>
+                            <child>
+                              <object class="GtkTreeView" id="convert_ft_tv">
+                                <property name="visible">True</property>
+                                <property name="can-focus">True</property>
+                                <property name="tooltip-text" translatable="yes">ddb_ows can insert a conversion step in the source to destination pipeline. Useful to save destination space through lossy compression of lossless files, for example.  Select a decoder plugin to indicate that files handled by that plugin should be converted.</property>
+                                <property name="vexpand">True</property>
+                                <property name="model">ft_model</property>
+                                <property name="headers-clickable">False</property>
+                                <property name="expander-column">ft_filetype</property>
+                                <property name="enable-search">False</property>
+                                <property name="search-column">0</property>
+                                <property name="fixed-height-mode">True</property>
+                                <property name="enable-grid-lines">vertical</property>
+                                <child internal-child="selection">
+                                  <object class="GtkTreeSelection"/>
+                                </child>
+                                <child>
+                                  <object class="GtkTreeViewColumn" id="ft_selected">
+                                    <property name="sizing">fixed</property>
+                                    <property name="fixed-width">30</property>
+                                    <property name="clickable">True</property>
+                                    <property name="widget">ft_select_all</property>
+                                    <property name="alignment">0.5</property>
+                                    <signal name="clicked" handler="on_select_all_toggled" object="ft_model" swapped="yes"/>
+                                    <child>
+                                      <object class="GtkCellRendererToggle" id="ft_selected_rend">
+                                        <signal name="toggled" handler="on_selected_rend_toggled" object="ft_model" swapped="no"/>
+                                      </object>
+                                      <attributes>
+                                        <attribute name="active">0</attribute>
+                                      </attributes>
+                                    </child>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkTreeViewColumn" id="ft_filetype">
+                                    <property name="sizing">fixed</property>
+                                    <property name="title" translatable="yes">Formats to convert</property>
+                                    <property name="expand">True</property>
+                                    <child>
+                                      <object class="GtkCellRendererText" id="ft_filetype_rend">
+                                        <property name="xalign">0</property>
+                                      </object>
+                                      <attributes>
+                                        <attribute name="text">1</attribute>
+                                      </attributes>
+                                    </child>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="left-attach">0</property>
+                            <property name="top-attach">0</property>
+                            <property name="height">4</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkSpinButton" id="wt_spinbutton">
+                            <property name="can-focus">True</property>
+                            <property name="halign">end</property>
+                            <property name="valign">start</property>
+                            <property name="invisible-char">•</property>
+                            <property name="text" translatable="yes">1</property>
+                            <property name="primary-icon-activatable">False</property>
+                            <property name="secondary-icon-activatable">False</property>
+                            <property name="input-purpose">number</property>
+                            <property name="adjustment">wt_adjustment</property>
+                            <property name="numeric">True</property>
+                            <property name="value">1</property>
+                            <signal name="show" handler="on_wt_spinbutton_show" swapped="no"/>
+                            <signal name="value-changed" handler="on_wt_spinbutton_value_changed" swapped="no"/>
+                          </object>
+                          <packing>
+                            <property name="left-attach">2</property>
+                            <property name="top-attach">0</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="wt_label">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="tooltip-text" translatable="yes">ddb_ows can parallelise jobs. This can achieve speedups if the bottleneck is CPU speed for conversions. (Encoders and decoders work single-threaded.) Can cause slowdowns if the bottleneck is read and write speed.</property>
+                            <property name="halign">end</property>
+                            <property name="valign">baseline</property>
+                            <property name="label" translatable="yes">Worker threads</property>
+                          </object>
+                          <packing>
+                            <property name="left-attach">1</property>
+                            <property name="top-attach">0</property>
+                          </packing>
+                        </child>
                         <child>
                           <object class="GtkComboBox" id="cp_combobox">
                             <property name="visible">True</property>
-                            <property name="can_focus">False</property>
+                            <property name="can-focus">False</property>
                             <property name="model">cp_model</property>
+                            <property name="popup-fixed-width">False</property>
                             <signal name="changed" handler="on_cp_combobox_changed" swapped="no"/>
                             <child>
-                              <object class="GtkCellRendererText" id="cp_renderer"/>
+                              <object class="GtkCellRendererText" id="cp_renderer">
+                                <property name="ellipsize">end</property>
+                              </object>
                               <attributes>
                                 <attribute name="text">0</attribute>
                               </attributes>
                             </child>
                           </object>
+                          <packing>
+                            <property name="left-attach">2</property>
+                            <property name="top-attach">1</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="vexpand">True</property>
+                          </object>
+                          <packing>
+                            <property name="left-attach">1</property>
+                            <property name="top-attach">3</property>
+                            <property name="width">2</property>
+                          </packing>
                         </child>
                       </object>
-                      <packing>
-                        <property name="left_attach">2</property>
-                        <property name="right_attach">3</property>
-                        <property name="top_attach">1</property>
-                        <property name="bottom_attach">2</property>
-                        <property name="y_options"/>
-                      </packing>
+                    </child>
+                    <child type="label">
+                      <object class="GtkLabel" id="convert_opts_label">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">&lt;b&gt;Conversion options&lt;/b&gt;</property>
+                        <property name="use-markup">True</property>
+                      </object>
                     </child>
                   </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">2</property>
+                  </packing>
                 </child>
               </object>
             </child>
-            <child type="label">
-              <object class="GtkLabel" id="convert_opts_label">
+            <child type="tab">
+              <object class="GtkLabel">
                 <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <property name="label" translatable="yes">&lt;b&gt;Conversion options&lt;/b&gt;</property>
-                <property name="use_markup">True</property>
+                <property name="can-focus">False</property>
+                <property name="label" translatable="yes">Configuration</property>
               </object>
+              <packing>
+                <property name="tab-fill">False</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkScrolledWindow" id="job_log_sw">
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="kinetic-scrolling">False</property>
+                <property name="overlay-scrolling">False</property>
+                <child>
+                  <object class="GtkTextView" id="job_log">
+                    <property name="can-focus">True</property>
+                    <property name="editable">False</property>
+                    <property name="cursor-visible">False</property>
+                    <property name="buffer">job_log_buffer</property>
+                    <property name="accepts-tab">False</property>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="position">1</property>
+              </packing>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="label" translatable="yes">Log</property>
+              </object>
+              <packing>
+                <property name="position">1</property>
+                <property name="tab-fill">False</property>
+              </packing>
             </child>
           </object>
           <packing>
-            <property name="top_attach">2</property>
-            <property name="bottom_attach">3</property>
-            <property name="x_options">GTK_FILL</property>
-            <property name="y_options">GTK_FILL</property>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">0</property>
           </packing>
         </child>
         <child>
-          <object class="GtkFrame" id="progress_frame">
+          <object class="GtkProgressBar" id="progress_bar">
             <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="label_xalign">0.019999999552965164</property>
-            <property name="shadow_type">in</property>
+            <property name="can-focus">False</property>
+            <property name="pulse-step">0.010000000223517418</property>
+            <property name="show-text">True</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkButtonBox" id="button_box">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="layout-style">end</property>
             <child>
-              <object class="GtkAlignment" id="alignment2">
+              <object class="GtkButton" id="quit_btn">
+                <property name="label" translatable="yes">Quit</property>
                 <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <property name="top_padding">4</property>
-                <property name="left_padding">8</property>
-                <property name="right_padding">8</property>
-                <child>
-                  <object class="GtkVBox" id="progress_vbox">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="spacing">4</property>
-                    <child>
-                      <object class="GtkProgressBar" id="progress_bar">
-                        <property name="height_request">24</property>
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="show_text">True</property>
-                        <property name="pulse_step">0.010000000223517418</property>
-                      </object>
-                      <packing>
-                        <property name="expand">False</property>
-                        <property name="fill">True</property>
-                        <property name="position">0</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkExpander" id="log_expander">
-                        <property name="visible">True</property>
-                        <property name="can_focus">True</property>
-                        <child>
-                          <object class="GtkScrolledWindow" id="job_log_sw">
-                            <property name="height_request">240</property>
-                            <property name="visible">True</property>
-                            <property name="can_focus">True</property>
-                            <property name="resize_mode">immediate</property>
-                            <property name="hscrollbar_policy">automatic</property>
-                            <property name="vscrollbar_policy">automatic</property>
-                            <child>
-                              <object class="GtkTextView" id="job_log">
-                                <property name="height_request">240</property>
-                                <property name="can_focus">True</property>
-                                <property name="editable">False</property>
-                                <property name="wrap_mode">word</property>
-                                <property name="cursor_visible">False</property>
-                                <property name="buffer">job_log_buffer</property>
-                                <property name="accepts_tab">False</property>
-                              </object>
-                            </child>
-                          </object>
-                        </child>
-                        <child type="label">
-                          <object class="GtkLabel" id="log_label">
-                            <property name="can_focus">False</property>
-                            <property name="label" translatable="yes">&lt;b&gt;View log&lt;/b&gt;</property>
-                            <property name="use_markup">True</property>
-                          </object>
-                        </child>
-                      </object>
-                      <packing>
-                        <property name="expand">True</property>
-                        <property name="fill">True</property>
-                        <property name="position">1</property>
-                      </packing>
-                    </child>
-                  </object>
-                </child>
+                <property name="can-focus">True</property>
+                <property name="receives-default">True</property>
+                <property name="image">quit_img</property>
+                <property name="always-show-image">True</property>
+                <signal name="clicked" handler="on_quit_btn_clicked" swapped="no"/>
               </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">0</property>
+                <property name="secondary">True</property>
+              </packing>
             </child>
-            <child type="label">
-              <object class="GtkLabel" id="progress_frame_label">
+            <child>
+              <object class="GtkButton" id="cancel_btn">
+                <property name="label" translatable="yes">Cancel</property>
                 <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <property name="label" translatable="yes">&lt;b&gt;Progress&lt;/b&gt;</property>
-                <property name="use_markup">True</property>
+                <property name="can-focus">True</property>
+                <property name="receives-default">True</property>
+                <property name="image">cancel_img</property>
+                <property name="always-show-image">True</property>
+                <signal name="clicked" handler="on_cancel_btn_clicked" swapped="no"/>
               </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="pack-type">end</property>
+                <property name="position">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="dry_run_btn">
+                <property name="label" translatable="yes">Dry run</property>
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="receives-default">True</property>
+                <property name="image">dry_run_icon</property>
+                <property name="always-show-image">True</property>
+                <signal name="clicked" handler="on_dry_run_btn_clicked" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="pack-type">end</property>
+                <property name="position">3</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="execute_btn">
+                <property name="label" translatable="yes">Execute</property>
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="receives-default">True</property>
+                <property name="image">execute_img</property>
+                <property name="always-show-image">True</property>
+                <signal name="clicked" handler="on_execute_btn_clicked" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="pack-type">end</property>
+                <property name="position">4</property>
+              </packing>
             </child>
           </object>
           <packing>
-            <property name="top_attach">3</property>
-            <property name="bottom_attach">4</property>
-            <property name="y_options">GTK_SHRINK</property>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">2</property>
           </packing>
         </child>
       </object>
