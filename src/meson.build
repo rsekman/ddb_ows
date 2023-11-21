@@ -36,7 +36,7 @@ shared_module('ddb_ows_gtk3', 'ddb_ows_gui.cpp',
   'progressmonitor.cpp',
   install: true,
   install_dir: destdir,
-  dependencies : [gtk_dep, fmt_dep],
+  dependencies : [gtk_dep, fmt_dep, uuid_dep],
   link_whole: conf,
   name_prefix: ''
 )
