@@ -352,7 +352,6 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
         return false;
     }
     jobs->open();
-    logger.clear();
 
     // We need to lock the playlist to avoid data races as we're looping over
     // it, but cover requests run async in another thread and ALSO need to lock

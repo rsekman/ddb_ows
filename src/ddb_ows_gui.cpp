@@ -373,6 +373,9 @@ job_cb_t make_progress_callback() {
 }
 
 void execute(job_cb_t cb, bool dry) {
+    if (plugin.gui_logger) {
+        plugin.gui_logger->clear();
+    }
     Gtk::ProgressBar* pb;
     builder->get_widget("progress_bar", pb);
     if (pb != NULL) {
