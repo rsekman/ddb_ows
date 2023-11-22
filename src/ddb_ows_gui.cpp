@@ -288,16 +288,16 @@ void pl_selection_update_model(Glib::RefPtr<Gtk::ListStore> model) {
     ddb->pl_unlock();
 }
 
-void queue_jobs() {
+std::vector<ddb_playlist_t*> get_selected_playlists() {
     auto pl_model = Glib::RefPtr<Gtk::ListStore>::cast_static(
         builder->get_object("pl_selection_model")
     );
     auto pls = std::vector<ddb_playlist_t*> {};
     auto rows = pl_model->children();
     if(!std::size(rows)){
-        return;
+        return pls;
     }
-    for(auto r = rows.begin(); r != rows.end(); r++) {
+    for(auto r : rows) {
         bool pl_selected;
         ddb_playlist_t* pl_addr;
         r->get_value(0, pl_selected);
@@ -306,6 +306,11 @@ void queue_jobs() {
             pls.push_back(pl_addr);
         }
     }
+    return pls;
+}
+
+void queue_jobs() {
+    std::vector<ddb_playlist_t*> pls = get_selected_playlists();
     if (plugin.gui_logger) {
         ddb_ows->queue_jobs(pls, *plugin.gui_logger);
     } else {
