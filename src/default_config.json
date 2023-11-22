@@ -10,6 +10,7 @@
   ],
   "cover_sync": true,
   "cover_fname": "cover.jpg",
+  "sync_pls": true,
   "rm_unref": false,
   "conv_fts": [],
   "conv_preset": "",

@@ -350,6 +350,43 @@ std::string plt_get_title(ddb_playlist_t* plt) {
     return out;
 }
 
+bool save_playlist(ddb_playlist_t* plt, Logger& logger, bool dry) {
+    path root(conf.get_root());
+    std::string title = plt_get_title(plt);
+    std::string pl_to(root / title);
+    pl_to += ".dbpl";
+    DDB_OWS_DEBUG << "Saving playlist to" << pl_to << std::endl;
+    int out = 0;
+    if (!dry) {
+        auto head = ddb->plt_get_head_item(plt, PL_MAIN);
+        auto tail = ddb->plt_get_tail_item(plt, PL_MAIN);
+        if (!head || !tail) {
+            logger.err("Playlist " + title + " is empty, not saving.");
+            return false;
+        }
+        out = ddb->plt_save(plt, head, tail, pl_to.c_str(), NULL, NULL, NULL);
+        ddb->pl_item_unref(head);
+        ddb->pl_item_unref(tail);
+    }
+    if (out < 0) {
+        logger.err("Failed to save playlist " + title + ".");
+        return false;
+    } else {
+        logger.log("Saved playlist " + title + ".");
+        return true;
+    }
+}
+
+bool save_playlists(std::vector<ddb_playlist_t*> playlists, Logger& logger, bool dry) {
+    // returns true if all playlists were successfully saved
+    bool out = true;
+    for( ddb_playlist_t* plt : playlists ) {
+        bool saved = save_playlist(plt, logger, dry);
+        out = out && saved;
+    }
+    return out;
+}
+
 bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
     if (!jobs->empty()) {
         // To avoid double-queueing
@@ -547,6 +584,7 @@ ddb_ows_plugin_t plugin = {
     .queue_jobs = queue_jobs,
     .jobs_count = jobs_count,
     .run = run,
+    .save_playlists = save_playlists,
     .cancel = cancel,
 };
 

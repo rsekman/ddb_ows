@@ -309,6 +309,15 @@ std::vector<ddb_playlist_t*> get_selected_playlists() {
     return pls;
 }
 
+void save_playlists(bool dry) {
+    std::vector<ddb_playlist_t*> pls = get_selected_playlists();
+    if (plugin.gui_logger) {
+        ddb_ows->save_playlists(pls, *plugin.gui_logger, dry);
+    } else {
+        ddb_ows->save_playlists(pls, terminal_logger, dry);
+    }
+}
+
 void queue_jobs() {
     std::vector<ddb_playlist_t*> pls = get_selected_playlists();
     if (plugin.gui_logger) {
@@ -383,6 +392,12 @@ void execute(job_cb_t cb, bool dry) {
     }
     Gtk::ProgressBar* pb;
     builder->get_widget("progress_bar", pb);
+    if (ddb_ows->conf.get_sync_pls()) {
+        if (pb != NULL) {
+            pb->set_text("Saving playlists");
+        }
+        save_playlists(dry);
+    }
     if (pb != NULL) {
         pb->set_text("Queueing jobs");
     }
@@ -617,6 +632,13 @@ void on_cover_sync_check_show(GtkWidget* widget, gpointer data) {
     );
 }
 
+void on_sync_pls_check_show(GtkWidget* widget, gpointer data) {
+    gtk_toggle_button_set_active(
+        GTK_TOGGLE_BUTTON(widget),
+        ddb_ows->conf.get_sync_pls()
+    );
+}
+
 void on_rm_unref_check_show(GtkWidget* widget, gpointer data) {
     gtk_toggle_button_set_active(
         GTK_TOGGLE_BUTTON(widget),
@@ -653,6 +675,10 @@ void on_cover_sync_check_toggled(GtkToggleButton* toggle, gpointer data) {
     ddb_ows->conf.set_cover_sync(cover_sync);
 }
 
+void on_sync_pls_check_toggled(GtkToggleButton* toggle, gpointer data) {
+    gboolean sync_pls = gtk_toggle_button_get_active(toggle);
+    ddb_ows->conf.set_sync_pls(sync_pls);
+}
 void on_rm_unref_check_toggled(GtkToggleButton* toggle, gpointer data) {
     gboolean rm_unref = gtk_toggle_button_get_active(toggle);
     ddb_ows->conf.set_rm_unref(rm_unref);
