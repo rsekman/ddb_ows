@@ -342,6 +342,14 @@ std::vector<std::unique_ptr<Job>> make_job(
     return out;
 }
 
+std::string plt_get_title(ddb_playlist_t* plt) {
+    char plt_title[PATH_MAX];
+    ddb->plt_get_title(plt, plt_title, sizeof(plt_title));
+    std::string out(plt_title);
+    out.shrink_to_fit();
+    return out;
+}
+
 bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
     if (!jobs->empty()) {
         // To avoid double-queueing
@@ -366,11 +374,10 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
 
     auto conv_settings = make_encoder_settings();
 
-    char plt_title[4096];
     ddb->pl_lock();
     for(auto plt = playlists.begin(); plt != playlists.end(); plt++) {
-        ddb->plt_get_title(*plt, plt_title, sizeof(plt_title));
-        DDB_OWS_DEBUG << "Looking for jobs from playlist " << plt_title << std::endl;
+        DDB_OWS_DEBUG << "Looking for jobs from playlist " << plt_get_title(*plt) << std::endl;
+
         DB_playItem_t* it;
         DB_playItem_t* next;
         path from;
