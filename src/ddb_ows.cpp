@@ -353,7 +353,9 @@ std::string plt_get_title(ddb_playlist_t* plt) {
 bool save_playlist(ddb_playlist_t* plt, Logger& logger, bool dry) {
     path root(conf.get_root());
     std::string title = plt_get_title(plt);
-    std::string pl_to(root / title);
+    std::string escaped = title;
+    escape(escaped);
+    std::string pl_to(root / escaped);
     pl_to += ".dbpl";
     DDB_OWS_DEBUG << "Saving playlist to" << pl_to << std::endl;
     int out = 0;
