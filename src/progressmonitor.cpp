@@ -9,6 +9,7 @@ ProgressMonitor::ProgressMonitor(int (*r_jobs_)(), Gtk::ProgressBar* _pb) :
 }
 
 int ProgressMonitor::set_n_jobs(int n) {
+    cancelled = false;
     return n_jobs = n;
 }
 
