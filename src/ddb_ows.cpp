@@ -413,41 +413,45 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
 
     auto conv_settings = make_encoder_settings();
 
+    std::vector<ddb_playItem_t*> its;
+
     ddb->pl_lock();
-    for(auto plt = playlists.begin(); plt != playlists.end(); plt++) {
-        DDB_OWS_DEBUG << "Looking for jobs from playlist " << plt_get_title(*plt) << std::endl;
+    for( auto plt : playlists) {
+        DDB_OWS_DEBUG << "Looking for jobs from playlist " << plt_get_title(plt) << std::endl;
 
         DB_playItem_t* it;
-        DB_playItem_t* next;
-        path from;
-        path to;
-        it = ddb->plt_get_first(*plt, 0);
+        it = ddb->plt_get_first(plt, PL_MAIN);
         while (it != NULL) {
-            from = std::string(ddb->pl_find_meta (it, ":URI"));
-            to = root / get_output_path(it, fmt);
-            if (!exists(from)) {
-                logger.err("Source file " + std::string(from) + " does not exist!");
-            } else {
-                auto new_jobs = make_job(ddb_ows->db, logger, it, from, to, conv_settings);
-                for (auto j = new_jobs.begin(); j != new_jobs.end(); j++) {
-                    jobs->push(std::move(*j));
-                }
-            }
-
-            path target_dir = to.parent_path();
-            if ( ddb_ows->conf.get_cover_sync()  && !cover_dirs.count(target_dir)) {
-                cover_its.push_back(it);
-                ddb->pl_item_ref(it);
-                DDB_OWS_DEBUG << "Copying cover to " << target_dir << std::endl;
-                cover_dirs.insert(target_dir);
-            }
-
-            next = ddb->pl_get_next(it, 0);
-            ddb->pl_item_unref(it);
-            it = next;
+            its.push_back(it);
+            it = ddb->pl_get_next(it, PL_MAIN);
         }
     }
     ddb->pl_unlock();
+
+    for( auto it : its) {
+        path from;
+        path to;
+        from = std::string(ddb->pl_find_meta (it, ":URI"));
+        to = root / get_output_path(it, fmt);
+        if (!exists(from)) {
+            logger.err("Source file " + std::string(from) + " does not exist!");
+        } else {
+            auto new_jobs = make_job(ddb_ows->db, logger, it, from, to, conv_settings);
+            for (auto j = new_jobs.begin(); j != new_jobs.end(); j++) {
+                jobs->push(std::move(*j));
+            }
+        }
+
+        path target_dir = to.parent_path();
+        if ( ddb_ows->conf.get_cover_sync()  && !cover_dirs.count(target_dir)) {
+            cover_its.push_back(it);
+            ddb->pl_item_ref(it);
+            DDB_OWS_DEBUG << "Copying cover to " << target_dir << std::endl;
+            cover_dirs.insert(target_dir);
+        }
+        ddb->pl_item_unref(it);
+    }
+
     // Now we can dispatch cover requests
     queue_cover_jobs(logger, ddb_ows->db, cover_its);
     // TODO: delete unreferenced files
