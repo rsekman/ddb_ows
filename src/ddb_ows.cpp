@@ -273,6 +273,7 @@ std::vector<std::unique_ptr<Job>> make_job(
     path to,
     ddb_converter_settings_t conv_settings
 ) {
+    //throws: can throw any filesystem error throw by checking ctime
     auto old = db->find_entry(from);
     std::vector<std::unique_ptr<Job>> out {};
     if (should_convert(it) ) {
@@ -433,9 +434,15 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
         if (!exists(from)) {
             logger.err("Source file {} does not exist!", from);
         } else {
-            auto new_jobs = make_job(ddb_ows->db, logger, it, from, to, conv_settings);
-            for (auto j = new_jobs.begin(); j != new_jobs.end(); j++) {
-                jobs->push(std::move(*j));
+            try {
+                auto new_jobs = make_job(ddb_ows->db, logger, it, from, to, conv_settings);
+                for (auto j = new_jobs.begin(); j != new_jobs.end(); j++) {
+                    jobs->push(std::move(*j));
+                }
+            } catch (std::filesystem::filesystem_error& e) {
+                logger.err("Could not queue job for {}: {}", from, e.what());
+                ddb->pl_item_unref(it);
+                continue;
             }
         }
 
