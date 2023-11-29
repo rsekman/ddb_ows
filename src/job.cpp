@@ -1,6 +1,7 @@
 #include "job.hpp"
 
 #include <filesystem>
+#include <fmt/std.h>
 #include <system_error>
 
 using namespace std::filesystem;
@@ -38,18 +39,26 @@ CopyJob::CopyJob(Logger& _logger, Database* _db, path _from, path _to) :
 } ;
 
 bool CopyJob::run(bool dry) {
-    logger.log("Copying from " + std::string(from) + " to " + std::string(to) + ".");
     bool success;
+    std::string from_to_str = fmt::format("from {} to {}", from, to);
     try {
         if (!dry) {
             create_directories(to.parent_path());
             success = copy_file(from, to, copy_options::update_existing);
-            register_job();
+            if( success ) {
+                register_job();
+                logger.log("Copied " + from_to_str + ".");
+            } else {
+                logger.err("Failed to copy " + from_to_str + ".");
+            }
         } else {
             success = true;
+            logger.log("Would copy " + from_to_str + ".");
         }
     } catch (filesystem_error& e) {
-        logger.err(e.what());
+        logger.err(
+            fmt::format("Failed to copy {}: {}.", from_to_str, e.what() )
+        );
         success = false;
     }
     return success;
@@ -65,7 +74,7 @@ void MoveJob::register_job(db_entry_t entry) {
     db->insert_or_update( source, entry );
 }
 bool MoveJob::run(bool dry) {
-    logger.log("Moving from " + std::string(from) + " to " + std::string(to) + ".");
+    std::string from_to_str = fmt::format("from {} to {}", from, to);
     bool success;
     try {
         if (!dry) {
@@ -78,10 +87,15 @@ bool MoveJob::run(bool dry) {
             }
             register_job(entry);
             clean_parents(from.parent_path());
+            logger.log("Moved from " + from_to_str + ".");
+        } else {
+            logger.log("Would move " + from_to_str + ".");
         }
         success = true;
     } catch (filesystem_error& e) {
-        logger.err(e.what());
+        logger.err(
+            fmt::format("Failed to move {}: {}.", from_to_str, e.what() )
+        );
         success = false;
     }
     return success;
@@ -111,11 +125,12 @@ ConvertJob::ConvertJob(
 
 
 bool ConvertJob::run(bool dry) {
-    logger.log(
-        "Converting " + std::string(from)
-        + " using " + settings.encoder_preset->title
-        + " to " + std::string(to));
+    std::string from_to_str = fmt::format(
+        "{} using {} to {}",
+       from, settings.encoder_preset->title, to
+    );
     if (!dry) {
+        logger.verbose(fmt::format( "Converting  {}.", from_to_str));
         auto ddb_conv = (ddb_converter_t*) ddb->plug_get_for_id("converter");
         // TODO implement cancelling
         create_directories(to.parent_path());
@@ -129,11 +144,13 @@ bool ConvertJob::run(bool dry) {
             db_entry_t entry = make_entry();
             entry.converter_preset = settings.encoder_preset->title;
             register_job(entry);
+            logger.log(fmt::format( "Conversion of {} successful.", from_to_str));
         } else {
-            logger.err("Converting " + std::string(from) + " failed.");
+            logger.err(fmt::format("Converting {} failed.", from_to_str));
         }
         return out == 0;
     } else {
+        logger.log(fmt::format( "Would convert {}.", from_to_str));
         return true;
     }
 }
@@ -149,20 +166,21 @@ DeleteJob::DeleteJob(Logger& _logger, ddb_ows::Database* _db, path _target) :
 };
 
 bool DeleteJob::run(bool dry) {
-    logger.log ( "Deleting " + std::string(target) + "." );
     bool success;
     if (!dry) {
         try {
             success = remove(target);
         } catch (filesystem_error& e) {
-            logger.err(e.what());
+            logger.log ( fmt::format("Failed to delete {}: {}.", target, e.what()) );
             success = false;
         }
         if (success) {
             register_job();
             clean_parents(to.parent_path());
+            logger.log ( fmt::format("Deleted {} .", target) );
         }
     } else {
+        logger.log ( fmt::format("Would delete {} .", target) );
         success = true;
     }
     return success;
