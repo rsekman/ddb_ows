@@ -56,9 +56,7 @@ bool CopyJob::run(bool dry) {
             logger.log("Would copy " + from_to_str + ".");
         }
     } catch (filesystem_error& e) {
-        logger.err(
-            fmt::format("Failed to copy {}: {}.", from_to_str, e.what() )
-        );
+        logger.err("Failed to copy {}: {}.", from_to_str, e.what());
         success = false;
     }
     return success;
@@ -93,9 +91,7 @@ bool MoveJob::run(bool dry) {
         }
         success = true;
     } catch (filesystem_error& e) {
-        logger.err(
-            fmt::format("Failed to move {}: {}.", from_to_str, e.what() )
-        );
+        logger.err("Failed to move {}: {}.", from_to_str, e.what());
         success = false;
     }
     return success;
@@ -130,7 +126,7 @@ bool ConvertJob::run(bool dry) {
        from, settings.encoder_preset->title, to
     );
     if (!dry) {
-        logger.verbose(fmt::format( "Converting  {}.", from_to_str));
+        logger.verbose("Converting  {}.", from_to_str);
         auto ddb_conv = (ddb_converter_t*) ddb->plug_get_for_id("converter");
         // TODO implement cancelling
         create_directories(to.parent_path());
@@ -144,13 +140,13 @@ bool ConvertJob::run(bool dry) {
             db_entry_t entry = make_entry();
             entry.converter_preset = settings.encoder_preset->title;
             register_job(entry);
-            logger.log(fmt::format( "Conversion of {} successful.", from_to_str));
+            logger.log("Conversion of {} successful.", from_to_str);
         } else {
-            logger.err(fmt::format("Converting {} failed.", from_to_str));
+            logger.err("Converting {} failed.", from_to_str);
         }
         return out == 0;
     } else {
-        logger.log(fmt::format( "Would convert {}.", from_to_str));
+        logger.log("Would convert {}.", from_to_str);
         return true;
     }
 }
@@ -171,16 +167,16 @@ bool DeleteJob::run(bool dry) {
         try {
             success = remove(target);
         } catch (filesystem_error& e) {
-            logger.log ( fmt::format("Failed to delete {}: {}.", target, e.what()) );
+            logger.log ("Failed to delete {}: {}.", target, e.what());
             success = false;
         }
         if (success) {
             register_job();
             clean_parents(to.parent_path());
-            logger.log ( fmt::format("Deleted {} .", target) );
+            logger.log ("Deleted {} .", target);
         }
     } else {
-        logger.log ( fmt::format("Would delete {} .", target) );
+        logger.log ("Would delete {} .", target);
         success = true;
     }
     return success;
