@@ -20,21 +20,15 @@ TextBufferLogger::TextBufferLogger(Glib::RefPtr<Gtk::TextBuffer> _buffer, Gtk::T
     sig_flush.connect(sigc::mem_fun(*this, &TextBufferLogger::flush));
 } ;
 
-bool TextBufferLogger::verbose(std::string message) {
-    return enqueue(message, DDB_OWS_TBL_VERBOSE);
+#define DDB_OWS_TBL_METHOD(l, e) \
+bool TextBufferLogger::l(std::string message) { \
+    return enqueue(message, DDB_OWS_TBL_##e); \
 }
 
-bool TextBufferLogger::log(std::string message) {
-    return enqueue(message, DDB_OWS_TBL_LOG);
-}
-
-bool TextBufferLogger::warn(std::string message) {
-    return enqueue(message, DDB_OWS_TBL_WARN);
-}
-
-bool TextBufferLogger::err(std::string message) {
-    return enqueue(message, DDB_OWS_TBL_ERR);
-}
+DDB_OWS_TBL_METHOD(verbose, VERBOSE);
+DDB_OWS_TBL_METHOD(log, LOG);
+DDB_OWS_TBL_METHOD(warn, WARN);
+DDB_OWS_TBL_METHOD(err, ERR);
 
 bool TextBufferLogger::enqueue(std::string message, loglevel_e level) {
     std::lock_guard <std::mutex> lock(m);
