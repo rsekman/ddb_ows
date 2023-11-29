@@ -33,21 +33,6 @@ typedef struct {
 } message_t;
 
 
-typedef std::queue<message_t> TextBufferLoggerStream;
-
-
-/*
-class TextBufferLoggerStream {
-    public:
-        TextBufferLoggerStream(Glib::RefPtr<TextBuffer::Tag> _tag) :
-            q(), sig(), tag(_tag)
-        {} ;
-        std::queue<std::string> q;
-        Glib::Dispatcher sig;
-        Glib::RefPtr<TextBuffer::Tag> tag;
-};
-*/
-
 class TextBufferLogger : public Logger {
     public:
         TextBufferLogger(Glib::RefPtr<TextBuffer> _buffer, TextView* view) ;
