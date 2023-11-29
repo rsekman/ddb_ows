@@ -163,7 +163,7 @@ bool queue_cover_jobs(Logger& logger, Database* db, std::deque<DB_playItem_t*> i
             path to = target_dir / conf.get_cover_fname();
             auto old = db->find_entry(from);
             if (exists(to) && last_write_time(to) > last_write_time(from)) {
-                logger.log("Cover at " + std::string(to) + " is newer than source " + std::string(from));
+                logger.verbose("Cover at " + std::string(to) + " is newer than source " + std::string(from));
             } else if ( old != db->end()
                 && old->second.destination != to
                 && exists(old->second.destination)
@@ -284,7 +284,7 @@ std::vector<std::unique_ptr<Job>> make_job(
             // This source file was synced previously and the same encoder preset is selected
             if ( exists(to) && is_newer(to, from) ) {
                 // The destination exists and is newer than the source
-                logger.log(
+                logger.verbose(
                     "Source " + std::string(from)
                     + " was already converted with " + preset_title
                     + "; skipping."
@@ -331,7 +331,7 @@ std::vector<std::unique_ptr<Job>> make_job(
             ));
         }
     }  else if (exists(to) && last_write_time(to) > last_write_time(from)) {
-            logger.log(
+            logger.verbose(
                 "Destination " + std::string(to)
                 + " is newer than source " + std::string(from)
                 + "; skipping."
@@ -363,7 +363,7 @@ bool save_playlist(ddb_playlist_t* plt, Logger& logger, bool dry) {
         auto head = ddb->plt_get_head_item(plt, PL_MAIN);
         auto tail = ddb->plt_get_tail_item(plt, PL_MAIN);
         if (!head || !tail) {
-            logger.err("Playlist " + title + " is empty, not saving.");
+            logger.warn("Playlist " + title + " is empty, not saving.");
             return false;
         }
         out = ddb->plt_save(plt, head, tail, pl_to.c_str(), NULL, NULL, NULL);
