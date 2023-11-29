@@ -2,6 +2,7 @@
 #include <cstring>
 #include <condition_variable>
 #include <filesystem>
+#include <fmt/std.h>
 #include <functional>
 #include <limits.h>
 #include <memory>
@@ -163,7 +164,7 @@ bool queue_cover_jobs(Logger& logger, Database* db, std::deque<DB_playItem_t*> i
             path to = target_dir / conf.get_cover_fname();
             auto old = db->find_entry(from);
             if (exists(to) && last_write_time(to) > last_write_time(from)) {
-                logger.verbose("Cover at " + std::string(to) + " is newer than source " + std::string(from));
+                logger.verbose("Cover at {} is newer than source {}", to, from);
             } else if ( old != db->end()
                 && old->second.destination != to
                 && exists(old->second.destination)
@@ -285,9 +286,7 @@ std::vector<std::unique_ptr<Job>> make_job(
             if ( exists(to) && is_newer(to, from) ) {
                 // The destination exists and is newer than the source
                 logger.verbose(
-                    "Source " + std::string(from)
-                    + " was already converted with " + preset_title
-                    + "; skipping."
+                    "Source {} was already converted with {}; skipping.", from, preset_title
                 );
                 return {};
             } else if(
@@ -332,9 +331,7 @@ std::vector<std::unique_ptr<Job>> make_job(
         }
     }  else if (exists(to) && last_write_time(to) > last_write_time(from)) {
             logger.verbose(
-                "Destination " + std::string(to)
-                + " is newer than source " + std::string(from)
-                + "; skipping."
+                "Destination {} is newer than source {}; skipping.", to, from
             );
     } else {
         out.push_back(std::unique_ptr<Job>( new CopyJob(logger, db, from, to)));
@@ -363,7 +360,7 @@ bool save_playlist(ddb_playlist_t* plt, Logger& logger, bool dry) {
         auto head = ddb->plt_get_head_item(plt, PL_MAIN);
         auto tail = ddb->plt_get_tail_item(plt, PL_MAIN);
         if (!head || !tail) {
-            logger.warn("Playlist " + title + " is empty, not saving.");
+            logger.warn("Playlist {} is empty, not saving.", title);
             return false;
         }
         out = ddb->plt_save(plt, head, tail, pl_to.c_str(), NULL, NULL, NULL);
@@ -371,10 +368,10 @@ bool save_playlist(ddb_playlist_t* plt, Logger& logger, bool dry) {
         ddb->pl_item_unref(tail);
     }
     if (out < 0) {
-        logger.err("Failed to save playlist " + title + ".");
+        logger.err("Failed to save playlist {}.", title);
         return false;
     } else {
-        logger.log("Saved playlist " + title + ".");
+        logger.log("Saved playlist {}", title);
         return true;
     }
 }
@@ -434,7 +431,7 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
         from = std::string(ddb->pl_find_meta (it, ":URI"));
         to = root / get_output_path(it, fmt);
         if (!exists(from)) {
-            logger.err("Source file " + std::string(from) + " does not exist!");
+            logger.err("Source file {} does not exist!", from);
         } else {
             auto new_jobs = make_job(ddb_ows->db, logger, it, from, to, conv_settings);
             for (auto j = new_jobs.begin(); j != new_jobs.end(); j++) {
