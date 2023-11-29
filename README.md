@@ -9,7 +9,7 @@ For performance only files newer than existing destination files are copied.
 Optionally, destination files that no longer have a source file can be purged from the destination.
 This can be useful e.g. if you want the destination directory structure to reflect playlist structure, have replaced mp3 files with FLAC, or just don't want the files on the destination anymore.
 
-Inspired by foo_ows
+Inspired by [foo_ows](https://wiki.hydrogenaud.io/index.php?title=Foobar2000:Components/One_Way_Sync_(foo_ows))
 
 ## Building
 
