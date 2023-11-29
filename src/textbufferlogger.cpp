@@ -30,6 +30,26 @@ DDB_OWS_TBL_METHOD(log, LOG);
 DDB_OWS_TBL_METHOD(warn, WARN);
 DDB_OWS_TBL_METHOD(err, ERR);
 
+void TextBufferLogger::set_level(loglevel_e level) {
+    for (  auto &l : loglevels ) {
+        l.second.tag->property_invisible().set_value(true);
+    }
+#define DDB_OWS_TBL_LL_SET(l) \
+        case DDB_OWS_TBL_##l: \
+            loglevels[DDB_OWS_TBL_##l].tag->property_invisible().set_value(false);
+
+    switch (level) {
+        DDB_OWS_TBL_LL_SET(VERBOSE)
+        DDB_OWS_TBL_LL_SET(LOG)
+        DDB_OWS_TBL_LL_SET(WARN)
+        DDB_OWS_TBL_LL_SET(ERR)
+    }
+}
+
+const std::map<loglevel_e, loglevel_info_t>& TextBufferLogger::get_levels() {
+    return loglevels;
+}
+
 bool TextBufferLogger::enqueue(std::string message, loglevel_e level) {
     std::lock_guard <std::mutex> lock(m);
     bool was_empty = q.empty();

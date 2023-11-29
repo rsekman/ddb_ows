@@ -43,6 +43,9 @@ class TextBufferLogger : public Logger {
         bool err(std::string message);
         void clear();
 
+        void set_level(loglevel_e level);
+        const std::map<loglevel_e, loglevel_info_t>& get_levels();
+
     private :
         RefPtr<TextBuffer> buffer;
         TextView* view;

@@ -371,6 +371,24 @@ void conv_fts_populate(
     DDB_OWS_DEBUG << "Finished reading decoders..." << std::endl;
 }
 
+void loglevel_cb_populate(TextBufferLogger* logger) {
+    Gtk::ComboBox* cb;
+    builder->get_widget("loglevel_cb", cb);
+    if (!cb) {
+        return;
+    }
+    auto model = Glib::RefPtr<Gtk::ListStore>::cast_static(cb->get_model());
+    for(auto l : logger->get_levels()) {
+        auto row = model->append();
+        if (!cb->get_active()) {
+            cb->set_active(row);
+        }
+        row->set_value(0, l.second.name);
+        row->set_value(1, l.second.color);
+        row->set_value(2, (unsigned int) l.first);
+    }
+}
+
 /* BEGIN EXTERN SIGNAL HANDLERS */
 // TODO consider moving these into their own file
 
@@ -576,6 +594,20 @@ void on_fn_format_combobox_changed(GtkComboBox* fn_combobox, gpointer data) {
     } else {
         clear_fn_preview();
     }
+}
+
+void on_loglevel_cb_changed(GtkComboBox* loglevel_cb, gpointer data) {
+    if(!plugin.gui_logger) {
+        return;
+    }
+    GtkTreeIter active;
+    if (gtk_combo_box_get_active_iter(loglevel_cb, &active) != TRUE) {
+        return;
+    }
+    auto model = gtk_combo_box_get_model(loglevel_cb);
+    guint level;
+    gtk_tree_model_get(model, &active, 2, &level, -1);
+    plugin.gui_logger->set_level(  (loglevel_e) level);
 }
 
 /* Initialize the UI with values from config */
@@ -851,6 +883,8 @@ int create_ui() {
         );
         plugin.gui_logger = new TextBufferLogger( log_buffer, job_log );
         log_buffer->create_mark("END", log_buffer->end(), false);
+
+        loglevel_cb_populate(plugin.gui_logger);
     }
 
     Gtk::ProgressBar* pb;
