@@ -329,7 +329,7 @@ std::vector<std::unique_ptr<Job>> make_job(
                 new DeleteJob(logger, db, old->second.destination)
             ));
         }
-    }  else if (exists(to) && last_write_time(to) > last_write_time(from)) {
+    }  else if (exists(to) && is_newer(to, from)) {
             logger.verbose(
                 "Destination {} is newer than source {}; skipping.", to, from
             );
