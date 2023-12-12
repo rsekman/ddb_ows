@@ -405,6 +405,8 @@ job_cb_t make_progress_callback() {
 }
 
 void execute(job_cb_t cb, bool dry) {
+    std::lock_guard lock(ddb_ows->running);
+
     if (plugin.gui_logger) {
         plugin.gui_logger->clear();
     }

@@ -2,6 +2,7 @@
 #ifndef DDB_OWS_PROJECT_ID
 
 #include <future>
+#include <mutex>
 #include <string>
 
 #include "deadbeef/deadbeef.h"
@@ -26,6 +27,7 @@ using namespace ddb_ows;
 typedef struct {
     DB_misc_t plugin;
     ddb_ows::Configuration& conf;
+    std::mutex running;
     wt_futures_t worker_thread_futures;
     plt_uuid (*plt_get_uuid) (ddb_playlist_t* plt);
     std::string (*get_output_path)(DB_playItem_t* it, char* format);
