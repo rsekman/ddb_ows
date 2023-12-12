@@ -105,7 +105,7 @@ void list_store_check_consistent(
     if(!std::size(rows)){
         return;
     }
-    for(auto r = rows.begin(); r != rows.end(); r++) {
+    for (auto r : rows) {
         r->get_value(0, pl_selected);
         all_true  = all_true && pl_selected;
         all_false = all_false && !pl_selected;
@@ -136,10 +136,10 @@ void fn_formats_populate(Glib::RefPtr<Gtk::ListStore> model) {
     }
     model->clear();
     Gtk::TreeModel::iterator r;
-    for(auto i = fmts.begin(); i != fmts.end(); i++) {
-        DDB_OWS_DEBUG << "Appending " << *i << " to fn formats" << std::endl;
+    for (auto i : fmts) {
+        DDB_OWS_DEBUG << "Appending " << i << " to fn formats" << std::endl;
         r = model->append();
-        r->set_value(0, *i);
+        r->set_value(0, i);
     }
 }
 
@@ -589,7 +589,7 @@ void on_fn_format_entered(Gtk::Entry* entry) {
     std::string f;
     Gtk::ComboBox* fn_combobox;
     builder->get_widget("fn_format_combobox", fn_combobox);
-    for(auto i = rows.begin(); i != rows.end(); i++) {
+    for (auto i : rows) {
         i->get_value(0, f);
         if (f == fn_format) {
             model->move(i, rows.begin());

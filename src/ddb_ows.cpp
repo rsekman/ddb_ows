@@ -45,8 +45,8 @@ std::mt19937 mersenne_twister(rd());
 auto dist = std::uniform_int_distribution<long>(LONG_MIN, LONG_MAX);
 
 void escape(std::string& s) {
-    for (auto i = s.begin(); i != s.end(); i++) {
-        switch (*i) {
+    for (auto &i : s) {
+        switch (i) {
             case '/':
             case '\\':
             case ':':
@@ -56,7 +56,7 @@ void escape(std::string& s) {
             case '<':
             case '>':
             case '|':
-                *i = '-';
+                i = '-';
         }
     }
 }
@@ -436,8 +436,8 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
         } else {
             try {
                 auto new_jobs = make_job(db, logger, it, from, to, conv_settings);
-                for (auto j = new_jobs.begin(); j != new_jobs.end(); j++) {
-                    jobs->push(std::move(*j));
+                for (auto& j : new_jobs) {
+                    jobs->push(std::move(j));
                 }
             } catch (std::filesystem::filesystem_error& e) {
                 logger.err("Could not queue job for {}: {}", from, e.what());
