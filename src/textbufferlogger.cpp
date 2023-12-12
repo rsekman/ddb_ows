@@ -31,7 +31,7 @@ DDB_OWS_TBL_METHOD(warn, WARN);
 DDB_OWS_TBL_METHOD(err, ERR);
 
 void TextBufferLogger::set_level(loglevel_e level) {
-    for (  auto &l : loglevels ) {
+    for (auto &l : loglevels ) {
         l.second.tag->property_invisible().set_value(true);
     }
 #define DDB_OWS_TBL_LL_SET(l) \

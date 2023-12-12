@@ -165,7 +165,7 @@ bool queue_cover_jobs(Logger& logger, DatabaseHandle db, std::deque<DB_playItem_
             auto old = db->find_entry(from);
             if (exists(to) && last_write_time(to) > last_write_time(from)) {
                 logger.verbose("Cover at {} is newer than source {}", to, from);
-            } else if ( old != db->end()
+            } else if (old != db->end()
                 && old->second.destination != to
                 && exists(old->second.destination)
                 && is_newer(old->second.destination, from)
@@ -282,15 +282,15 @@ std::vector<std::unique_ptr<Job>> make_job(
         std::unique_ptr<Job> cjob(
             new ConvertJob(logger, db, ddb, conv_settings, it, from, to)
         );
-        if(old != db->end() && old->second.converter_preset == preset_title) {
+        if (old != db->end() && old->second.converter_preset == preset_title) {
             // This source file was synced previously and the same encoder preset is selected
-            if ( exists(to) && is_newer(to, from) ) {
+            if (exists(to) && is_newer(to, from) ) {
                 // The destination exists and is newer than the source
                 logger.verbose(
                     "Source {} was already converted with {}; skipping.", from, preset_title
                 );
                 return {};
-            } else if(
+            } else if (
                 exists(old->second.destination)
                 && is_newer(old->second.destination, from)
             ) {
@@ -310,7 +310,7 @@ std::vector<std::unique_ptr<Job>> make_job(
         } else {
             out.push_back(std::move(cjob));
         }
-    } else if ( old != db->end()
+    } else if (old != db->end()
         && old->second.destination != to
         && exists(old->second.destination)
     ) {
@@ -380,7 +380,7 @@ bool save_playlist(ddb_playlist_t* plt, Logger& logger, bool dry) {
 bool save_playlists(std::vector<ddb_playlist_t*> playlists, Logger& logger, bool dry) {
     // returns true if all playlists were successfully saved
     bool out = true;
-    for( ddb_playlist_t* plt : playlists ) {
+    for (ddb_playlist_t* plt : playlists ) {
         bool saved = save_playlist(plt, logger, dry);
         out = out && saved;
     }
@@ -414,7 +414,7 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
     std::vector<ddb_playItem_t*> its;
 
     ddb->pl_lock();
-    for( auto plt : playlists) {
+    for (auto plt : playlists) {
         DDB_OWS_DEBUG << "Looking for jobs from playlist " << plt_get_title(plt) << std::endl;
 
         DB_playItem_t* it;
@@ -426,7 +426,7 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
     }
     ddb->pl_unlock();
 
-    for( auto it : its) {
+    for (auto it : its) {
         path from;
         path to;
         from = std::string(ddb->pl_find_meta (it, ":URI"));
@@ -447,7 +447,7 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
         }
 
         path target_dir = to.parent_path();
-        if ( ddb_ows->conf.get_cover_sync()  && !cover_dirs.count(target_dir)) {
+        if (ddb_ows->conf.get_cover_sync()  && !cover_dirs.count(target_dir)) {
             cover_its.push_back(it);
             ddb->pl_item_ref(it);
             DDB_OWS_DEBUG << "Copying cover to " << target_dir << std::endl;
@@ -475,10 +475,10 @@ int jobs_count() {
 
 bool worker_thread(bool dry, job_cb_t callback) {
     std::unique_ptr<Job> job;
-    while( (job = jobs->pop()) ) {
+    while ( (job = jobs->pop()) ) {
         // unique_ptr is falsey if there is no object
         bool status = job->run(dry);
-        if ( status && callback ) {
+        if (status && callback ) {
             // callback is falsy if the function object is empty
             callback(std::move(job));
         }
@@ -490,7 +490,7 @@ bool run(bool dry, job_cb_t callback) {
     ddb_ows_plugin_t* ddb_ows = (ddb_ows_plugin_t*) ddb->plug_get_for_id("ddb_ows");
     int n_wts = conf.get_conv_wts();
     ddb_ows->worker_thread_futures.futures.clear();
-    for(int i = 0; i < n_wts; i++) {
+    for (int i = 0; i < n_wts; i++) {
         auto task = worker_thread_t(worker_thread);
         ddb_ows->worker_thread_futures.futures.push_back(
             task.get_future()
@@ -499,7 +499,7 @@ bool run(bool dry, job_cb_t callback) {
         t.detach();
     }
     std::lock_guard lock(ddb_ows->worker_thread_futures.m);
-    for(
+    for (
         auto t = ddb_ows->worker_thread_futures.futures.begin();
         t != ddb_ows->worker_thread_futures.futures.end();
         t++
@@ -514,7 +514,7 @@ void cancel_thread(cancel_cb_t callback) {
     ddb_ows_plugin_t* ddb_ows = (ddb_ows_plugin_t*) ddb->plug_get_for_id("ddb_ows");
     jobs->cancel();
     std::lock_guard lock(ddb_ows->worker_thread_futures.m);
-    for(
+    for (
         auto t = ddb_ows->worker_thread_futures.futures.begin();
         t != ddb_ows->worker_thread_futures.futures.end();
         t++

@@ -19,7 +19,7 @@ std::unique_ptr<Job> JobsQueue::pop() {
     c.wait( lock, [this] {
             return !this->q.empty() || !this->isOpen;
             } );
-    if ( !this->q.empty() ){
+    if (!this->q.empty()){
         std::unique_ptr<Job> val = std::move(q.front());
         q.pop_front();
         return val;
@@ -42,7 +42,7 @@ void JobsQueue::cancel () {
     std::lock_guard<std::mutex> lock(m);
     isOpen = false;
     std::unique_ptr<Job> val;
-    while( !q.empty() ){
+    while (!q.empty()){
         val = std::move(q.front());
         val->abort();
         q.pop_front();

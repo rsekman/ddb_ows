@@ -93,16 +93,16 @@ void list_store_check_consistent(
     bool all_true  = true;
     bool all_false = true;
     bool pl_selected;
-    if(!model) {
+    if (!model) {
         DDB_OWS_WARN << "Attempt to check consistency with null model." << std::endl;
         return;
     }
-    if(!toggle) {
+    if (!toggle) {
         DDB_OWS_WARN << "Attempt to check consistency with null toggle " << toggle << std::endl;
         return;
     }
     auto rows = model->children();
-    if(!std::size(rows)){
+    if (!std::size(rows)){
         return;
     }
     for (auto r : rows) {
@@ -201,7 +201,7 @@ void cp_populate(Glib::RefPtr<Gtk::ListStore> model) {
     Gtk::ComboBox* cp_combobox;
     builder->get_widget("cp_combobox", cp_combobox);
     std::string conf_preset_name = ddb_ows->conf.get_conv_preset();
-    while ( enc != NULL ) {
+    while (enc != NULL) {
         row = model->append();
         std::string preset_name = std::string(enc->title);
         row->set_value(0, preset_name);
@@ -237,7 +237,7 @@ void pl_selection_save(Glib::RefPtr<Gtk::ListStore> model){
             r->get_value(0, checked);
             ddb_playlist_t* p;
             r->get_value(2, p);
-            if(checked && p != NULL) {
+            if (checked && p != NULL) {
                 pls.insert(ddb_ows->plt_get_uuid(p));
             }
             return false;
@@ -255,7 +255,7 @@ void pl_selection_populate(
     ddb_playlist_t*  plt;
     Gtk::TreeModel::iterator row;
     bool s;
-    for(int i=0; i < plt_count; i++) {
+    for (int i=0; i < plt_count; i++) {
         plt = ddb->plt_get_for_idx(i);
         ddb->plt_get_title(plt, buf, sizeof(buf));
         row = model->append();
@@ -295,10 +295,10 @@ std::vector<ddb_playlist_t*> get_selected_playlists() {
     );
     auto pls = std::vector<ddb_playlist_t*> {};
     auto rows = pl_model->children();
-    if(!std::size(rows)){
+    if (!std::size(rows)){
         return pls;
     }
-    for(auto r : rows) {
+    for (auto r : rows) {
         bool pl_selected;
         ddb_playlist_t* pl_addr;
         r->get_value(0, pl_selected);
@@ -336,7 +336,7 @@ void conv_fts_save(Glib::RefPtr<Gtk::ListStore> model){
             bool checked;
             r->get_value(0, checked);
             r->get_value(1, name);
-            if(checked) {
+            if (checked) {
                 fts.insert(name);
             }
             return false;
@@ -379,7 +379,7 @@ void loglevel_cb_populate(TextBufferLogger* logger) {
         return;
     }
     auto model = Glib::RefPtr<Gtk::ListStore>::cast_static(cb->get_model());
-    for(auto l : logger->get_levels()) {
+    for (auto l : logger->get_levels()) {
         auto row = model->append();
         if (!cb->get_active()) {
             cb->set_active(row);
@@ -631,7 +631,7 @@ void on_fn_format_combobox_changed(GtkComboBox* fn_combobox, gpointer data) {
 }
 
 void on_loglevel_cb_changed(GtkComboBox* loglevel_cb, gpointer data) {
-    if(!plugin.gui_logger) {
+    if (!plugin.gui_logger) {
         return;
     }
     GtkTreeIter active;
@@ -839,7 +839,7 @@ int read_ui() {
     };
     std::string ui_fname;
     bool success = false;
-    for( auto dir : plugdirs){
+    for (auto dir : plugdirs){
         ui_fname = dir + "/" + DDB_OWS_GUI_GLADE;
         try {
             DDB_OWS_DEBUG
@@ -872,7 +872,7 @@ int read_ui() {
 }
 
 int create_ui() {
-    if(read_ui() < 0) {
+    if (read_ui() < 0) {
         DDB_OWS_ERR << "Could not read .ui" << std::endl;
         return -1;
     }
@@ -978,17 +978,17 @@ int connect (void) {
     DB_plugin_t* ddb_gtkui = ddb->plug_get_for_id (DDB_GTKUI_PLUGIN_ID);
     ddb_converter_t* ddb_converter = (ddb_converter_t*) ddb->plug_get_for_id ("converter");
     ddb_ows = (ddb_ows_plugin_t*) ddb->plug_get_for_id ("ddb_ows");
-    if(!ddb_gtkui) {
+    if (!ddb_gtkui) {
         DDB_OWS_ERR << DDB_OWS_GUI_PLUGIN_NAME
             << ": matching gtkui plugin not found, quitting."
             << std::endl;
         return -1;
     }
-    if(!ddb_converter) {
+    if (!ddb_converter) {
         fprintf(stderr, "%s: converter plugin not found\n", DDB_OWS_GUI_PLUGIN_NAME);
         return -1;
     }
-    if(!ddb_ows) {
+    if (!ddb_ows) {
         fprintf(stderr, "%s: ddb_ows plugin not found\n", DDB_OWS_GUI_PLUGIN_NAME);
         return -1;
     }
@@ -1029,7 +1029,7 @@ int handleMessage(uint32_t id, uintptr_t ctx, uint32_t p1, uint32_t p2){
             pl_selection_update_model(model);
             break;
         case DB_EV_SONGCHANGED:
-            if(fn_combobox->gobj()) {
+            if (fn_combobox->gobj()) {
                 on_fn_format_combobox_changed(fn_combobox->gobj(), NULL);
             }
             break;
