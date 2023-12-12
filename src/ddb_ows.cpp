@@ -121,7 +121,7 @@ bool is_newer(path a, path b) {
     return last_write_time(a) > last_write_time(b);
 }
 
-bool queue_cover_jobs(Logger& logger, Database* db, std::deque<DB_playItem_t*> items) {
+bool queue_cover_jobs(Logger& logger, DatabaseHandle db, std::deque<DB_playItem_t*> items) {
     path from;
     path to;
     char* fmt = ddb->tf_compile(conf.get_fn_formats()[0].c_str());
@@ -266,7 +266,7 @@ bool should_convert(DB_playItem_t* it){
 }
 
 std::vector<std::unique_ptr<Job>> make_job(
-    Database* db,
+    DatabaseHandle db,
     Logger& logger,
     DB_playItem_t* it,
     path from,
@@ -407,7 +407,7 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
 
     ddb_ows_plugin_t* ddb_ows = (ddb_ows_plugin_t*) ddb->plug_get_for_id("ddb_ows");
     path root(conf.get_root());
-    ddb_ows->db = new Database(root);
+    DatabaseHandle db(root);
 
     auto conv_settings = make_encoder_settings();
 
@@ -435,7 +435,7 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
             logger.err("Source file {} does not exist!", from);
         } else {
             try {
-                auto new_jobs = make_job(ddb_ows->db, logger, it, from, to, conv_settings);
+                auto new_jobs = make_job(db, logger, it, from, to, conv_settings);
                 for (auto j = new_jobs.begin(); j != new_jobs.end(); j++) {
                     jobs->push(std::move(*j));
                 }
@@ -457,7 +457,7 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
     }
 
     // Now we can dispatch cover requests
-    queue_cover_jobs(logger, ddb_ows->db, cover_its);
+    queue_cover_jobs(logger, db, cover_its);
     // TODO: delete unreferenced files
     jobs->close();
     DDB_OWS_DEBUG << "Found " << jobs->size() << " jobs" << std::endl;
@@ -507,7 +507,6 @@ bool run(bool dry, job_cb_t callback) {
         t->wait();
     }
     ddb_ows->worker_thread_futures.c.notify_all();
-    delete ddb_ows->db;
     return true;
 }
 
@@ -583,7 +582,6 @@ ddb_ows_plugin_t plugin = {
         },
     },
     .conf = conf,
-    .db = NULL,
     .worker_thread_futures = wt_futures_t {
         .m = std::mutex(),
         .c = std::condition_variable(),

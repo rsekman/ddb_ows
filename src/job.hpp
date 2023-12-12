@@ -14,7 +14,7 @@ namespace ddb_ows {
 
 class Job {
     public:
-        Job(Logger& _logger, ddb_ows::Database* _db, path _from, path _to) :
+        Job(Logger& _logger, DatabaseHandle _db, path _from, path _to) :
             logger(_logger),
             db(_db),
             from(_from),
@@ -25,7 +25,7 @@ class Job {
         virtual ~Job() {};
     protected:
         Logger& logger;
-        ddb_ows::Database* db;
+        DatabaseHandle db;
         const path from;
         const path to;
         db_entry_t make_entry();
@@ -35,7 +35,7 @@ class Job {
 
 class CopyJob : public Job {
     public:
-        CopyJob( Logger& logger, ddb_ows::Database* db, path from, path to );
+        CopyJob( Logger& logger, DatabaseHandle db, path from, path to );
         bool run(bool dry=false);
         void abort() {
         }
@@ -43,7 +43,7 @@ class CopyJob : public Job {
 
 class MoveJob : public Job {
     public:
-        MoveJob( Logger& logger, ddb_ows::Database* db, path from, path to , path source );
+        MoveJob( Logger& logger, DatabaseHandle db, path from, path to , path source );
         bool run(bool dry=false);
         void abort() {
         }
@@ -56,7 +56,7 @@ class ConvertJob : public Job {
     public:
         ConvertJob(
             Logger& logger,
-            ddb_ows::Database* db,
+            DatabaseHandle db,
             DB_functions_t* ddb,
             ddb_converter_settings_t settings,
             DB_playItem_t* it,
@@ -75,7 +75,7 @@ class ConvertJob : public Job {
 
 class DeleteJob : public Job {
     public:
-        DeleteJob( Logger& logger, ddb_ows::Database* db, path target);
+        DeleteJob( Logger& logger, DatabaseHandle db, path target);
         bool run(bool dry = false);
         void abort() {};
     private:

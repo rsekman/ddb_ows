@@ -33,7 +33,7 @@ void Job::register_job(db_entry_t entry) {
     db->insert_or_update( from, entry );
 }
 
-CopyJob::CopyJob(Logger& _logger, Database* _db, path _from, path _to) :
+CopyJob::CopyJob(Logger& _logger, DatabaseHandle _db, path _from, path _to) :
     Job(_logger, _db, _from, _to)
 {
 } ;
@@ -62,7 +62,7 @@ bool CopyJob::run(bool dry) {
     return success;
 }
 
-MoveJob::MoveJob(Logger& _logger, Database* _db, path _from, path _to, path _source) :
+MoveJob::MoveJob(Logger& _logger, DatabaseHandle _db, path _from, path _to, path _source) :
     Job(_logger, _db, _from, _to),
     source(_source)
 {
@@ -103,7 +103,7 @@ ConvertJob::~ConvertJob() {
 
 ConvertJob::ConvertJob(
     Logger& _logger,
-    Database* _db,
+    DatabaseHandle _db,
     DB_functions_t* _ddb,
     ddb_converter_settings_t _settings,
     DB_playItem_t* _it,
@@ -155,7 +155,7 @@ void ConvertJob::abort(){
     pabort = 1;
 }
 
-DeleteJob::DeleteJob(Logger& _logger, ddb_ows::Database* _db, path _target) :
+DeleteJob::DeleteJob(Logger& _logger, DatabaseHandle _db, path _target) :
    Job(_logger, _db, "", ""),
    target(_target)
 {

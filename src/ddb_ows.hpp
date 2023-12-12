@@ -7,7 +7,6 @@
 #include "deadbeef/deadbeef.h"
 
 #include "config.hpp"
-#include "database.hpp"
 #include "logger.hpp"
 #include "job.hpp"
 
@@ -27,7 +26,6 @@ using namespace ddb_ows;
 typedef struct {
     DB_misc_t plugin;
     ddb_ows::Configuration& conf;
-    ddb_ows::Database* db;
     wt_futures_t worker_thread_futures;
     plt_uuid (*plt_get_uuid) (ddb_playlist_t* plt);
     std::string (*get_output_path)(DB_playItem_t* it, char* format);

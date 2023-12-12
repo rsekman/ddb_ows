@@ -46,6 +46,16 @@ namespace ddb_ows {
             path fname;
             db_t db;
     };
+
+    class DatabaseHandle {
+        public:
+            DatabaseHandle(path root);
+            DatabaseHandle(Database* _db) : db(_db) {} ;
+            Database& operator*() const noexcept;
+            Database* operator->() const noexcept;
+        private:
+            std::shared_ptr<Database> db;
+    };
 }
 
 #endif
