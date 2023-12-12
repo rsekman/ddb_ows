@@ -1,3 +1,4 @@
+#include "glibmm/dispatcher.h"
 #include "glibmm/refptr.h"
 #include "gdk/gdkkeysyms.h"
 #include "gtkmm/builder.h"
@@ -441,6 +442,37 @@ void execute(job_cb_t cb, bool dry) {
     ddb_ows->run(dry, make_progress_callback());
 }
 
+void execution_buttons_set_sensitive(bool sensitive) {
+    Button* dry_run_btn = NULL;
+    Button* execute_btn = NULL;
+    builder->get_widget("execute_btn", execute_btn);
+    builder->get_widget("dry_run_btn", dry_run_btn);
+    if (dry_run_btn) {
+        dry_run_btn->set_sensitive(sensitive);
+    }
+    if (execute_btn) {
+        execute_btn->set_sensitive(sensitive);
+    }
+}
+
+void execution_buttons_set_sensitive() {
+    execution_buttons_set_sensitive(true);
+}
+void execution_buttons_set_insensitive() {
+    execution_buttons_set_sensitive(false);
+}
+
+// These instances must be created by the Gtk main thread, so we cannot initialize them here
+Glib::Dispatcher* sig_execution_buttons_set_sensitive;
+Glib::Dispatcher* sig_execution_buttons_set_insensitive;
+
+auto execution_thread(job_cb_t cb, bool dry) {
+    return std::thread( [cb, dry] {
+        execute(cb, dry);
+        (*sig_execution_buttons_set_sensitive)();
+    });
+}
+
 extern "C" {
 
 // TODO
@@ -770,14 +802,20 @@ void on_cancel_btn_clicked(GtkButton* button, gpointer data){
     ddb_ows->cancel( (cancel_cb_t) []() {});
 }
 
-void on_dry_run_btn_clicked(GtkButton* button, gpointer data){
+void on_execution_btn_clicked(bool dry) {
     job_cb_t cb = make_progress_callback();
-    std::thread( [cb] { execute(cb, true); }).detach();
+    // signal handlers are called from the Gtk main thread, so we can set to
+    // insensitive immediately
+    execution_buttons_set_insensitive();
+    execution_thread(cb, dry).detach();
+}
+
+void on_dry_run_btn_clicked(GtkButton* button, gpointer data){
+    on_execution_btn_clicked(true);
 }
 
 void on_execute_btn_clicked(GtkButton* button, gpointer data){
-    job_cb_t cb = make_progress_callback();
-    std::thread( [cb] { execute(cb, false); }).detach();
+    on_execution_btn_clicked(false);
 }
 
 gboolean on_ddb_ows_key_press_event(GtkWidget* widget, GdkEventKey* key, gpointer data) {
@@ -861,6 +899,15 @@ int create_ui() {
     gtk_builder_connect_signals_full(builder->gobj(),
         gtk_builder_connect_signals_default,
         args);
+
+    sig_execution_buttons_set_sensitive = new Glib::Dispatcher();
+    sig_execution_buttons_set_sensitive->connect(
+        sigc::ptr_fun<void>(execution_buttons_set_sensitive)
+    );
+    sig_execution_buttons_set_insensitive = new Glib::Dispatcher();
+    sig_execution_buttons_set_insensitive->connect(
+        sigc::ptr_fun<void>(execution_buttons_set_insensitive)
+    );
 
     auto pl_model = Glib::RefPtr<Gtk::ListStore>::cast_static(
         builder->get_object("pl_selection_model")
