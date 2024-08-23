@@ -1,0 +1,29 @@
+﻿---
+BasedOnStyle: Google
+IndentWidth: 4
+AccessModifierOffset: -2
+IndentAccessModifiers: false
+
+AlignAfterOpenBracket: BlockIndent
+AllowAllArgumentsOnNextLine: 'true'
+AllowAllConstructorInitializersOnNextLine: 'true'
+AllowAllParametersOfDeclarationOnNextLine: 'true'
+AllowShortIfStatementsOnASingleLine: Never
+BinPackArguments: 'false'
+BinPackParameters: 'false'
+
+# only available in clang-format>=20
+# BreakBinaryOperations: OnePerLine
+BreakConstructorInitializers: AfterColon
+
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterControlStatement: MultiLine
+
+BreakInheritanceList: AfterColon
+IncludeBlocks: Regroup
+InsertBraces: true
+PointerAlignment: Left
+SortIncludes: 'true'
+
+...

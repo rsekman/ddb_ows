@@ -1,14 +1,13 @@
 #ifndef DDB_OWS_GUI_H
 #define DDB_OWS_GUI_H
 
-#include <gtk/gtk.h>
-
 #include <deadbeef/deadbeef.h>
+#include <gtk/gtk.h>
 
 #include "progressmonitor.hpp"
 #include "textbufferlogger.hpp"
 
-#if GTK_CHECK_VERSION(3,0,0)
+#if GTK_CHECK_VERSION(3, 0, 0)
 #define DDB_OWS_GUI_PLUGIN_ID "ddb_ows_gtk3"
 #define DDB_OWS_GUI_PLUGIN_NAME "ddb_ows_gtk3"
 #else
@@ -21,7 +20,7 @@
 typedef struct {
     DB_misc_t plugin;
     ProgressMonitor* pm;
-    TextBufferLogger* gui_logger;
+    ddb_ows::TextBufferLogger* gui_logger;
 
 } ddb_ows_gui_plugin_t;
 

@@ -1,7 +1,8 @@
-#include "log.hpp"
 #include "logger.hpp"
 
-namespace ddb_ows{
+#include "log.hpp"
+
+namespace ddb_ows {
 
 bool StdioLogger::verbose(std::string message) {
     DDB_OWS_DEBUG << message << std::endl;
@@ -22,4 +23,4 @@ bool StdioLogger::err(std::string message) {
     return true;
 };
 
-}
+}  // namespace ddb_ows

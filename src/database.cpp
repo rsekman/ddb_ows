@@ -1,6 +1,4 @@
-#include "constants.hpp"
 #include "database.hpp"
-#include "log.hpp"
 
 #include <ctime>
 #include <fstream>
@@ -8,12 +6,17 @@
 #include <mutex>
 #include <nlohmann/json.hpp>
 
+#include "constants.hpp"
+#include "log.hpp"
+
 using namespace nlohmann;
 
 namespace ddb_ows {
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(db_meta_t, ver, last_write)
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(db_entry_t, destination, timestamp, converter_preset)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
+    db_entry_t, destination, timestamp, converter_preset
+)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(db_t, meta, entries)
 
 Database::Database(path root) : m() {
@@ -24,25 +27,24 @@ Database::Database(path root) : m() {
 bool Database::read() {
     DDB_OWS_DEBUG << "Reading database from " << fname << "." << std::endl;
     std::ifstream in_file;
-    in_file.exceptions ( std::ifstream::failbit | std::ifstream::badbit );
+    in_file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
     json j;
     try {
         in_file.open(fname, std::ifstream::in);
         in_file >> j;
         db = j;
-        DDB_OWS_DEBUG << "Successfully read database from " << fname << "." << std::endl;
+        DDB_OWS_DEBUG << "Successfully read database from " << fname << "."
+                      << std::endl;
         return true;
     } catch (std::ifstream::failure e) {
         DDB_OWS_WARN << "Could not read " << fname << "." << std::endl;
     } catch (json::exception e) {
-        DDB_OWS_ERR << "Malformed database " << fname << ": " << e.what() << std::endl;
+        DDB_OWS_ERR << "Malformed database " << fname << ": " << e.what()
+                    << std::endl;
     }
-    db = db_t {
-        .meta = db_meta_t {
-            .ver = DDB_OWS_VERSION,
-            .last_write = 0
-        },
-        .entries = entry_dict {}
+    db = db_t{
+        .meta = db_meta_t{.ver = DDB_OWS_VERSION, .last_write = 0},
+        .entries = entry_dict{}
     };
     DDB_OWS_DEBUG << "Set default database" << "." << std::endl;
     return false;
@@ -50,16 +52,14 @@ bool Database::read() {
 
 Database::~Database() {
     std::ofstream out_file;
-    out_file.exceptions ( std::ofstream::failbit | std::ofstream::badbit );
+    out_file.exceptions(std::ofstream::failbit | std::ofstream::badbit);
     db.meta.last_write = std::time(nullptr);
     try {
         out_file.open(fname, std::ofstream::out);
-        out_file << json ( db ) ;
+        out_file << json(db);
     } catch (std::ofstream::failure e) {
-        DDB_OWS_ERR
-            << "Unable to write database to " << fname
-            << ": " << e.what()
-            << std::endl;
+        DDB_OWS_ERR << "Unable to write database to " << fname << ": "
+                    << e.what() << std::endl;
     }
     DDB_OWS_DEBUG << "Wrote database " << fname << std::endl;
 }
@@ -98,11 +98,7 @@ DatabaseHandle::DatabaseHandle(path root) {
     db = std::make_shared<Database>(root);
 }
 
-Database& DatabaseHandle::operator*() const noexcept {
-    return *db.get();
-};
-Database* DatabaseHandle::operator->() const noexcept {
-    return db.get();
-}
+Database& DatabaseHandle::operator*() const noexcept { return *db.get(); };
+Database* DatabaseHandle::operator->() const noexcept { return db.get(); }
 
-}
+}  // namespace ddb_ows

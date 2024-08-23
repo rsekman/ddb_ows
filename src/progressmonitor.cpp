@@ -1,7 +1,7 @@
 #include "progressmonitor.hpp"
 
 ProgressMonitor::ProgressMonitor(int (*r_jobs_)(), Gtk::ProgressBar* _pb) :
-    r_jobs(r_jobs_), pb(_pb){
+    r_jobs(r_jobs_), pb(_pb) {
     sig_tick.connect(sigc::mem_fun(*this, &ProgressMonitor::_tick));
     sig_pulse.connect(sigc::mem_fun(*this, &ProgressMonitor::_pulse));
     sig_no_jobs.connect(sigc::mem_fun(*this, &ProgressMonitor::_no_jobs));
@@ -18,17 +18,11 @@ void ProgressMonitor::cancel() {
     sig_cancel();
 }
 
-void ProgressMonitor::tick() {
-    sig_tick();
-}
+void ProgressMonitor::tick() { sig_tick(); }
 
-void ProgressMonitor::pulse() {
-    sig_pulse();
-}
+void ProgressMonitor::pulse() { sig_pulse(); }
 
-void ProgressMonitor::no_jobs() {
-    sig_no_jobs();
-}
+void ProgressMonitor::no_jobs() { sig_no_jobs(); }
 
 void ProgressMonitor::_tick() {
     if (pb == NULL || cancelled) {
@@ -37,14 +31,12 @@ void ProgressMonitor::_tick() {
     int r = r_jobs();
     float pct;
     if (n_jobs) {
-        pct = ((float) n_jobs - (float) r) / (float) n_jobs;
+        pct = ((float)n_jobs - (float)r) / (float)n_jobs;
     } else {
         pct = 1.0;
     }
     pb->set_fraction(pct);
-    pb->set_text(
-        fmt::format("{}/{} ({:.0f}%)", n_jobs - r, n_jobs, 100*pct)
-    );
+    pb->set_text(fmt::format("{}/{} ({:.0f}%)", n_jobs - r, n_jobs, 100 * pct));
     pb->queue_draw();
 }
 

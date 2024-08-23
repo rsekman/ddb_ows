@@ -1,25 +1,23 @@
-#include "job.hpp"
 #include "jobsqueue.hpp"
+
 #include <memory>
 
-namespace ddb_ows{
+#include "job.hpp"
+
+namespace ddb_ows {
 
 void JobsQueue::push(std::unique_ptr<Job> job) {
     if (!isOpen) {
         return;
     }
     std::lock_guard<std::mutex> lock(m);
-    q.push_back(
-        std::move(job)
-    );
+    q.push_back(std::move(job));
     c.notify_one();
 }
 std::unique_ptr<Job> JobsQueue::pop() {
     std::unique_lock<std::mutex> lock(m);
-    c.wait( lock, [this] {
-            return !this->q.empty() || !this->isOpen;
-            } );
-    if (!this->q.empty()){
+    c.wait(lock, [this] { return !this->q.empty() || !this->isOpen; });
+    if (!this->q.empty()) {
         std::unique_ptr<Job> val = std::move(q.front());
         q.pop_front();
         return val;
@@ -27,22 +25,22 @@ std::unique_ptr<Job> JobsQueue::pop() {
         return std::unique_ptr<Job>();
     }
 }
-void JobsQueue::close () {
+void JobsQueue::close() {
     std::lock_guard<std::mutex> lock(m);
     isOpen = false;
     c.notify_all();
 }
 
-void JobsQueue::open () {
+void JobsQueue::open() {
     std::lock_guard<std::mutex> lock(m);
     isOpen = true;
     c.notify_all();
 }
-void JobsQueue::cancel () {
+void JobsQueue::cancel() {
     std::lock_guard<std::mutex> lock(m);
     isOpen = false;
     std::unique_ptr<Job> val;
-    while (!q.empty()){
+    while (!q.empty()) {
         val = std::move(q.front());
         val->abort();
         q.pop_front();
@@ -64,4 +62,4 @@ int JobsQueue::size() {
     return out;
 }
 
-}
+}  // namespace ddb_ows
