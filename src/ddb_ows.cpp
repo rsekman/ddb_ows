@@ -334,25 +334,59 @@ std::string plt_get_title(ddb_playlist_t* plt) {
     return out;
 }
 
-bool save_playlist(ddb_playlist_t* plt, Logger& logger, bool dry) {
+bool save_playlist(ddb_playlist_t* plt_in, Logger& logger, bool dry) {
     path root(conf.get_root());
-    std::string title = plt_get_title(plt);
+    std::string title = plt_get_title(plt_in);
     std::string escaped = title;
     escape(escaped);
     std::string pl_to(root / escaped);
     pl_to += ".dbpl";
     DDB_OWS_DEBUG("Saving playlist to {}", pl_to);
     int out = 0;
+
+    char* fmt = ddb->tf_compile(conf.get_fn_formats()[0].c_str());
+    if (fmt == NULL) {
+        return false;
+    }
+
     if (!dry) {
-        auto head = ddb->plt_get_head_item(plt, PL_MAIN);
-        auto tail = ddb->plt_get_tail_item(plt, PL_MAIN);
+        auto head = ddb->plt_get_head_item(plt_in, PL_MAIN);
+        auto tail = ddb->plt_get_tail_item(plt_in, PL_MAIN);
         if (!head || !tail) {
             logger.warn("Playlist {} is empty, not saving.", title);
             return false;
         }
-        out = ddb->plt_save(plt, head, tail, pl_to.c_str(), NULL, NULL, NULL);
         ddb->pl_item_unref(head);
         ddb->pl_item_unref(tail);
+        ddb_playlist_t* plt_out = ddb->plt_alloc(title.c_str());
+
+        ddb_playItem_t** its;
+        ddb_playItem_t* after = ddb->plt_get_head_item(plt_out, PL_MAIN);
+
+        size_t n_its = ddb->plt_get_items(plt_in, &its);
+        for (size_t k = 0; k < n_its; k++) {
+            DB_playItem_t* new_it = ddb->pl_item_alloc();
+            ddb->pl_item_copy(new_it, its[k]);
+            ddb->pl_item_unref(its[k]);
+            path out_path = get_output_path(new_it, fmt);
+
+            if (should_convert(new_it)) {
+                out_path.replace_extension(conf.get_conv_ext());
+            }
+
+            ddb->pl_replace_meta(new_it, ":URI", out_path.c_str());
+            after = ddb->plt_insert_item(plt_out, after, new_it);
+            ddb->pl_item_unref(new_it);
+        }
+        free(its);
+
+        head = ddb->plt_get_head_item(plt_out, PL_MAIN);
+        tail = ddb->plt_get_tail_item(plt_out, PL_MAIN);
+        out =
+            ddb->plt_save(plt_out, head, tail, pl_to.c_str(), NULL, NULL, NULL);
+        ddb->pl_item_unref(head);
+        ddb->pl_item_unref(tail);
+        ddb->plt_unref(plt_out);
     }
     if (out < 0) {
         logger.err("Failed to save playlist {}.", title);
