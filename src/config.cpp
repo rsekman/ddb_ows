@@ -61,14 +61,15 @@ bool Configuration::_update_conf(const char* buf) {
     try {
         upd = json::parse(buf);
     } catch (json::exception& e) {
-        DDB_OWS_ERR << "Configuration contains malformed JSON: " << e.what()
-                    << std::endl;
+        DDB_OWS_ERR("Configuration contains malformed JSON: {}", e.what());
     } catch (std::exception& e) {
-        DDB_OWS_ERR << "Error reading configuration: " << e.what() << std::endl;
+        DDB_OWS_ERR("Error reading configuration: {}", e.what());
     }
     if (!upd.is_object()) {
-        DDB_OWS_ERR << "Configuration is not a JSON object. Falling back to "
-                       "default configuration.\n";
+        DDB_OWS_ERR(
+            "Configuration is not a JSON object. Falling back to default "
+            "configuration."
+        )
         return _update_conf(&DDB_OWS_CONFIG_DEFAULT);
     }
     // ensures proper copying of strings
@@ -77,8 +78,10 @@ bool Configuration::_update_conf(const char* buf) {
     try {
         _conf = conf;
     } catch (json::exception& e) {
-        DDB_OWS_ERR << "Configuration from DeaDBeeF is not valid. Falling back "
-                       "to default configuration.\n";
+        DDB_OWS_ERR(
+            "Configuration from DeaDBeeF is not valid. Falling back "
+            "to default configuration."
+        );
         return _update_conf(&DDB_OWS_CONFIG_DEFAULT);
     }
     return true;

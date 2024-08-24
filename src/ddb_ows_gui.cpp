@@ -90,13 +90,11 @@ void list_store_check_consistent(
     bool all_false = true;
     bool pl_selected;
     if (!model) {
-        DDB_OWS_WARN << "Attempt to check consistency with null model."
-                     << std::endl;
+        DDB_OWS_WARN("Attempt to check consistency with null model.");
         return;
     }
     if (!toggle) {
-        DDB_OWS_WARN << "Attempt to check consistency with null toggle "
-                     << toggle << std::endl;
+        DDB_OWS_WARN("Attempt to check consistency with null toggle.");
         return;
     }
     auto rows = model->children();
@@ -134,7 +132,7 @@ void fn_formats_populate(Glib::RefPtr<Gtk::ListStore> model) {
     model->clear();
     Gtk::TreeModel::iterator r;
     for (auto i : fmts) {
-        DDB_OWS_DEBUG << "Appending " << i << " to fn formats" << std::endl;
+        DDB_OWS_DEBUG("Appending {} to fn formats", i);
         r = model->append();
         r->set_value(0, i);
     }
@@ -191,7 +189,7 @@ void cp_populate(Glib::RefPtr<Gtk::ListStore> model) {
     ddb_converter_t* enc_plug =
         (ddb_converter_t*)ddb->plug_get_for_id("converter");
     if (enc_plug == NULL) {
-        DDB_OWS_WARN << "Converter plugin not present!" << std::endl;
+        DDB_OWS_WARN("Converter plugin not present!");
         return;
     }
     ddb_encoder_preset_t* enc = enc_plug->encoder_preset_get_list();
@@ -212,7 +210,7 @@ void cp_populate(Glib::RefPtr<Gtk::ListStore> model) {
 }
 
 void pl_selection_clear(Glib::RefPtr<Gtk::ListStore> model) {
-    DDB_OWS_DEBUG << "Clearing playlist selection model." << std::endl;
+    DDB_OWS_DEBUG("Clearing playlist selection model.");
     model->foreach_iter([](const Gtk::TreeIter r) -> bool {
         ddb_playlist_t* plt;
         r->get_value(2, plt);
@@ -243,8 +241,9 @@ void pl_selection_populate(
     std::unordered_set<plt_uuid> selected_uuids = {}
 ) {
     int plt_count = ddb->plt_get_count();
-    DDB_OWS_DEBUG << "Populating playlist selection model with " << plt_count
-                  << " playlists." << std::endl;
+    DDB_OWS_DEBUG(
+        "Populating playlist selection model with {} playlists.", plt_count
+    );
     char buf[4096];
     ddb_playlist_t* plt;
     Gtk::TreeModel::iterator row;
@@ -358,7 +357,7 @@ void conv_fts_populate(
         row->set_value(2, decoders[i]);
         i++;
     }
-    DDB_OWS_DEBUG << "Finished reading decoders..." << std::endl;
+    DDB_OWS_DEBUG("Finished reading decoders.");
 }
 
 void loglevel_cb_populate(TextBufferLogger* logger) {
@@ -642,7 +641,7 @@ void on_conv_ext_entry_show(GtkWidget* widget, gpointer data) {
 
 void on_target_root_chooser_show(GtkWidget* widget, gpointer data) {
     std::string root = ddb_ows->conf.get_root();
-    DDB_OWS_DEBUG << "setting root to" << root << std::endl;
+    DDB_OWS_DEBUG("Setting root to {}", root);
     const char* path = root.c_str();
     gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(widget), path);
 }
@@ -719,7 +718,6 @@ void on_rm_unref_check_toggled(GtkToggleButton* toggle, gpointer data) {
 
 void on_wt_spinbutton_value_changed(GtkSpinButton* spinbutton, gpointer data) {
     int wt = (int)gtk_spin_button_get_value(spinbutton);
-    DDB_OWS_DEBUG << "Saving wts " << wt << std::endl;
     ddb_ows->conf.set_conv_wts(wt);
 }
 
@@ -736,7 +734,7 @@ void on_conv_ext_entry_changed(GtkEntry* entry, gpointer data) {
 }
 
 void on_cp_combobox_changed(GtkComboBox* combobox, gpointer data) {
-    DDB_OWS_DEBUG << "Preset changed" << std::endl;
+    DDB_OWS_DEBUG("Preset changed.");
     Glib::RefPtr<Gtk::ListStore> model = Glib::wrap(GTK_LIST_STORE(data), true);
     Gtk::ComboBox* cb = Glib::wrap(combobox, true);
     auto iter = cb->get_active();
@@ -806,19 +804,23 @@ int read_ui() {
     for (auto dir : plugdirs) {
         ui_fname = dir + "/" + DDB_OWS_GUI_GLADE;
         try {
-            DDB_OWS_DEBUG << "loading ui file " << ui_fname << std::endl;
+            DDB_OWS_DEBUG("Loading ui file {}", ui_fname);
             success = builder->add_from_file(ui_fname);
         } catch (Gtk::BuilderError& e) {
-            DDB_OWS_ERR << "could not build ui from file " << ui_fname << ": "
-                        << e.what() << std::endl;
+            DDB_OWS_ERR(
+                "could not build ui from file {}: {}",
+                ui_fname,
+                e.what().c_str()
+            );
             continue;
         } catch (Glib::Error& e) {
-            DDB_OWS_ERR << "could not load ui file " << ui_fname << ": "
-                        << e.what() << std::endl;
+            DDB_OWS_ERR(
+                "could not load ui file {}: {}", ui_fname, e.what().c_str()
+            );
             continue;
         }
         if (success) {
-            DDB_OWS_DEBUG << "loaded ui file " << ui_fname << std::endl;
+            DDB_OWS_DEBUG("loaded ui file {}", ui_fname);
             return 0;
         }
     }
@@ -827,7 +829,7 @@ int read_ui() {
 
 int create_ui() {
     if (read_ui() < 0) {
-        DDB_OWS_ERR << "Could not read .ui" << std::endl;
+        DDB_OWS_ERR("Could not read .ui");
         return -1;
     }
 
@@ -846,7 +848,7 @@ int create_ui() {
     if (last_bracket) {
         *last_bracket = '\0';
     }
-    DDB_OWS_DEBUG << "Trying to load GModule" << bt_symbols[0] << std::endl;
+    DDB_OWS_DEBUG("Trying to load GModule {}", bt_symbols[0]);
 
     // Now we are ready to connect signal handlers;
     connect_args* args = g_slice_new0(connect_args);
@@ -929,20 +931,21 @@ int connect(void) {
         (ddb_converter_t*)ddb->plug_get_for_id("converter");
     ddb_ows = (ddb_ows_plugin_t*)ddb->plug_get_for_id("ddb_ows");
     if (!ddb_gtkui) {
-        DDB_OWS_ERR << DDB_OWS_GUI_PLUGIN_NAME
-                    << ": matching gtkui plugin not found, quitting."
-                    << std::endl;
+        DDB_OWS_ERR(
+            "{}: matching gtkui plugin not found, quitting.",
+            DDB_OWS_GUI_PLUGIN_NAME
+        );
         return -1;
     }
     if (!ddb_converter) {
-        fprintf(
-            stderr, "%s: converter plugin not found\n", DDB_OWS_GUI_PLUGIN_NAME
+        DDB_OWS_ERR(
+            "{}: converter plugin not found, quitting", DDB_OWS_GUI_PLUGIN_NAME
         );
         return -1;
     }
     if (!ddb_ows) {
-        fprintf(
-            stderr, "%s: ddb_ows plugin not found\n", DDB_OWS_GUI_PLUGIN_NAME
+        DDB_OWS_ERR(
+            "{}: ddb_ows plugin not found, quitting", DDB_OWS_GUI_PLUGIN_NAME
         );
         return -1;
     }

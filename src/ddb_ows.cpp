@@ -108,7 +108,7 @@ void callback_cover_art_found(
     {
         creq->cover = NULL;
     } else {
-        DDB_OWS_DEBUG << "Found cover: " << cover->image_filename << std::endl;
+        DDB_OWS_DEBUG("Found cover: {}", cover->image_filename);
         creq->cover = cover;
     }
     creq->c->notify_all();
@@ -173,12 +173,13 @@ bool queue_cover_jobs(
                 jobs->push(std::move(cover_job));
             }
         } else if (!creq.returned) {
-            DDB_OWS_DEBUG
-                << "Cover request timed out for" << target_dir << " after "
-                << duration_cast<milliseconds>(DDB_OWS_COVER_TIMEOUT).count()
-                << std::endl;
+            DDB_OWS_DEBUG(
+                "Cover request timed out for {} after {}",
+                target_dir,
+                duration_cast<milliseconds>(DDB_OWS_COVER_TIMEOUT).count()
+            );
         } else {
-            DDB_OWS_DEBUG << "No cover found for " << target_dir << std::endl;
+            DDB_OWS_DEBUG("No cover found for {}", target_dir);
         }
         // it is unref'd in the callback; we don't need to do it here
         items.pop_front();
@@ -225,8 +226,7 @@ bool should_convert(DB_playItem_t* it) {
     if (ext) {
         ext++;
     } else {
-        DDB_OWS_WARN << "Unable to determine filetype for " << fname
-                     << std::endl;
+        DDB_OWS_WARN("Unable to determine filetype for {}.");
         return false;
     }
     while (decoders[i]) {
@@ -314,7 +314,6 @@ std::vector<std::unique_ptr<Job>> make_job(
             // delete the old copy
             out.push_back(std::unique_ptr<Job>(new CopyJob(logger, db, from, to)
             ));
-            DDB_OWS_DEBUG << "Making delete job" << std::endl;
             out.push_back(std::unique_ptr<Job>(
                 new DeleteJob(logger, db, old->second.destination)
             ));
@@ -344,7 +343,7 @@ bool save_playlist(ddb_playlist_t* plt, Logger& logger, bool dry) {
     escape(escaped);
     std::string pl_to(root / escaped);
     pl_to += ".dbpl";
-    DDB_OWS_DEBUG << "Saving playlist to" << pl_to << std::endl;
+    DDB_OWS_DEBUG("Saving playlist to {}", pl_to);
     int out = 0;
     if (!dry) {
         auto head = ddb->plt_get_head_item(plt, PL_MAIN);
@@ -407,8 +406,7 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
 
     ddb->pl_lock();
     for (auto plt : playlists) {
-        DDB_OWS_DEBUG << "Looking for jobs from playlist " << plt_get_title(plt)
-                      << std::endl;
+        DDB_OWS_DEBUG("Looking for jobs from playlist {}", plt_get_title(plt));
 
         DB_playItem_t* it;
         it = ddb->plt_get_first(plt, PL_MAIN);
@@ -444,7 +442,7 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
         if (ddb_ows->conf.get_cover_sync() && !cover_dirs.count(target_dir)) {
             cover_its.push_back(it);
             ddb->pl_item_ref(it);
-            DDB_OWS_DEBUG << "Copying cover to " << target_dir << std::endl;
+            DDB_OWS_DEBUG("Copying cover to {}", target_dir);
             cover_dirs.insert(target_dir);
         }
         ddb->pl_item_unref(it);
@@ -454,7 +452,7 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
     queue_cover_jobs(logger, db, cover_its);
     // TODO: delete unreferenced files
     jobs->close();
-    DDB_OWS_DEBUG << "Found " << jobs->size() << " jobs" << std::endl;
+    DDB_OWS_DEBUG("Found {} jobs", jobs->size());
     free(fmt);
     return true;
 }

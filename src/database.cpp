@@ -1,5 +1,7 @@
 #include "database.hpp"
 
+#include <fmt/std.h>
+
 #include <ctime>
 #include <fstream>
 #include <iostream>
@@ -25,7 +27,7 @@ Database::Database(path root) : m() {
 }
 
 bool Database::read() {
-    DDB_OWS_DEBUG << "Reading database from " << fname << "." << std::endl;
+    DDB_OWS_DEBUG("Reading database from {}.", fname);
     std::ifstream in_file;
     in_file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
     json j;
@@ -33,20 +35,18 @@ bool Database::read() {
         in_file.open(fname, std::ifstream::in);
         in_file >> j;
         db = j;
-        DDB_OWS_DEBUG << "Successfully read database from " << fname << "."
-                      << std::endl;
+        DDB_OWS_DEBUG("Successfully read database from {}.", fname);
         return true;
     } catch (std::ifstream::failure e) {
-        DDB_OWS_WARN << "Could not read " << fname << "." << std::endl;
+        DDB_OWS_WARN("Could not read {}.", fname);
     } catch (json::exception e) {
-        DDB_OWS_ERR << "Malformed database " << fname << ": " << e.what()
-                    << std::endl;
+        DDB_OWS_ERR("Malformed database {}: {}.", fname, e.what());
     }
     db = db_t{
         .meta = db_meta_t{.ver = DDB_OWS_VERSION, .last_write = 0},
         .entries = entry_dict{}
     };
-    DDB_OWS_DEBUG << "Set default database" << "." << std::endl;
+    DDB_OWS_DEBUG("Set default database.");
     return false;
 }
 
@@ -58,10 +58,9 @@ Database::~Database() {
         out_file.open(fname, std::ofstream::out);
         out_file << json(db);
     } catch (std::ofstream::failure e) {
-        DDB_OWS_ERR << "Unable to write database to " << fname << ": "
-                    << e.what() << std::endl;
+        DDB_OWS_ERR("Unable to write database to {}: {}.", fname, e.what());
     }
-    DDB_OWS_DEBUG << "Wrote database " << fname << std::endl;
+    DDB_OWS_DEBUG("Wrote database {}.", fname);
 }
 
 int Database::count(path key) {
