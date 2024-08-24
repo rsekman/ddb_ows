@@ -162,13 +162,13 @@ bool queue_cover_jobs(
                        exists(old->second.destination) &&
                        is_newer(old->second.destination, from))
             {
-                auto cover_job = std::unique_ptr<Job>(
-                    new MoveJob(logger, db, old->second.destination, to, from)
+                auto cover_job = std::make_unique<MoveJob>(
+                    logger, db, old->second.destination, to, from
                 );
                 jobs->push(std::move(cover_job));
             } else {
-                auto cover_job = std::unique_ptr<Job>(
-                    new CopyJob(logger, db, creq.cover->image_filename, to)
+                auto cover_job = std::make_unique<CopyJob>(
+                    logger, db, creq.cover->image_filename, to
                 );
                 jobs->push(std::move(cover_job));
             }
@@ -284,16 +284,16 @@ std::vector<std::unique_ptr<Job>> make_job(
             {
                 // The source was previously converted with a different
                 // destination, which is newer than the source
-                out.push_back(std::unique_ptr<Job>(
+                out.emplace_back(
                     new MoveJob(logger, db, old->second.destination, to, from)
-                ));
+                );
             } else {
                 // The source is newer => reconvert with new destination and
                 // delete the old destination
                 if (old->second.destination != to) {
-                    out.push_back(std::unique_ptr<Job>(
+                    out.emplace_back(
                         new DeleteJob(logger, db, old->second.destination)
-                    ));
+                    );
                 }
                 out.push_back(std::move(cjob));
             }
@@ -306,24 +306,22 @@ std::vector<std::unique_ptr<Job>> make_job(
         // This source file was synced previously,
         if (is_newer(old->second.destination, from)) {
             // the destination file is newer than the source => move
-            out.push_back(std::unique_ptr<Job>(
+            out.emplace_back(
                 new MoveJob(logger, db, old->second.destination, to, from)
-            ));
+            );
         } else {
             // the source file is newer than the old copy => copy anew and
             // delete the old copy
-            out.push_back(std::unique_ptr<Job>(new CopyJob(logger, db, from, to)
-            ));
-            out.push_back(std::unique_ptr<Job>(
-                new DeleteJob(logger, db, old->second.destination)
-            ));
+            out.emplace_back(new CopyJob(logger, db, from, to));
+            out.emplace_back(new DeleteJob(logger, db, old->second.destination)
+            );
         }
     } else if (exists(to) && is_newer(to, from)) {
         logger.verbose(
             "Destination {} is newer than source {}; skipping.", to, from
         );
     } else {
-        out.push_back(std::unique_ptr<Job>(new CopyJob(logger, db, from, to)));
+        out.emplace_back(new CopyJob(logger, db, from, to));
     }
     return out;
 }
