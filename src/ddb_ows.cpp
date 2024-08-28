@@ -156,15 +156,16 @@ bool queue_cover_jobs(
             path from = creq.cover->image_filename;
             path to = target_dir / conf.get_cover_fname();
             auto old = db->find_entry(from);
+            auto old_dest = old != db->end()
+                                ? std::optional{old->second.destination}
+                                : std::nullopt;
             if (exists(to) && last_write_time(to) > last_write_time(from)) {
                 logger.verbose("Cover at {} is newer than source {}", to, from);
-            } else if (old != db->end() && old->second.destination != to &&
-                       exists(old->second.destination) &&
-                       is_newer(old->second.destination, from))
+            } else if (old_dest && *old_dest != to && exists(*old_dest) &&
+                       is_newer(*old_dest, from))
             {
-                auto cover_job = std::make_unique<MoveJob>(
-                    logger, db, old->second.destination, to, from
-                );
+                auto cover_job =
+                    std::make_unique<MoveJob>(logger, db, *old_dest, to, from);
                 jobs->push(std::move(cover_job));
             } else {
                 auto cover_job = std::make_unique<CopyJob>(
@@ -261,6 +262,8 @@ std::vector<std::unique_ptr<Job>> make_job(
 ) {
     // throws: can throw any filesystem error throw by checking ctime
     auto old = db->find_entry(from);
+    auto old_dest = old != db->end() ? std::optional{old->second.destination}
+                                     : std::nullopt;
     std::vector<std::unique_ptr<Job>> out{};
     if (should_convert(it)) {
         to.replace_extension(conf.get_conv_ext());
@@ -279,41 +282,30 @@ std::vector<std::unique_ptr<Job>> make_job(
                     preset_title
                 );
                 return {};
-            } else if (exists(old->second.destination) &&
-                       is_newer(old->second.destination, from))
-            {
+            } else if (exists(*old_dest) && is_newer(*old_dest, from)) {
                 // The source was previously converted with a different
                 // destination, which is newer than the source
-                out.emplace_back(
-                    new MoveJob(logger, db, old->second.destination, to, from)
-                );
+                out.emplace_back(new MoveJob(logger, db, *old_dest, to, from));
             } else {
                 // The source is newer => delete the old destination and
                 // reconvert with new destination
-                if (old->second.destination != to) {
-                    out.emplace_back(
-                        new DeleteJob(logger, db, old->second.destination)
-                    );
+                if (old_dest != to) {
+                    out.emplace_back(new DeleteJob(logger, db, *old_dest));
                 }
                 out.push_back(std::move(cjob));
             }
         } else {
             out.push_back(std::move(cjob));
         }
-    } else if (old != db->end() && old->second.destination != to &&
-               exists(old->second.destination))
-    {
+    } else if (old_dest && *old_dest != to && exists(*old_dest)) {
         // This source file was synced previously,
-        if (is_newer(old->second.destination, from)) {
+        if (is_newer(*old_dest, from)) {
             // the destination file is newer than the source => move
-            out.emplace_back(
-                new MoveJob(logger, db, old->second.destination, to, from)
-            );
+            out.emplace_back(new MoveJob(logger, db, *old_dest, to, from));
         } else {
             // the source file is newer than the old copy => delete the old copy
             // and copy anew
-            out.emplace_back(new DeleteJob(logger, db, old->second.destination)
-            );
+            out.emplace_back(new DeleteJob(logger, db, *old_dest));
             out.emplace_back(new CopyJob(logger, db, from, to));
         }
     } else if (exists(to) && is_newer(to, from)) {
