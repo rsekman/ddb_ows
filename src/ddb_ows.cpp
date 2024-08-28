@@ -288,8 +288,8 @@ std::vector<std::unique_ptr<Job>> make_job(
                     new MoveJob(logger, db, old->second.destination, to, from)
                 );
             } else {
-                // The source is newer => reconvert with new destination and
-                // delete the old destination
+                // The source is newer => delete the old destination and
+                // reconvert with new destination
                 if (old->second.destination != to) {
                     out.emplace_back(
                         new DeleteJob(logger, db, old->second.destination)
@@ -310,11 +310,11 @@ std::vector<std::unique_ptr<Job>> make_job(
                 new MoveJob(logger, db, old->second.destination, to, from)
             );
         } else {
-            // the source file is newer than the old copy => copy anew and
-            // delete the old copy
-            out.emplace_back(new CopyJob(logger, db, from, to));
+            // the source file is newer than the old copy => delete the old copy
+            // and copy anew
             out.emplace_back(new DeleteJob(logger, db, old->second.destination)
             );
+            out.emplace_back(new CopyJob(logger, db, from, to));
         }
     } else if (exists(to) && is_newer(to, from)) {
         logger.verbose(
