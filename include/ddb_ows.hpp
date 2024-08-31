@@ -34,7 +34,10 @@ typedef struct {
     int (*jobs_count)();
     bool (*run)(bool dry, job_cb_t callback);
     bool (*save_playlists)(
-        std::vector<ddb_playlist_t*> playlists, Logger& logger, bool dry
+        const char* ext,
+        std::vector<ddb_playlist_t*> playlists,
+        Logger& logger,
+        bool dry
     );
     bool (*cancel)(cancel_cb_t callback);
 } ddb_ows_plugin_t;

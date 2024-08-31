@@ -326,13 +326,16 @@ std::string plt_get_title(ddb_playlist_t* plt) {
     return out;
 }
 
-bool save_playlist(ddb_playlist_t* plt_in, Logger& logger, bool dry) {
+bool save_playlist(
+    const char* ext, ddb_playlist_t* plt_in, Logger& logger, bool dry
+) {
     path root(conf.get_root());
     std::string title = plt_get_title(plt_in);
     std::string escaped = title;
     escape(escaped);
     std::string pl_to(root / escaped);
-    pl_to += ".dbpl";
+    pl_to += ".";
+    pl_to += ext;
     DDB_OWS_DEBUG("Saving playlist to {}", pl_to);
     int out = 0;
 
@@ -390,12 +393,15 @@ bool save_playlist(ddb_playlist_t* plt_in, Logger& logger, bool dry) {
 }
 
 bool save_playlists(
-    std::vector<ddb_playlist_t*> playlists, Logger& logger, bool dry
+    const char* ext,
+    std::vector<ddb_playlist_t*> playlists,
+    Logger& logger,
+    bool dry
 ) {
     // returns true if all playlists were successfully saved
     bool out = true;
     for (ddb_playlist_t* plt : playlists) {
-        bool saved = save_playlist(plt, logger, dry);
+        bool saved = save_playlist(ext, plt, logger, dry);
         out = out && saved;
     }
     return out;

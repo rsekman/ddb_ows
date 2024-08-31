@@ -28,6 +28,8 @@ void from_json(const json& j, plt_uuid& uuid) {
     }
 }
 
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(sync_pls_s, dbpl, m3u8);
+
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
     ddb_ows_config,
     root,

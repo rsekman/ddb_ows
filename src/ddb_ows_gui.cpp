@@ -301,12 +301,12 @@ std::vector<ddb_playlist_t*> get_selected_playlists() {
     return pls;
 }
 
-void save_playlists(bool dry) {
+void save_playlists(const char* ext, bool dry) {
     std::vector<ddb_playlist_t*> pls = get_selected_playlists();
     if (plugin.gui_logger) {
-        ddb_ows->save_playlists(pls, *plugin.gui_logger, dry);
+        ddb_ows->save_playlists(ext, pls, *plugin.gui_logger, dry);
     } else {
-        ddb_ows->save_playlists(pls, terminal_logger, dry);
+        ddb_ows->save_playlists(ext, pls, terminal_logger, dry);
     }
 }
 
@@ -398,11 +398,17 @@ void execute(job_cb_t cb, bool dry) {
     }
     Gtk::ProgressBar* pb;
     builder->get_widget("progress_bar", pb);
-    if (ddb_ows->conf.get_sync_pls()) {
+    if (ddb_ows->conf.get_sync_pls().dbpl) {
         if (pb != NULL) {
-            pb->set_text("Saving playlists");
+            pb->set_text("Saving playlists (DBPL)");
         }
-        save_playlists(dry);
+        save_playlists("dbpl", dry);
+    }
+    if (ddb_ows->conf.get_sync_pls().m3u8) {
+        if (pb != NULL) {
+            pb->set_text("Saving playlists (M3U8)");
+        }
+        save_playlists("m3u8", dry);
     }
     if (pb != NULL) {
         pb->set_text("Queueing jobs");
@@ -670,9 +676,15 @@ void on_cover_sync_check_show(GtkWidget* widget, gpointer data) {
     );
 }
 
-void on_sync_pls_check_show(GtkWidget* widget, gpointer data) {
+void on_sync_pls_dbpl_check_show(GtkWidget* widget, gpointer data) {
     gtk_toggle_button_set_active(
-        GTK_TOGGLE_BUTTON(widget), ddb_ows->conf.get_sync_pls()
+        GTK_TOGGLE_BUTTON(widget), ddb_ows->conf.get_sync_pls().dbpl
+    );
+}
+
+void on_sync_pls_m3u8_check_show(GtkWidget* widget, gpointer data) {
+    gtk_toggle_button_set_active(
+        GTK_TOGGLE_BUTTON(widget), ddb_ows->conf.get_sync_pls().m3u8
     );
 }
 
@@ -707,10 +719,20 @@ void on_cover_sync_check_toggled(GtkToggleButton* toggle, gpointer data) {
     ddb_ows->conf.set_cover_sync(cover_sync);
 }
 
-void on_sync_pls_check_toggled(GtkToggleButton* toggle, gpointer data) {
+void on_sync_pls_dbpl_check_toggled(GtkToggleButton* toggle, gpointer data) {
     gboolean sync_pls = gtk_toggle_button_get_active(toggle);
-    ddb_ows->conf.set_sync_pls(sync_pls);
+    auto s = ddb_ows->conf.get_sync_pls();
+    s.dbpl = sync_pls;
+    ddb_ows->conf.set_sync_pls(s);
 }
+
+void on_sync_pls_m3u8_check_toggled(GtkToggleButton* toggle, gpointer data) {
+    gboolean sync_pls = gtk_toggle_button_get_active(toggle);
+    auto s = ddb_ows->conf.get_sync_pls();
+    s.m3u8 = sync_pls;
+    ddb_ows->conf.set_sync_pls(s);
+}
+
 void on_rm_unref_check_toggled(GtkToggleButton* toggle, gpointer data) {
     gboolean rm_unref = gtk_toggle_button_get_active(toggle);
     ddb_ows->conf.set_rm_unref(rm_unref);
