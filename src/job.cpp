@@ -42,13 +42,13 @@ bool CopyJob::run(bool dry) {
             success = copy_file(from, to, copy_options::update_existing);
             if (success) {
                 register_job();
-                logger.log("Copied " + from_to_str + ".");
+                logger.log("Copied {}.", from_to_str);
             } else {
-                logger.err("Failed to copy " + from_to_str + ".");
+                logger.err("Failed to copy {}.", from_to_str);
             }
         } else {
             success = true;
-            logger.log("Would copy " + from_to_str + ".");
+            logger.log("Would copy {}.", from_to_str);
         }
     } catch (filesystem_error& e) {
         logger.err("Failed to copy {}: {}.", from_to_str, e.what());
@@ -79,9 +79,9 @@ bool MoveJob::run(bool dry) {
             }
             register_job(entry);
             clean_parents(from.parent_path());
-            logger.log("Moved from " + from_to_str + ".");
+            logger.log("Moved from {}.", from_to_str);
         } else {
-            logger.log("Would move " + from_to_str + ".");
+            logger.log("Would move {}.", from_to_str);
         }
         success = true;
     } catch (filesystem_error& e) {
