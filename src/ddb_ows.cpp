@@ -264,12 +264,14 @@ std::vector<std::unique_ptr<Job>> make_job(
     auto old = db->find_entry(from);
     auto old_dest = old != db->end() ? std::optional{old->second.destination}
                                      : std::nullopt;
+    auto djob = std::make_unique<DeleteJob>(logger, db, *old_dest);
     std::vector<std::unique_ptr<Job>> out{};
+
     if (should_convert(it)) {
         to.replace_extension(conf.get_conv_ext());
         std::string preset_title = conv_settings.encoder_preset->title;
-        std::unique_ptr<Job> cjob(
-            new ConvertJob(logger, db, ddb, conv_settings, it, from, to)
+        auto cjob = std::make_unique<ConvertJob>(
+            logger, db, ddb, conv_settings, it, from, to
         );
         if (old != db->end() && old->second.converter_preset == preset_title) {
             // This source file was synced previously and the same encoder
@@ -290,22 +292,27 @@ std::vector<std::unique_ptr<Job>> make_job(
                 // The source is newer => delete the old destination and
                 // reconvert with new destination
                 if (old_dest != to) {
-                    out.emplace_back(new DeleteJob(logger, db, *old_dest));
+                    out.push_back(std::move(djob));
                 }
                 out.push_back(std::move(cjob));
             }
         } else {
             out.push_back(std::move(cjob));
+            if (old->second.converter_preset != preset_title) {
+                // Clean up previous conversion with a different preset
+                out.push_back(std::move(djob));
+            }
         }
     } else if (old_dest && *old_dest != to && exists(*old_dest)) {
-        // This source file was synced previously,
-        if (is_newer(*old_dest, from)) {
+        // This source file was synced previously, and was not converted
+        if (is_newer(*old_dest, from) && old->second.converter_preset == "") {
             // the destination file is newer than the source => move
             out.emplace_back(new MoveJob(logger, db, *old_dest, to, from));
         } else {
-            // the source file is newer than the old copy => delete the old copy
+            // the source file is newer than the old copy, or was previously
+            // converted but should not be now => delete the old copy/conversion
             // and copy anew
-            out.emplace_back(new DeleteJob(logger, db, *old_dest));
+            out.push_back(std::move(djob));
             out.emplace_back(new CopyJob(logger, db, from, to));
         }
     } else if (exists(to) && is_newer(to, from)) {
