@@ -5,7 +5,6 @@
 #include <execinfo.h>
 #include <fmt/core.h>
 
-#include <iostream>
 #include <memory>
 #include <set>
 #include <string>
