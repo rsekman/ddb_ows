@@ -782,7 +782,9 @@ void on_quit_btn_clicked() {
 
 void on_cancel_btn_clicked(GtkButton* button, gpointer data) {
     plugin.pm->cancel();
-    ddb_ows->cancel((cancel_cb_t)[](){});
+    ddb_ows->cancel((cancel_cb_t)[]() {
+        (*sig_execution_buttons_set_sensitive)();
+    });
 }
 
 void on_execution_btn_clicked(bool dry) {
