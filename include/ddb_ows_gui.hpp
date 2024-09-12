@@ -4,6 +4,8 @@
 #include <deadbeef/deadbeef.h>
 #include <gtk/gtk.h>
 
+#include <memory>
+
 #include "progressmonitor.hpp"
 #include "textbufferlogger.hpp"
 
@@ -19,8 +21,11 @@
 
 typedef struct {
     DB_misc_t plugin;
-    ProgressMonitor* pm;
-    ddb_ows::TextBufferLogger* gui_logger;
+    std::shared_ptr<ProgressMonitor> pm;
+    std::shared_ptr<ddb_ows::TextBufferLogger> gui_logger;
+    // These instances must be created by the Gtk main thread
+    std::shared_ptr<Glib::Dispatcher> sig_execution_buttons_set_sensitive;
+    std::shared_ptr<Glib::Dispatcher> sig_execution_buttons_set_insensitive;
 
 } ddb_ows_gui_plugin_t;
 

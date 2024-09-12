@@ -39,7 +39,12 @@ namespace ddb_ows_gui {
 
 using namespace ddb_ows;
 
-ddb_ows_gui_plugin_t plugin{.pm = NULL, .gui_logger = NULL};
+ddb_ows_gui_plugin_t plugin{
+    .pm = nullptr,
+    .gui_logger = nullptr,
+    .sig_execution_buttons_set_sensitive = nullptr,
+    .sig_execution_buttons_set_insensitive = nullptr
+};
 
 ddb_ows_plugin_t* ddb_ows;
 
@@ -359,7 +364,7 @@ void conv_fts_populate(
     DDB_OWS_DEBUG("Finished reading decoders.");
 }
 
-void loglevel_cb_populate(TextBufferLogger* logger) {
+void loglevel_cb_populate(std::shared_ptr<TextBufferLogger> logger) {
     Gtk::ComboBox* cb;
     builder->get_widget("loglevel_cb", cb);
     if (!cb) {
@@ -453,15 +458,10 @@ void execution_buttons_set_insensitive() {
     execution_buttons_set_sensitive(false);
 }
 
-// These instances must be created by the Gtk main thread, so we cannot
-// initialize them here
-Glib::Dispatcher* sig_execution_buttons_set_sensitive;
-Glib::Dispatcher* sig_execution_buttons_set_insensitive;
-
 auto execution_thread(job_cb_t cb, bool dry) {
     return std::thread([cb, dry] {
         execute(cb, dry);
-        (*sig_execution_buttons_set_sensitive)();
+        (*plugin.sig_execution_buttons_set_sensitive)();
     });
 }
 
@@ -782,7 +782,7 @@ void on_quit_btn_clicked() {
 void on_cancel_btn_clicked(GtkButton* button, gpointer data) {
     plugin.pm->cancel();
     ddb_ows->cancel((cancel_cb_t)[]() {
-        (*sig_execution_buttons_set_sensitive)();
+        (*plugin.sig_execution_buttons_set_sensitive)();
     });
 }
 
@@ -881,12 +881,14 @@ int create_ui() {
         builder->gobj(), gtk_builder_connect_signals_default, args
     );
 
-    sig_execution_buttons_set_sensitive = new Glib::Dispatcher();
-    sig_execution_buttons_set_sensitive->connect(
+    plugin.sig_execution_buttons_set_sensitive =
+        std::make_shared<Glib::Dispatcher>();
+    plugin.sig_execution_buttons_set_sensitive->connect(
         sigc::ptr_fun<void>(execution_buttons_set_sensitive)
     );
-    sig_execution_buttons_set_insensitive = new Glib::Dispatcher();
-    sig_execution_buttons_set_insensitive->connect(
+    plugin.sig_execution_buttons_set_insensitive =
+        std::make_shared<Glib::Dispatcher>();
+    plugin.sig_execution_buttons_set_insensitive->connect(
         sigc::ptr_fun<void>(execution_buttons_set_insensitive)
     );
 
@@ -911,7 +913,8 @@ int create_ui() {
         auto log_buffer = Glib::RefPtr<Gtk::TextBuffer>::cast_static(
             builder->get_object("job_log_buffer")
         );
-        plugin.gui_logger = new TextBufferLogger(log_buffer, job_log);
+        plugin.gui_logger =
+            std::make_shared<TextBufferLogger>(log_buffer, job_log);
         log_buffer->create_mark("END", log_buffer->end(), false);
 
         loglevel_cb_populate(plugin.gui_logger);
@@ -920,7 +923,7 @@ int create_ui() {
     Gtk::ProgressBar* pb;
     builder->get_widget("progress_bar", pb);
     if (pb) {
-        plugin.pm = new ProgressMonitor(ddb_ows->jobs_count, pb);
+        plugin.pm = std::make_shared<ProgressMonitor>(ddb_ows->jobs_count, pb);
     }
 
     return 0;
@@ -985,8 +988,10 @@ int disconnect() {
         );
         pl_selection_clear(model);
     }
-    delete plugin.pm;
-    delete plugin.gui_logger;
+    plugin.pm.reset();
+    plugin.gui_logger.reset();
+    plugin.sig_execution_buttons_set_sensitive.reset();
+    plugin.sig_execution_buttons_set_insensitive.reset();
     return 0;
 }
 
