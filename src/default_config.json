@@ -2,6 +2,8 @@
   "root": "",
   "pl_selection": [],
   "fn_formats": [
+    "$puts(artist,$replace($stripprefix(%album artist%,The),&,and))$puts(initial,$substr($get(artist),1,1))$ifgreater($strchr(0123456789,$get(initial)),0,0-9,$get(initial))/$get(artist)/'['$year(%year%)']' %album%/$if($and(%disc%,$greater(%totaldiscs%,1)),Disc %disc%/)%tracknumber%. %title%.$ext(%path%)",
+    "$replace($stripprefix(%album artist%,The),&,and)/'['$year(%year%)']' %album%/$if($and(%disc%,$greater(%totaldiscs%,1)),Disc %disc%/)%tracknumber%. %title%.$ext(%path%)",
     "$replace($stripprefix(%album artist%,The),&,and)/'['$year(%year%)']' %album%/%tracknumber%. %title%.$ext(%path%)",
     "$stripprefix(%album artist%,The)/'['$year(%year%)']' %album%/%tracknumber%. %title%.$ext(%path%)",
     "%album artist%/'['$year(%year%)']' %album%/%tracknumber%. %title%.$ext(%path%)",
