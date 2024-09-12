@@ -451,10 +451,19 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
     }
     ddb->pl_unlock();
 
+    std::unordered_set<std::string> sources{};
+
     for (auto it : its) {
         path from;
         path to;
         from = std::string(ddb->pl_find_meta(it, ":URI"));
+        if (sources.count(from) > 0) {
+            // This source file was already processed, avoid queueing redundant
+            // jobs
+            ddb->pl_item_unref(it);
+            continue;
+        }
+        sources.insert(from);
         to = root / get_output_path(it, fmt);
         if (!exists(from)) {
             logger.err("Source file {} does not exist!", from);
