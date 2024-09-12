@@ -1,4 +1,4 @@
-#include "textbufferlogger.hpp"
+#include "gui/textbufferlogger.hpp"
 
 namespace ddb_ows {
 

@@ -12,39 +12,28 @@ gnome = import('gnome')
 resources = gnome.compile_resources('ddb_ows_resources',
   'resources.xml'
 )
-gui_resources = gnome.compile_resources('ddb_ows_gui_resources',
-  'gui_resources.xml'
-)
 
-shared_module('ddb_ows',
-  'ddb_ows.cpp',
+lib = static_library('libddb_ows',
   'config.cpp',
   'database.cpp',
   'job.cpp',
   'jobsqueue.cpp',
   'logger.cpp',
   'playlist_uuid.cpp',
+  include_directories: incdir,
+  dependencies : [gio_dep, fmt_dep, uuid_dep],
+  name_prefix: ''
+)
+
+shared_module('ddb_ows',
+  'ddb_ows.cpp',
   resources,
   include_directories: incdir,
   install: true,
   install_dir: destdir,
   dependencies : [gio_dep, fmt_dep, uuid_dep],
+  link_with: lib,
   name_prefix: ''
 )
 
-shared_module('ddb_ows_gtk3', 'ddb_ows_gui.cpp',
-  'config.cpp',
-  'database.cpp',
-  'job.cpp',
-  'jobsqueue.cpp',
-  'logger.cpp',
-  'playlist_uuid.cpp',
-  'textbufferlogger.cpp',
-  'progressmonitor.cpp',
-  gui_resources,
-  include_directories: incdir,
-  install: true,
-  install_dir: destdir,
-  dependencies : [gtk_dep, fmt_dep, uuid_dep],
-  name_prefix: ''
-)
+subdir('gui')

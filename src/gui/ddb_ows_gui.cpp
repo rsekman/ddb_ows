@@ -1,4 +1,4 @@
-#include "ddb_ows_gui.hpp"
+#include "gui/ddb_ows_gui.hpp"
 
 #include <deadbeef/converter.h>
 #include <deadbeef/gtkui_api.h>

@@ -1,4 +1,4 @@
-#include "progressmonitor.hpp"
+#include "gui/progressmonitor.hpp"
 
 ProgressMonitor::ProgressMonitor(int (*r_jobs_)(), Gtk::ProgressBar* _pb) :
     r_jobs(r_jobs_), pb(_pb) {
