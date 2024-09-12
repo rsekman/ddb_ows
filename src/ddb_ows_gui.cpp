@@ -815,44 +815,11 @@ gboolean on_ddb_ows_key_press_event(
 /* END EXTERN SIGNAL HANDLERS */
 }
 
-/* Build the UI from .ui */
-
-int read_ui() {
-    std::vector<std::string> plugdirs = {
-        std::string(ddb->get_system_dir(DDB_SYS_DIR_PLUGIN)),
-        std::string(LIBDIR) + "/deadbeef"
-    };
-    std::string ui_fname;
-    bool success = false;
-    for (auto dir : plugdirs) {
-        ui_fname = dir + "/" + DDB_OWS_GUI_GLADE;
-        try {
-            DDB_OWS_DEBUG("Loading ui file {}", ui_fname);
-            success = builder->add_from_file(ui_fname);
-        } catch (Gtk::BuilderError& e) {
-            DDB_OWS_ERR(
-                "could not build ui from file {}: {}",
-                ui_fname,
-                e.what().c_str()
-            );
-            continue;
-        } catch (Glib::Error& e) {
-            DDB_OWS_ERR(
-                "could not load ui file {}: {}", ui_fname, e.what().c_str()
-            );
-            continue;
-        }
-        if (success) {
-            DDB_OWS_DEBUG("loaded ui file {}", ui_fname);
-            return 0;
-        }
-    }
-    return -1;
-}
-
 int create_ui() {
-    if (read_ui() < 0) {
-        DDB_OWS_ERR("Could not read .ui");
+    try {
+        builder->add_from_resource("/ddb_ows/ddb_ows.ui");
+    } catch (Gtk::BuilderError& e) {
+        DDB_OWS_ERR("Could not build ui: {}.", std::string(e.what()));
         return -1;
     }
 

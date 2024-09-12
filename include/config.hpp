@@ -64,6 +64,7 @@ class Configuration {
     DB_functions_t* ddb;
     ddb_ows_config _conf;
     bool _update_conf(const char* buf);
+    bool _update_conf_with_default();
     bool write_conf();
 };
 

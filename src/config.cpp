@@ -1,13 +1,13 @@
 #include "config.hpp"
 
+#include <giomm/resource.h>
+
 #include <nlohmann/json.hpp>
 #include <stdexcept>
 
 #include "log.hpp"
 
 using nlohmann::json;
-
-extern char DDB_OWS_CONFIG_DEFAULT;
 
 namespace ddb_ows {
 
@@ -45,7 +45,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
     conv_wts
 )
 
-Configuration::Configuration() { _update_conf(&DDB_OWS_CONFIG_DEFAULT); }
+Configuration::Configuration() { _update_conf_with_default(); }
 
 void Configuration::set_api(DB_functions_t* api) { ddb = api; }
 
@@ -72,7 +72,7 @@ bool Configuration::_update_conf(const char* buf) {
             "Configuration is not a JSON object. Falling back to default "
             "configuration."
         )
-        return _update_conf(&DDB_OWS_CONFIG_DEFAULT);
+        return _update_conf_with_default();
     }
     // ensures proper copying of strings
     json conf = {};
@@ -84,8 +84,16 @@ bool Configuration::_update_conf(const char* buf) {
             "Configuration from DeaDBeeF is not valid. Falling back "
             "to default configuration."
         );
-        return _update_conf(&DDB_OWS_CONFIG_DEFAULT);
+        return _update_conf_with_default();
     }
+    return true;
+}
+
+bool Configuration::_update_conf_with_default() {
+    auto default_conf =
+        Gio::Resource::lookup_data_global("/ddb_ows/default_config.json");
+    auto size = default_conf->get_size();
+    _update_conf(static_cast<const char*>(default_conf->get_data(size)));
     return true;
 }
 
