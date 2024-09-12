@@ -78,9 +78,14 @@ entry_dict::iterator Database::end() {
     return db.entries.end();
 }
 
-entry_dict::iterator Database::find_entry(path key) {
+std::optional<db_entry_t> Database::find_entry(path key) {
     std::lock_guard lock(m);
-    return db.entries.find(key);
+    auto res = db.entries.find(key);
+    if (res != db.entries.end()) {
+        return res->second;
+    } else {
+        return std::nullopt;
+    }
 }
 
 void Database::insert_or_update(path key, db_entry_t entry) {

@@ -74,8 +74,8 @@ bool MoveJob::run(bool dry) {
             rename(from, to);
             db_entry_t entry = make_entry();
             auto old = db->find_entry(from);
-            if (old != db->end()) {
-                entry.converter_preset = old->second.converter_preset;
+            if (old) {
+                entry.converter_preset = old->converter_preset;
             }
             register_job(entry);
             clean_parents(from.parent_path());
