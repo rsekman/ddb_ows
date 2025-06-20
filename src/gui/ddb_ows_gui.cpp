@@ -864,14 +864,14 @@ int create_ui() {
     );
     pl_selection_populate(pl_model, ddb_ows->conf.get_pl_selection());
 
-    auto ft_model =
-        Glib::RefPtr<Gtk::ListStore>::cast_static(builder->get_object("ft_model"
-        ));
+    auto ft_model = Glib::RefPtr<Gtk::ListStore>::cast_static(
+        builder->get_object("ft_model")
+    );
     conv_fts_populate(ft_model);
 
-    auto cp_model =
-        Glib::RefPtr<Gtk::ListStore>::cast_static(builder->get_object("cp_model"
-        ));
+    auto cp_model = Glib::RefPtr<Gtk::ListStore>::cast_static(
+        builder->get_object("cp_model")
+    );
     cp_populate(cp_model);
 
     Gtk::TextView* job_log;
@@ -991,26 +991,25 @@ int handleMessage(uint32_t id, uintptr_t ctx, uint32_t p1, uint32_t p2) {
 
 void init(DB_functions_t* api) {
     plugin.plugin = {
-        .plugin =
-            {
-                .type = DB_PLUGIN_MISC,
-                .api_vmajor = 1,
-                .api_vminor = 8,
-                .version_major = DDB_OWS_VERSION_MAJOR,
-                .version_minor = DDB_OWS_VERSION_MINOR,
-                .id = DDB_OWS_GUI_PLUGIN_ID,
-                .name = DDB_OWS_GUI_PLUGIN_NAME,
-                .descr = DDB_OWS_PROJECT_DESC,
-                .copyright = DDB_OWS_LICENSE_TEXT,
-                .website = DDB_OWS_PROJECT_URL,
-                .start = start,
-                .stop = stop,
-                .connect = connect,
-                .disconnect = disconnect,
-                .get_actions = get_actions,
-                .message = handleMessage,
-                .configdialog = "",
-            },
+        .plugin = {
+            .type = DB_PLUGIN_MISC,
+            .api_vmajor = 1,
+            .api_vminor = 8,
+            .version_major = DDB_OWS_VERSION_MAJOR,
+            .version_minor = DDB_OWS_VERSION_MINOR,
+            .id = DDB_OWS_GUI_PLUGIN_ID,
+            .name = DDB_OWS_GUI_PLUGIN_NAME,
+            .descr = DDB_OWS_PROJECT_DESC,
+            .copyright = DDB_OWS_LICENSE_TEXT,
+            .website = DDB_OWS_PROJECT_URL,
+            .start = start,
+            .stop = stop,
+            .connect = connect,
+            .disconnect = disconnect,
+            .get_actions = get_actions,
+            .message = handleMessage,
+            .configdialog = "",
+        },
     };
 }
 
