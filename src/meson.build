@@ -20,6 +20,7 @@ lib = static_library('libddb_ows',
   'jobsqueue.cpp',
   'logger.cpp',
   'playlist_uuid.cpp',
+  'cancellationtoken.cpp',
   include_directories: incdir,
   dependencies : [gio_dep, fmt_dep, uuid_dep],
   name_prefix: ''

@@ -314,12 +314,12 @@ void save_playlists(const char* ext, bool dry) {
     }
 }
 
-void queue_jobs() {
+bool queue_jobs() {
     std::vector<ddb_playlist_t*> pls = get_selected_playlists();
     if (plugin.gui_logger) {
-        ddb_ows->queue_jobs(pls, *plugin.gui_logger);
+        return ddb_ows->queue_jobs(pls, *plugin.gui_logger);
     } else {
-        ddb_ows->queue_jobs(pls, terminal_logger);
+        return ddb_ows->queue_jobs(pls, terminal_logger);
     }
 }
 
@@ -425,9 +425,13 @@ void execute(job_cb_t cb, bool dry) {
             std::this_thread::sleep_for(5000ms / 60);
         }
     });
-    queue_jobs();
+    bool queue_successful = queue_jobs();
     queueing_complete = true;
     t.join();
+    if (!queue_successful) {
+        pm->cancel();
+        return;
+    }
     pm->tick();
     ddb_ows_plugin_t* ddb_ows =
         (ddb_ows_plugin_t*)ddb->plug_get_for_id("ddb_ows");
@@ -781,9 +785,9 @@ void on_quit_btn_clicked() {
 
 void on_cancel_btn_clicked(GtkButton* button, gpointer data) {
     plugin.pm->cancel();
-    ddb_ows->cancel((cancel_cb_t)[]() {
-        (*plugin.sig_execution_buttons_set_sensitive)();
-    });
+    cancel_cb_t cb = []() { (*plugin.sig_execution_buttons_set_sensitive)(); };
+    auto t = std::thread([cb]() { ddb_ows->cancel(cb); });
+    t.detach();
 }
 
 void on_execution_btn_clicked(bool dry) {

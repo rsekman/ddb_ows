@@ -5,6 +5,7 @@
 #include <mutex>
 #include <string>
 
+#include "cancellationtoken.hpp"
 #include "config.hpp"
 #include "deadbeef/deadbeef.h"
 #include "job.hpp"
@@ -27,6 +28,7 @@ typedef struct {
     DB_misc_t plugin;
     ddb_ows::Configuration& conf;
     std::mutex running;
+    std::shared_ptr<ddb_ows::CancellationToken> cancellationtoken;
     wt_futures_t worker_thread_futures;
     plt_uuid (*plt_get_uuid)(ddb_playlist_t* plt);
     std::string (*get_output_path)(DB_playItem_t* it, char* format);

@@ -120,6 +120,7 @@ bool is_newer(path a, path b) {
     return last_write_time(a) > last_write_time(b);
 }
 
+// Returns false if cancelled, true if successful
 bool queue_cover_jobs(
     Logger& logger, DatabaseHandle db, std::deque<DB_playItem_t*> items
 ) {
@@ -133,8 +134,18 @@ bool queue_cover_jobs(
     std::mutex m{};
     std::condition_variable c{};
     DB_playItem_t* it;
+    ddb_ows_plugin_t* ddb_ows =
+        (ddb_ows_plugin_t*)ddb->plug_get_for_id("ddb_ows");
+
+    bool cancelled = false;
     while (!items.empty()) {
         it = items.front();
+        if (cancelled || (cancelled = ddb_ows->cancellationtoken->get())) {
+            ddb->pl_item_unref(it);
+            items.pop_front();
+            DDB_OWS_DEBUG("Cancelled while queueing cover jobs");
+            continue;
+        }
         from = ddb->pl_find_meta(it, ":URI");
         to = root / get_output_path(it, fmt);
         path target_dir = to.parent_path();
@@ -196,11 +207,10 @@ bool queue_cover_jobs(
         // it is unref'd in the callback; we don't need to do it here
         items.pop_front();
     }
-    return true;
-}
-
-bool cancel_jobs() {
-    jobs->cancel();
+    if (cancelled) {
+        DDB_OWS_DEBUG("Cancelled while queueing cover jobs");
+        return false;
+    }
     return true;
 }
 
@@ -437,6 +447,7 @@ bool save_playlists(
     return out;
 }
 
+// Returns false if cancelled, true if successful
 bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
     if (!jobs->empty()) {
         // To avoid double-queueing
@@ -479,6 +490,9 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
 
     std::unordered_set<std::string> sources{};
 
+    ddb_ows->cancellationtoken = std::make_shared<CancellationToken>();
+    bool cancelled = false;
+
     for (auto it : its) {
         path from;
         path to;
@@ -486,6 +500,13 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
         if (sources.count(from) > 0) {
             // This source file was already processed, avoid queueing redundant
             // jobs
+            ddb->pl_item_unref(it);
+            continue;
+        }
+        // Short-circuit to avoid having to check the token for every item
+        // We still need to process the entire vector to unref everyhing, so
+        // this can't be break.
+        if (cancelled || (cancelled = ddb_ows->cancellationtoken->get())) {
             ddb->pl_item_unref(it);
             continue;
         }
@@ -516,9 +537,20 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
         }
         ddb->pl_item_unref(it);
     }
+    if (cancelled || ddb_ows->cancellationtoken->get()) {
+        DDB_OWS_DEBUG("Cancelled while queueing jobs");
+        for (auto it : cover_its) {
+            ddb->pl_item_unref(it);
+        }
+        free(fmt);
+        return false;
+    }
 
     // Now we can dispatch cover requests
-    queue_cover_jobs(logger, db, cover_its);
+    if (!queue_cover_jobs(logger, db, cover_its)) {
+        free(fmt);
+        return false;
+    }
     // TODO: delete unreferenced files
     jobs->close();
     DDB_OWS_DEBUG("Found {} jobs", jobs->size());
@@ -569,9 +601,11 @@ bool run(bool dry, job_cb_t callback) {
     return true;
 }
 
-void cancel_thread(cancel_cb_t callback) {
+bool cancel(cancel_cb_t callback) {
     ddb_ows_plugin_t* ddb_ows =
         (ddb_ows_plugin_t*)ddb->plug_get_for_id("ddb_ows");
+    DDB_OWS_DEBUG("Cancelling");
+    ddb_ows->cancellationtoken->cancel();
     jobs->cancel();
     std::lock_guard lock(ddb_ows->worker_thread_futures.m);
     for (auto t = ddb_ows->worker_thread_futures.futures.begin();
@@ -582,11 +616,6 @@ void cancel_thread(cancel_cb_t callback) {
     }
     callback();
     ddb_ows->worker_thread_futures.c.notify_all();
-}
-
-bool cancel(cancel_cb_t callback) {
-    auto t = std::thread(cancel_thread, callback);
-    t.detach();
     return true;
 }
 
@@ -635,6 +664,7 @@ ddb_ows_plugin_t plugin = {
                 },
         },
     .conf = conf,
+    .cancellationtoken = std::make_shared<ddb_ows::CancellationToken>(),
     .worker_thread_futures =
         wt_futures_t{
             .m = std::mutex(),
