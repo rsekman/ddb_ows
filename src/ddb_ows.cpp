@@ -158,11 +158,23 @@ bool queue_cover_jobs(
             auto old = db->find_entry(from);
             auto old_dest =
                 old ? std::optional{old->destination} : std::nullopt;
-            if (exists(to) && last_write_time(to) > last_write_time(from)) {
+
+            bool dest_newer;
+            try {
+                dest_newer = is_newer(to, from);
+            } catch (std::filesystem::filesystem_error& e) {
+                dest_newer = false;
+            }
+            bool old_newer;
+            try {
+                old_newer = old_dest && is_newer(*old_dest, from);
+            } catch (std::filesystem::filesystem_error& e) {
+                old_newer = false;
+            }
+
+            if (dest_newer) {
                 logger.verbose("Cover at {} is newer than source {}", to, from);
-            } else if (old_dest && *old_dest != to && exists(*old_dest) &&
-                       is_newer(*old_dest, from))
-            {
+            } else if (old_newer && *old_dest != to) {
                 auto cover_job =
                     std::make_unique<MoveJob>(logger, db, *old_dest, to, from);
                 jobs->push(std::move(cover_job));
@@ -264,6 +276,19 @@ std::vector<std::unique_ptr<Job>> make_job(
     auto old_dest = old ? std::optional{old->destination} : std::nullopt;
     std::vector<std::unique_ptr<Job>> out{};
 
+    bool dest_newer;
+    try {
+        dest_newer = is_newer(to, from);
+    } catch (std::filesystem::filesystem_error& e) {
+        dest_newer = false;
+    }
+    bool old_newer;
+    try {
+        old_newer = old_dest && is_newer(*old_dest, from);
+    } catch (std::filesystem::filesystem_error& e) {
+        old_newer = false;
+    }
+
     if (should_convert(it)) {
         to.replace_extension(conf.get_conv_ext());
         std::string preset_title = conv_settings.encoder_preset->title;
@@ -273,7 +298,8 @@ std::vector<std::unique_ptr<Job>> make_job(
         if (old && old->converter_preset == preset_title) {
             // This source file was synced previously and the same encoder
             // preset is selected
-            if (exists(to) && is_newer(to, from)) {
+
+            if (dest_newer) {
                 // The destination exists and is newer than the source
                 logger.verbose(
                     "Source {} was already converted with {}; skipping.",
@@ -281,7 +307,7 @@ std::vector<std::unique_ptr<Job>> make_job(
                     preset_title
                 );
                 return {};
-            } else if (exists(*old_dest) && is_newer(*old_dest, from)) {
+            } else if (old_newer && *old_dest != to) {
                 // The source was previously converted with a different
                 // destination, which is newer than the source
                 out.emplace_back(new MoveJob(logger, db, *old_dest, to, from));
@@ -302,7 +328,7 @@ std::vector<std::unique_ptr<Job>> make_job(
         }
     } else if (old_dest && *old_dest != to && exists(*old_dest)) {
         // This source file was synced previously, and was not converted
-        if (is_newer(*old_dest, from) && old->converter_preset == "") {
+        if (old_newer && old->converter_preset == "") {
             // the destination file is newer than the source => move
             out.emplace_back(new MoveJob(logger, db, *old_dest, to, from));
         } else {
@@ -312,7 +338,7 @@ std::vector<std::unique_ptr<Job>> make_job(
             out.emplace_back(new DeleteJob(logger, db, *old_dest));
             out.emplace_back(new CopyJob(logger, db, from, to));
         }
-    } else if (exists(to) && is_newer(to, from)) {
+    } else if (dest_newer) {
         logger.verbose(
             "Destination {} is newer than source {}; skipping.", to, from
         );
