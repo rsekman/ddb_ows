@@ -1,6 +1,9 @@
 #ifndef DDB_OWS_DATABASE_HPP
 #define DDB_OWS_DATABASE_HPP
 
+#include <spdlog/logger.h>
+
+#include <memory>
 #define DDB_OWS_DATABASE_FNAME ".ddb_ows.json"
 
 #include <filesystem>
@@ -47,6 +50,7 @@ class Database {
     bool read();
     path fname;
     db_t db;
+    std::shared_ptr<spdlog::logger> logger;
 };
 
 class DatabaseHandle {

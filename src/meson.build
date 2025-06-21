@@ -5,6 +5,7 @@ gio_dep = dependency('giomm-2.4')
 gtk_dep = dependency('gtkmm-3.0')
 uuid_dep = dependency('uuid')
 fmt_dep = dependency('fmt')
+spdlog_dep = dependency('spdlog')
 
 incdir = include_directories('../include')
 
@@ -22,7 +23,7 @@ lib = static_library('libddb_ows',
   'playlist_uuid.cpp',
   'cancellationtoken.cpp',
   include_directories: incdir,
-  dependencies : [gio_dep, fmt_dep, uuid_dep],
+  dependencies : [gio_dep, fmt_dep, uuid_dep, spdlog_dep],
   name_prefix: ''
 )
 
@@ -32,7 +33,7 @@ shared_module('ddb_ows',
   include_directories: incdir,
   install: true,
   install_dir: destdir,
-  dependencies : [gio_dep, fmt_dep, uuid_dep],
+  dependencies : [gio_dep, fmt_dep, uuid_dep, spdlog_dep],
   link_with: lib,
   name_prefix: ''
 )

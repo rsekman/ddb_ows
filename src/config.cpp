@@ -1,11 +1,10 @@
 #include "config.hpp"
 
 #include <giomm/resource.h>
+#include <spdlog/spdlog.h>
 
 #include <nlohmann/json.hpp>
 #include <stdexcept>
-
-#include "log.hpp"
 
 using nlohmann::json;
 
@@ -59,19 +58,20 @@ bool Configuration::update_conf() {
 }
 
 bool Configuration::_update_conf(const char* buf) {
+    auto logger = spdlog::get(DDB_OWS_PROJECT_ID);
     json upd;
     try {
         upd = json::parse(buf);
     } catch (json::exception& e) {
-        DDB_OWS_ERR("Configuration contains malformed JSON: {}", e.what());
+        logger->error("Configuration contains malformed JSON: {}", e.what());
     } catch (std::exception& e) {
-        DDB_OWS_ERR("Error reading configuration: {}", e.what());
+        logger->error("Error reading configuration: {}", e.what());
     }
     if (!upd.is_object()) {
-        DDB_OWS_ERR(
+        logger->error(
             "Configuration is not a JSON object. Falling back to default "
             "configuration."
-        )
+        );
         return _update_conf_with_default();
     }
     // ensures proper copying of strings
@@ -80,7 +80,7 @@ bool Configuration::_update_conf(const char* buf) {
     try {
         _conf = conf;
     } catch (json::exception& e) {
-        DDB_OWS_ERR(
+        logger->error(
             "Configuration from DeaDBeeF is not valid. Falling back "
             "to default configuration."
         );

@@ -1,6 +1,8 @@
 #include <condition_variable>
 #ifndef DDB_OWS_PROJECT_ID
 
+#include <spdlog/spdlog.h>
+
 #include <future>
 #include <mutex>
 #include <string>
@@ -29,6 +31,7 @@ typedef struct {
     ddb_ows::Configuration& conf;
     std::mutex running;
     std::shared_ptr<ddb_ows::CancellationToken> cancellationtoken;
+    std::shared_ptr<spdlog::logger> logger;
     wt_futures_t worker_thread_futures;
     plt_uuid (*plt_get_uuid)(ddb_playlist_t* plt);
     std::string (*get_output_path)(DB_playItem_t* it, char* format);

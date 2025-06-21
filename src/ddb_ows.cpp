@@ -4,6 +4,8 @@
 #include <deadbeef/converter.h>
 #include <fmt/std.h>
 #include <limits.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/spdlog.h>
 
 #include <condition_variable>
 #include <cstring>
@@ -22,7 +24,6 @@
 #include "database.hpp"
 #include "job.hpp"
 #include "jobsqueue.hpp"
-#include "log.hpp"
 #include "playlist_uuid.hpp"
 
 using namespace std::chrono_literals;
@@ -103,6 +104,9 @@ void callback_cover_art_found(
 ) {
     cover_req_t* creq = (cover_req_t*)(query->user_data);
     std::lock_guard<std::mutex> lock(*creq->m);
+
+    auto logger = spdlog::get(DDB_OWS_PROJECT_ID);
+
     if (creq->timed_out) {
         delete creq;
         ddb->pl_item_unref(query->track);
@@ -114,7 +118,7 @@ void callback_cover_art_found(
     {
         creq->cover = NULL;
     } else {
-        DDB_OWS_DEBUG("Found cover: {}", cover->image_filename);
+        logger->debug("Found cover: {}", cover->image_filename);
         creq->cover = cover;
     }
     creq->c->notify_all();
@@ -141,6 +145,7 @@ bool queue_cover_jobs(
     DB_playItem_t* it;
     ddb_ows_plugin_t* ddb_ows =
         (ddb_ows_plugin_t*)ddb->plug_get_for_id("ddb_ows");
+    auto plug_logger = ddb_ows->logger;
 
     bool cancelled = false;
     while (!items.empty()) {
@@ -148,7 +153,7 @@ bool queue_cover_jobs(
         if (cancelled || (cancelled = ddb_ows->cancellationtoken->get())) {
             ddb->pl_item_unref(it);
             items.pop_front();
-            DDB_OWS_DEBUG("Cancelled while queueing cover jobs");
+            plug_logger->debug("Cancelled while queueing cover jobs");
             continue;
         }
         from = ddb->pl_find_meta(it, ":URI");
@@ -174,7 +179,7 @@ bool queue_cover_jobs(
             return creq->returned;
         });
         if (!creq->returned) {
-            DDB_OWS_DEBUG(
+            plug_logger->debug(
                 "Cover request timed out for {} after {}",
                 target_dir,
                 duration_cast<milliseconds>(DDB_OWS_COVER_TIMEOUT).count()
@@ -183,7 +188,7 @@ bool queue_cover_jobs(
             creq->timed_out = true;
             lock.unlock();
         } else if (creq->cover == NULL) {
-            DDB_OWS_DEBUG("No cover found for {}", target_dir);
+            plug_logger->debug("No cover found for {}", target_dir);
             delete creq;
         } else {
             path from = creq->cover->image_filename;
@@ -223,7 +228,7 @@ bool queue_cover_jobs(
         }
     }
     if (cancelled) {
-        DDB_OWS_DEBUG("Cancelled while queueing cover jobs");
+        plug_logger->debug("Cancelled while queueing cover jobs");
         return false;
     }
     return true;
@@ -260,10 +265,12 @@ bool should_convert(DB_playItem_t* it) {
     std::set<std::string> sels = conf.get_conv_fts();
     const char* fname = ddb->pl_find_meta(it, ":URI");
     const char* ext = strrchr(fname, '.');
+    auto logger = spdlog::get(DDB_OWS_PROJECT_ID);
+
     if (ext) {
         ext++;
     } else {
-        DDB_OWS_WARN("Unable to determine filetype for {}.");
+        logger->warn("Unable to determine filetype for {}.");
         return false;
     }
     while (decoders[i]) {
@@ -391,7 +398,12 @@ bool save_playlist(
     std::string pl_to(root / escaped);
     pl_to += ".";
     pl_to += ext;
-    DDB_OWS_DEBUG("Saving playlist to {}", pl_to);
+
+    ddb_ows_plugin_t* ddb_ows =
+        (ddb_ows_plugin_t*)ddb->plug_get_for_id("ddb_ows");
+    auto plug_logger = ddb_ows->logger;
+
+    plug_logger->debug("Saving playlist to {}", pl_to);
     int out = 0;
 
     char* fmt = ddb->tf_compile(conf.get_fn_formats()[0].c_str());
@@ -483,6 +495,8 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
 
     ddb_ows_plugin_t* ddb_ows =
         (ddb_ows_plugin_t*)ddb->plug_get_for_id("ddb_ows");
+    auto plug_logger = ddb_ows->logger;
+
     path root(conf.get_root());
     DatabaseHandle db(root);
 
@@ -492,7 +506,9 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
 
     ddb->pl_lock();
     for (auto plt : playlists) {
-        DDB_OWS_DEBUG("Looking for jobs from playlist {}", plt_get_title(plt));
+        plug_logger->debug(
+            "Looking for jobs from playlist {}", plt_get_title(plt)
+        );
 
         DB_playItem_t* it;
         it = ddb->plt_get_first(plt, PL_MAIN);
@@ -547,13 +563,13 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
         if (ddb_ows->conf.get_cover_sync() && !cover_dirs.count(target_dir)) {
             cover_its.push_back(it);
             ddb->pl_item_ref(it);
-            DDB_OWS_DEBUG("Copying cover to {}", target_dir);
+            plug_logger->debug("Copying cover to {}", target_dir);
             cover_dirs.insert(target_dir);
         }
         ddb->pl_item_unref(it);
     }
     if (cancelled || ddb_ows->cancellationtoken->get()) {
-        DDB_OWS_DEBUG("Cancelled while queueing jobs");
+        plug_logger->debug("Cancelled while queueing jobs");
         for (auto it : cover_its) {
             ddb->pl_item_unref(it);
         }
@@ -568,7 +584,7 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
     }
     // TODO: delete unreferenced files
     jobs->close();
-    DDB_OWS_DEBUG("Found {} jobs", jobs->size());
+    plug_logger->debug("Found {} jobs", jobs->size());
     free(fmt);
     return true;
 }
@@ -619,7 +635,7 @@ bool run(bool dry, job_cb_t callback) {
 bool cancel(cancel_cb_t callback) {
     ddb_ows_plugin_t* ddb_ows =
         (ddb_ows_plugin_t*)ddb->plug_get_for_id("ddb_ows");
-    DDB_OWS_DEBUG("Cancelling");
+    ddb_ows->logger->debug("Cancelling");
     ddb_ows->cancellationtoken->cancel();
     jobs->cancel();
     std::lock_guard lock(ddb_ows->worker_thread_futures.m);
@@ -680,6 +696,7 @@ ddb_ows_plugin_t plugin = {
         },
     .conf = conf,
     .cancellationtoken = std::make_shared<ddb_ows::CancellationToken>(),
+    .logger = std::shared_ptr<spdlog::logger>(),
     .worker_thread_futures =
         wt_futures_t{
             .m = std::mutex(),
@@ -698,6 +715,9 @@ ddb_ows_plugin_t plugin = {
 void init(DB_functions_t* api) {
     plugin.conf.set_api(api);
     plugin.conf.update_conf();
+    plugin.logger = spdlog::stderr_color_mt(DDB_OWS_PROJECT_ID);
+    plugin.logger->set_level(spdlog::level::debug);
+    plugin.logger->set_pattern("[%n] [%^%l%$] [thread %t] %v");
 }
 
 DB_plugin_t* load(DB_functions_t* api) {

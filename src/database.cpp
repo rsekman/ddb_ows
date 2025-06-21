@@ -1,6 +1,7 @@
 #include "database.hpp"
 
 #include <fmt/std.h>
+#include <spdlog/spdlog.h>
 
 #include <ctime>
 #include <fstream>
@@ -9,7 +10,6 @@
 #include <nlohmann/json.hpp>
 
 #include "constants.hpp"
-#include "log.hpp"
 
 using namespace nlohmann;
 
@@ -22,12 +22,13 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(db_t, meta, entries)
 
 Database::Database(path root) : m() {
+    logger = spdlog::get(DDB_OWS_PROJECT_ID);
     fname = root / DDB_OWS_DATABASE_FNAME;
     read();
 }
 
 bool Database::read() {
-    DDB_OWS_DEBUG("Reading database from {}.", fname);
+    logger->debug("Reading database from {}.", fname);
     std::ifstream in_file;
     in_file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
     json j;
@@ -35,18 +36,18 @@ bool Database::read() {
         in_file.open(fname, std::ifstream::in);
         in_file >> j;
         db = j;
-        DDB_OWS_DEBUG("Successfully read database from {}.", fname);
+        logger->debug("Successfully read database from {}.", fname);
         return true;
     } catch (std::ifstream::failure e) {
-        DDB_OWS_WARN("Could not read {}.", fname);
+        logger->warn("Could not read {}.", fname);
     } catch (json::exception e) {
-        DDB_OWS_ERR("Malformed database {}: {}.", fname, e.what());
+        logger->error("Malformed database {}: {}.", fname, e.what());
     }
     db = db_t{
         .meta = db_meta_t{.ver = DDB_OWS_VERSION, .last_write = 0},
         .entries = entry_dict{}
     };
-    DDB_OWS_DEBUG("Set default database.");
+    logger->debug("Set default database.");
     return false;
 }
 
@@ -58,9 +59,9 @@ Database::~Database() {
         out_file.open(fname, std::ofstream::out);
         out_file << json(db);
     } catch (std::ofstream::failure e) {
-        DDB_OWS_ERR("Unable to write database to {}: {}.", fname, e.what());
+        logger->error("Unable to write database to {}: {}.", fname, e.what());
     }
-    DDB_OWS_DEBUG("Wrote database {}.", fname);
+    logger->debug("Wrote database {}.", fname);
 }
 
 int Database::count(path key) {

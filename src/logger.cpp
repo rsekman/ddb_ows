@@ -1,26 +1,18 @@
 #include "logger.hpp"
 
-#include "log.hpp"
+#include <spdlog/spdlog.h>
 
 namespace ddb_ows {
 
-bool StdioLogger::verbose(std::string message) {
-    DDB_OWS_DEBUG("{}", message);
-    return true;
-};
+#define DDB_OWS_STDIO_LOGGER_METHOD(x, y)      \
+    bool StdioLogger::x(std::string message) { \
+        spdlog::y(message);                    \
+        return true;                           \
+    }
 
-bool StdioLogger::log(std::string message) {
-    DDB_OWS_DEBUG("{}", message);
-    return true;
-};
-
-bool StdioLogger::warn(std::string message) {
-    DDB_OWS_WARN("{}", message);
-    return true;
-};
-bool StdioLogger::err(std::string message) {
-    DDB_OWS_ERR("{}", message);
-    return true;
-};
+DDB_OWS_STDIO_LOGGER_METHOD(verbose, debug);
+DDB_OWS_STDIO_LOGGER_METHOD(log, info);
+DDB_OWS_STDIO_LOGGER_METHOD(warn, warn);
+DDB_OWS_STDIO_LOGGER_METHOD(err, error);
 
 }  // namespace ddb_ows

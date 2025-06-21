@@ -4,6 +4,7 @@
 #include <deadbeef/gtkui_api.h>
 #include <execinfo.h>
 #include <fmt/core.h>
+#include <spdlog/spdlog.h>
 
 #include <memory>
 #include <set>
@@ -28,7 +29,6 @@
 #include "gtkmm/togglebutton.h"
 #include "gtkmm/treeview.h"
 #include "gtkmm/window.h"
-#include "log.hpp"
 #include "playlist_uuid.hpp"
 
 using namespace std::chrono_literals;
@@ -51,6 +51,11 @@ ddb_ows_plugin_t* ddb_ows;
 StdioLogger terminal_logger{};
 
 Glib::RefPtr<Gtk::Builder> builder;
+
+std::shared_ptr<spdlog::logger> get_logger() {
+    auto logger = spdlog::get(DDB_OWS_PROJECT_ID);
+    return logger ? logger : spdlog::default_logger();
+}
 
 typedef struct {
     GModule* gmodule;
@@ -93,12 +98,15 @@ void list_store_check_consistent(
     bool all_true = true;
     bool all_false = true;
     bool pl_selected;
+
+    auto logger = get_logger();
+
     if (!model) {
-        DDB_OWS_WARN("Attempt to check consistency with null model.");
+        logger->warn("Attempt to check consistency with null model.");
         return;
     }
     if (!toggle) {
-        DDB_OWS_WARN("Attempt to check consistency with null toggle.");
+        logger->warn("Attempt to check consistency with null toggle.");
         return;
     }
     auto rows = model->children();
@@ -135,8 +143,9 @@ void fn_formats_populate(Glib::RefPtr<Gtk::ListStore> model) {
     }
     model->clear();
     Gtk::TreeModel::iterator r;
+    auto logger = get_logger();
     for (auto i : fmts) {
-        DDB_OWS_DEBUG("Appending {} to fn formats", i);
+        logger->debug("Appending {} to fn formats", i);
         r = model->append();
         r->set_value(0, i);
     }
@@ -190,10 +199,11 @@ void update_fn_preview(char* format) {
 }
 
 void cp_populate(Glib::RefPtr<Gtk::ListStore> model) {
+    auto logger = get_logger();
     ddb_converter_t* enc_plug =
         (ddb_converter_t*)ddb->plug_get_for_id("converter");
     if (enc_plug == NULL) {
-        DDB_OWS_WARN("Converter plugin not present!");
+        logger->warn("Converter plugin not present!");
         return;
     }
     ddb_encoder_preset_t* enc = enc_plug->encoder_preset_get_list();
@@ -214,7 +224,9 @@ void cp_populate(Glib::RefPtr<Gtk::ListStore> model) {
 }
 
 void pl_selection_clear(Glib::RefPtr<Gtk::ListStore> model) {
-    DDB_OWS_DEBUG("Clearing playlist selection model.");
+    auto logger = get_logger();
+    logger->debug("Clearing playlist selection model.");
+
     model->foreach_iter([](const Gtk::TreeIter r) -> bool {
         ddb_playlist_t* plt;
         r->get_value(2, plt);
@@ -244,8 +256,10 @@ void pl_selection_populate(
     Glib::RefPtr<Gtk::ListStore> model,
     std::unordered_set<plt_uuid> selected_uuids = {}
 ) {
+    auto logger = get_logger();
+
     int plt_count = ddb->plt_get_count();
-    DDB_OWS_DEBUG(
+    logger->debug(
         "Populating playlist selection model with {} playlists.", plt_count
     );
     char buf[4096];
@@ -342,6 +356,7 @@ void conv_fts_populate(
     Glib::RefPtr<Gtk::ListStore> model,
     std::unordered_map<std::string, bool> selected = {}
 ) {
+    auto logger = get_logger();
     DB_decoder_t** decoders = ddb->plug_get_decoder_list();
     // decoders and decoders[i]->exts are null-terminated arrays
     int i = 0;
@@ -361,7 +376,7 @@ void conv_fts_populate(
         row->set_value(2, decoders[i]);
         i++;
     }
-    DDB_OWS_DEBUG("Finished reading decoders.");
+    logger->debug("Finished reading decoders.");
 }
 
 void loglevel_cb_populate(std::shared_ptr<TextBufferLogger> logger) {
@@ -649,8 +664,9 @@ void on_conv_ext_entry_show(GtkWidget* widget, gpointer data) {
 }
 
 void on_target_root_chooser_show(GtkWidget* widget, gpointer data) {
+    auto logger = get_logger();
     std::string root = ddb_ows->conf.get_root();
-    DDB_OWS_DEBUG("Setting root to {}", root);
+    logger->debug("Setting root to {}", root);
     const char* path = root.c_str();
     gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(widget), path);
 }
@@ -759,7 +775,8 @@ void on_conv_ext_entry_changed(GtkEntry* entry, gpointer data) {
 }
 
 void on_cp_combobox_changed(GtkComboBox* combobox, gpointer data) {
-    DDB_OWS_DEBUG("Preset changed.");
+    auto logger = get_logger();
+    logger->debug("Preset changed.");
     Glib::RefPtr<Gtk::ListStore> model = Glib::wrap(GTK_LIST_STORE(data), true);
     Gtk::ComboBox* cb = Glib::wrap(combobox, true);
     auto iter = cb->get_active();
@@ -820,10 +837,11 @@ gboolean on_ddb_ows_key_press_event(
 }
 
 int create_ui() {
+    auto logger = get_logger();
     try {
         builder->add_from_resource("/ddb_ows/ddb_ows.ui");
     } catch (Gtk::BuilderError& e) {
-        DDB_OWS_ERR("Could not build ui: {}.", std::string(e.what()));
+        logger->error("Could not build ui: {}.", std::string(e.what()));
         return -1;
     }
 
@@ -842,7 +860,7 @@ int create_ui() {
     if (last_bracket) {
         *last_bracket = '\0';
     }
-    DDB_OWS_DEBUG("Trying to load GModule {}", bt_symbols[0]);
+    logger->debug("Trying to load GModule {}", bt_symbols[0]);
 
     // Now we are ready to connect signal handlers;
     connect_args* args = g_slice_new0(connect_args);
@@ -927,21 +945,23 @@ int connect(void) {
     ddb_converter_t* ddb_converter =
         (ddb_converter_t*)ddb->plug_get_for_id("converter");
     ddb_ows = (ddb_ows_plugin_t*)ddb->plug_get_for_id("ddb_ows");
+    auto logger = ddb_ows->logger;
+
     if (!ddb_gtkui) {
-        DDB_OWS_ERR(
+        logger->error(
             "{}: matching gtkui plugin not found, quitting.",
             DDB_OWS_GUI_PLUGIN_NAME
         );
         return -1;
     }
     if (!ddb_converter) {
-        DDB_OWS_ERR(
+        logger->error(
             "{}: converter plugin not found, quitting", DDB_OWS_GUI_PLUGIN_NAME
         );
         return -1;
     }
     if (!ddb_ows) {
-        DDB_OWS_ERR(
+        logger->error(
             "{}: ddb_ows plugin not found, quitting", DDB_OWS_GUI_PLUGIN_NAME
         );
         return -1;
