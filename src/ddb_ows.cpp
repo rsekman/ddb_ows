@@ -91,9 +91,10 @@ std::string get_output_path(DB_playItem_t* it, char* format) {
 JobsQueue* jobs = new JobsQueue();
 
 typedef struct cover_req_s {
-    std::mutex* m;
-    std::condition_variable* c;
+    std::shared_ptr<std::mutex> m;
+    std::shared_ptr<std::condition_variable> c;
     bool returned;
+    bool timed_out = false;
     ddb_cover_info_t* cover;
 } cover_req_t;
 
@@ -101,8 +102,13 @@ void callback_cover_art_found(
     int error, ddb_cover_query_t* query, ddb_cover_info_t* cover
 ) {
     cover_req_t* creq = (cover_req_t*)(query->user_data);
-    creq->returned = true;
     std::lock_guard<std::mutex> lock(*creq->m);
+    if (creq->timed_out) {
+        delete creq;
+        ddb->pl_item_unref(query->track);
+        free(query);
+    }
+    creq->returned = true;
     if ((query->flags & DDB_ARTWORK_FLAG_CANCELLED) || cover == NULL ||
         cover->image_filename == NULL)
     {
@@ -131,8 +137,7 @@ bool queue_cover_jobs(
         return false;
     }
     auto root = path(conf.get_root());
-    std::mutex m{};
-    std::condition_variable c{};
+
     DB_playItem_t* it;
     ddb_ows_plugin_t* ddb_ows =
         (ddb_ows_plugin_t*)ddb->plug_get_for_id("ddb_ows");
@@ -156,15 +161,32 @@ bool queue_cover_jobs(
         int64_t sid = dist(mersenne_twister);
         cover_query->source_id = sid;
         cover_query->_size = sizeof(ddb_cover_query_t);
-        cover_req_t creq = {.m = &m, .c = &c, .returned = false, .cover = NULL};
-        cover_query->user_data = &creq;
-        std::unique_lock<std::mutex> lock(*creq.m);
+
+        auto m = std::make_shared<std::mutex>();
+        auto c = std::make_shared<std::condition_variable>();
+        auto creq =
+            new cover_req_t{.m = m, .c = c, .returned = false, .cover = NULL};
+        cover_query->user_data = creq;
+
+        std::unique_lock<std::mutex> lock(*m);
         ddb_artwork->cover_get(cover_query, callback_cover_art_found);
-        creq.c->wait_for(lock, DDB_OWS_COVER_TIMEOUT, [&creq] {
-            return creq.returned;
+        c->wait_for(lock, DDB_OWS_COVER_TIMEOUT, [&creq] {
+            return creq->returned;
         });
-        if (creq.returned && creq.cover != NULL) {
-            path from = creq.cover->image_filename;
+        if (!creq->returned) {
+            DDB_OWS_DEBUG(
+                "Cover request timed out for {} after {}",
+                target_dir,
+                duration_cast<milliseconds>(DDB_OWS_COVER_TIMEOUT).count()
+            );
+            lock.lock();
+            creq->timed_out = true;
+            lock.unlock();
+        } else if (creq->cover == NULL) {
+            DDB_OWS_DEBUG("No cover found for {}", target_dir);
+            delete creq;
+        } else {
+            path from = creq->cover->image_filename;
             path to = target_dir / conf.get_cover_fname();
             auto old = db->find_entry(from);
             auto old_dest =
@@ -191,21 +213,14 @@ bool queue_cover_jobs(
                 jobs->push(std::move(cover_job));
             } else {
                 auto cover_job = std::make_unique<CopyJob>(
-                    logger, db, creq.cover->image_filename, to
+                    logger, db, creq->cover->image_filename, to
                 );
                 jobs->push(std::move(cover_job));
             }
-        } else if (!creq.returned) {
-            DDB_OWS_DEBUG(
-                "Cover request timed out for {} after {}",
-                target_dir,
-                duration_cast<milliseconds>(DDB_OWS_COVER_TIMEOUT).count()
-            );
-        } else {
-            DDB_OWS_DEBUG("No cover found for {}", target_dir);
+            // it is unref'd in the callback; we don't need to do it here
+            items.pop_front();
+            delete creq;
         }
-        // it is unref'd in the callback; we don't need to do it here
-        items.pop_front();
     }
     if (cancelled) {
         DDB_OWS_DEBUG("Cancelled while queueing cover jobs");
