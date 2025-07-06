@@ -12,6 +12,7 @@
   ],
   "cover_sync": true,
   "cover_fname": "cover.jpg",
+  "cover_timeout_ms": 2000,
   "sync_pls": {"dbpl": true, "m3u8": true},
   "rm_unref": false,
   "conv_fts": [],

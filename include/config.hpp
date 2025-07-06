@@ -33,6 +33,7 @@ typedef struct {
     std::unordered_set<plt_uuid> pl_selection;
     bool cover_sync;
     std::string cover_fname;
+    unsigned int cover_timeout_ms;
     sync_pls_t sync_pls;
     bool rm_unref;
     std::set<std::string> conv_fts;
@@ -53,6 +54,7 @@ class Configuration {
     DDB_OWS_CONFIG_METHODS(pl_selection, std::unordered_set<plt_uuid>)
     DDB_OWS_CONFIG_METHODS(cover_sync, bool)
     DDB_OWS_CONFIG_METHODS(cover_fname, std::string)
+    DDB_OWS_CONFIG_METHODS(cover_timeout_ms, unsigned int)
     DDB_OWS_CONFIG_METHODS(sync_pls, sync_pls_t)
     DDB_OWS_CONFIG_METHODS(rm_unref, bool)
     DDB_OWS_CONFIG_METHODS(conv_fts, std::set<std::string>)

@@ -9,6 +9,7 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
+#include <chrono>
 #include <condition_variable>
 #include <cstring>
 #include <ctime>
@@ -179,15 +180,17 @@ bool queue_cover_jobs(
         cover_query->user_data = creq_copy;
 
         ddb_artwork->cover_get(cover_query, callback_cover_art_found);
+        auto timeout =
+            std::chrono::milliseconds(ddb_ows->conf.get_cover_timeout_ms());
         std::unique_lock<std::mutex> lock(creq->m);
         if (!creq->returned) {
-            creq->c.wait_for(lock, DDB_OWS_COVER_TIMEOUT, [&creq] { return creq->returned; });
+            creq->c.wait_for(lock, timeout, [&creq] { return creq->returned; });
         }
         if (!creq->returned) {
             plug_logger->debug(
-                "Cover request timed out for {} after {:%Q %q}",
+                "Cover request for {} timed out after {:%Q %q}",
                 target_dir,
-                DDB_OWS_COVER_TIMEOUT
+                timeout
             );
             creq->timed_out = true;
         } else if (creq->cover == NULL) {

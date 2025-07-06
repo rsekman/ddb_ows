@@ -97,6 +97,12 @@
     <property name="can-focus">False</property>
     <property name="icon-name">application-exit-symbolic</property>
   </object>
+  <object class="GtkAdjustment" id="timeout_adjustment">
+    <property name="lower">1</property>
+    <property name="upper">3600000</property>
+    <property name="step-increment">1</property>
+    <property name="page-increment">10</property>
+  </object>
   <object class="GtkAdjustment" id="wt_adjustment">
     <property name="lower">1</property>
     <property name="upper">100</property>
@@ -136,7 +142,7 @@
                     <property name="label-xalign">0.019999999552965164</property>
                     <property name="shadow-type">in</property>
                     <child>
-                      <!-- n-columns=3 n-rows=6 -->
+                      <!-- n-columns=3 n-rows=7 -->
                       <object class="GtkGrid" id="gen_opts_table">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
@@ -257,7 +263,7 @@
                           </object>
                           <packing>
                             <property name="left-attach">0</property>
-                            <property name="top-attach">5</property>
+                            <property name="top-attach">6</property>
                             <property name="width">3</property>
                           </packing>
                         </child>
@@ -349,8 +355,45 @@
                           </object>
                           <packing>
                             <property name="left-attach">0</property>
-                            <property name="top-attach">4</property>
+                            <property name="top-attach">5</property>
                             <property name="width">3</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="timeout_label">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="tooltip-text" translatable="yes">How long to wait for cover art to become available before timing out and skipping.</property>
+                            <property name="label" translatable="yes">Cover art timeout [ms]</property>
+                          </object>
+                          <packing>
+                            <property name="left-attach">0</property>
+                            <property name="top-attach">4</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkAlignment" id="timeout_spinbutton_alignment">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="xalign">0</property>
+                            <property name="xscale">0</property>
+                            <child>
+                              <object class="GtkSpinButton" id="cover_timeout_spinbutton">
+                                <property name="can-focus">True</property>
+                                <property name="width-chars">8</property>
+                                <property name="input-purpose">number</property>
+                                <property name="adjustment">timeout_adjustment</property>
+                                <property name="numeric">True</property>
+                                <property name="update-policy">if-valid</property>
+                                <signal name="show" handler="on_cover_timeout_spinbutton_show" swapped="no"/>
+                                <signal name="value-changed" handler="on_cover_timeout_spinbutton_value_changed" swapped="no"/>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="left-attach">1</property>
+                            <property name="top-attach">4</property>
+                            <property name="width">2</property>
                           </packing>
                         </child>
                       </object>

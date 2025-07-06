@@ -19,7 +19,6 @@
     "Provides One-Way Sync to manage e.g. portable music players. Inspired " \
     "by foo_ows."
 #define DDB_OWS_PROJECT_URL "https://github.com/rsekman/ddb_ows"
-#define DDB_OWS_COVER_TIMEOUT 2000ms
 #define DDB_OWS_LICENSE_TEXT                                                 \
     "Copyright 2021 Robin Ekman\n"                                           \
     "\n"                                                                     \

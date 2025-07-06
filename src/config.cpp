@@ -36,6 +36,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
     fn_formats,
     cover_sync,
     cover_fname,
+    cover_timeout_ms,
     sync_pls,
     rm_unref,
     conv_fts,
