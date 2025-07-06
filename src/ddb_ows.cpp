@@ -93,38 +93,37 @@ std::string get_output_path(DB_playItem_t* it, char* format) {
 
 JobsQueue* jobs = new JobsQueue();
 
-typedef struct cover_req_s {
-    std::shared_ptr<std::mutex> m;
-    std::shared_ptr<std::condition_variable> c;
+struct cover_req_t {
+    std::mutex m;
+    std::condition_variable c;
     bool returned;
     bool timed_out = false;
     ddb_cover_info_t* cover;
-} cover_req_t;
+};
 
 void callback_cover_art_found(
     int error, ddb_cover_query_t* query, ddb_cover_info_t* cover
 ) {
-    cover_req_t* creq = (cover_req_t*)(query->user_data);
-    std::lock_guard<std::mutex> lock(*creq->m);
+    auto creq = static_cast<std::shared_ptr<cover_req_t>*>(query->user_data);
 
     auto logger = spdlog::get(DDB_OWS_PROJECT_ID);
 
-    if (creq->timed_out) {
-        delete creq;
-        ddb->pl_item_unref(query->track);
-        free(query);
-        return;
-    }
-    creq->returned = true;
-    if ((query->flags & DDB_ARTWORK_FLAG_CANCELLED) || cover == NULL ||
-        cover->image_filename == NULL)
     {
-        creq->cover = NULL;
-    } else {
-        logger->debug("Found cover: {}", cover->image_filename);
-        creq->cover = cover;
+        std::lock_guard<std::mutex> lock((*creq)->m);
+        if (!(*creq)->timed_out) {
+            (*creq)->returned = true;
+            if ((query->flags & DDB_ARTWORK_FLAG_CANCELLED) || cover == NULL ||
+                cover->image_filename == NULL)
+            {
+                (*creq)->cover = NULL;
+            } else {
+                logger->debug("Found cover: {}", cover->image_filename);
+                (*creq)->cover = cover;
+            }
+        }
     }
-    creq->c->notify_all();
+    (*creq)->c.notify_all();
+    delete creq;
     ddb->pl_item_unref(query->track);
     free(query);
 }
@@ -169,19 +168,21 @@ bool queue_cover_jobs(
         cover_query->source_id = sid;
         cover_query->_size = sizeof(ddb_cover_query_t);
 
-        auto m = std::make_shared<std::mutex>();
-        auto c = std::make_shared<std::condition_variable>();
-        // can't use a smart pointer since the C interface works with raw
-        // pointers
-        auto creq =
-            new cover_req_t{.m = m, .c = c, .returned = false, .cover = NULL};
-        cover_query->user_data = creq;
-
-        std::unique_lock<std::mutex> lock(*m);
-        ddb_artwork->cover_get(cover_query, callback_cover_art_found);
-        c->wait_for(lock, DDB_OWS_COVER_TIMEOUT, [&creq] {
-            return creq->returned;
+        std::shared_ptr<cover_req_t> creq(new cover_req_t{
+            .m = std::mutex(),
+            .c = std::condition_variable(),
+            .returned = false,
+            .timed_out = false,
+            .cover = nullptr
         });
+        auto creq_copy = new std::shared_ptr(creq);
+        cover_query->user_data = creq_copy;
+
+        ddb_artwork->cover_get(cover_query, callback_cover_art_found);
+        std::unique_lock<std::mutex> lock(creq->m);
+        if (!creq->returned) {
+            creq->c.wait_for(lock, DDB_OWS_COVER_TIMEOUT, [&creq] { return creq->returned; });
+        }
         if (!creq->returned) {
             plug_logger->debug(
                 "Cover request timed out for {} after {:%Q %q}",
@@ -191,7 +192,6 @@ bool queue_cover_jobs(
             creq->timed_out = true;
         } else if (creq->cover == NULL) {
             plug_logger->debug("No cover found for {}", target_dir);
-            delete creq;
         } else {
             path from = creq->cover->image_filename;
             path to = target_dir / conf.get_cover_fname();
@@ -224,7 +224,6 @@ bool queue_cover_jobs(
                 );
                 jobs->push(std::move(cover_job));
             }
-            delete creq;
         }
         items.pop_front();
     }
