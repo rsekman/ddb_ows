@@ -163,6 +163,7 @@ bool queue_cover_jobs(
         ddb_cover_query_t* cover_query =
             (ddb_cover_query_t*)calloc(sizeof(ddb_cover_query_t), 1);
         cover_query->flags = 0;
+        // ownership of it transferred here
         cover_query->track = it;
         int64_t sid = dist(mersenne_twister);
         cover_query->source_id = sid;
@@ -170,6 +171,8 @@ bool queue_cover_jobs(
 
         auto m = std::make_shared<std::mutex>();
         auto c = std::make_shared<std::condition_variable>();
+        // can't use a smart pointer since the C interface works with raw
+        // pointers
         auto creq =
             new cover_req_t{.m = m, .c = c, .returned = false, .cover = NULL};
         cover_query->user_data = creq;
