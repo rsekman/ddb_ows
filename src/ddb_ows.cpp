@@ -111,6 +111,7 @@ void callback_cover_art_found(
         delete creq;
         ddb->pl_item_unref(query->track);
         free(query);
+        return;
     }
     creq->returned = true;
     if ((query->flags & DDB_ARTWORK_FLAG_CANCELLED) || cover == NULL ||
