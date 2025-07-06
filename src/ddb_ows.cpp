@@ -705,10 +705,10 @@ ddb_ows_plugin_t plugin = {
 
 void init(DB_functions_t* api) {
     plugin.conf.set_api(api);
-    plugin.conf.update_conf();
     plugin.logger = spdlog::stderr_color_mt(DDB_OWS_PROJECT_ID);
     plugin.logger->set_level(spdlog::level::debug);
     plugin.logger->set_pattern("[%n] [%^%l%$] [thread %t] %v");
+    plugin.conf.update_conf();
 }
 
 DB_plugin_t* load(DB_functions_t* api) {
