@@ -69,16 +69,6 @@ int Database::count(path key) {
     return db.entries.count(key);
 }
 
-entry_dict::iterator Database::begin() {
-    std::lock_guard lock(m);
-    return db.entries.begin();
-}
-
-entry_dict::iterator Database::end() {
-    std::lock_guard lock(m);
-    return db.entries.end();
-}
-
 std::optional<db_entry_t> Database::find_entry(path key) {
     std::lock_guard lock(m);
     auto res = db.entries.find(key);

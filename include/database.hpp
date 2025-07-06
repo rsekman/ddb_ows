@@ -40,8 +40,6 @@ class Database {
     bool write();
     int count(path);
     std::optional<db_entry_t> find_entry(path);
-    entry_dict::iterator begin();
-    entry_dict::iterator end();
     void insert_or_update(path key, db_entry_t entry);
     void erase(path key);
 
