@@ -51,16 +51,8 @@ class Database {
     std::shared_ptr<spdlog::logger> logger;
 };
 
-class DatabaseHandle {
-  public:
-    DatabaseHandle(path root);
-    DatabaseHandle(Database* _db) : db(_db) {};
-    Database& operator*() const noexcept;
-    Database* operator->() const noexcept;
+typedef std::shared_ptr<Database> DatabaseHandle;
 
-  private:
-    std::shared_ptr<Database> db;
-};
 }  // namespace ddb_ows
 
 #endif

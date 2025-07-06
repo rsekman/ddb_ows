@@ -500,7 +500,7 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
     auto plug_logger = ddb_ows->logger;
 
     path root(conf.get_root());
-    DatabaseHandle db(root);
+    DatabaseHandle db = std::make_shared<Database>(root);
 
     auto conv_settings = make_encoder_settings();
 

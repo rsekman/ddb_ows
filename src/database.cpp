@@ -89,11 +89,4 @@ void Database::erase(path key) {
     db.entries.erase(key);
 }
 
-DatabaseHandle::DatabaseHandle(path root) {
-    db = std::make_shared<Database>(root);
-}
-
-Database& DatabaseHandle::operator*() const noexcept { return *db.get(); };
-Database* DatabaseHandle::operator->() const noexcept { return db.get(); }
-
 }  // namespace ddb_ows
