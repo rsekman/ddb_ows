@@ -700,7 +700,6 @@ void on_cover_timeout_spinbutton_show(GtkWidget* widget, gpointer data) {
         gtk_spin_button_get_adjustment(GTK_SPIN_BUTTON(widget));
     unsigned int timeout_ms = ddb_ows->conf.get_cover_timeout_ms();
     gtk_adjustment_set_value(adjustment, timeout_ms);
-    fmt::println("Timeout value from config: {}", timeout_ms);
 }
 
 void on_sync_pls_dbpl_check_show(GtkWidget* widget, gpointer data) {
@@ -748,7 +747,6 @@ void on_cover_timeout_spinbutton_value_changed(
 
     adjustment = gtk_spin_button_get_adjustment(timeout);
     unsigned int timeout_ms = gtk_adjustment_get_value(adjustment);
-    fmt::println("Timeout value changed: {}", timeout_ms);
     ddb_ows->conf.set_cover_timeout_ms(timeout_ms);
 }
 
