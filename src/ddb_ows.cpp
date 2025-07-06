@@ -188,9 +188,7 @@ bool queue_cover_jobs(
                 target_dir,
                 duration_cast<milliseconds>(DDB_OWS_COVER_TIMEOUT).count()
             );
-            lock.lock();
             creq->timed_out = true;
-            lock.unlock();
         } else if (creq->cover == NULL) {
             plug_logger->debug("No cover found for {}", target_dir);
             delete creq;
