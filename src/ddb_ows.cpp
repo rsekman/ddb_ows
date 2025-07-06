@@ -135,7 +135,9 @@ bool is_newer(path a, path b) {
 
 // Returns false if cancelled, true if successful
 bool queue_cover_jobs(
-    Logger& logger, DatabaseHandle db, std::deque<DB_playItem_t*> items
+    Logger& logger,
+    DatabaseHandle db,
+    std::deque<std::shared_ptr<DB_playItem_t>>& items
 ) {
     path from;
     path to;
@@ -145,19 +147,15 @@ bool queue_cover_jobs(
     }
     auto root = path(conf.get_root());
 
-    DB_playItem_t* it;
     ddb_ows_plugin_t* ddb_ows =
         (ddb_ows_plugin_t*)ddb->plug_get_for_id("ddb_ows");
     auto plug_logger = ddb_ows->logger;
 
-    bool cancelled = false;
     while (!items.empty()) {
-        it = items.front();
-        if (cancelled || (cancelled = ddb_ows->cancellationtoken->get())) {
-            ddb->pl_item_unref(it);
-            items.pop_front();
+        auto it = items.front().get();
+        if (ddb_ows->cancellationtoken->get()) {
             plug_logger->debug("Cancelled while queueing cover jobs");
-            continue;
+            break;
         }
         from = ddb->pl_find_meta(it, ":URI");
         to = root / get_output_path(it, fmt);
@@ -165,8 +163,8 @@ bool queue_cover_jobs(
         ddb_cover_query_t* cover_query =
             (ddb_cover_query_t*)calloc(sizeof(ddb_cover_query_t), 1);
         cover_query->flags = 0;
-        // ownership of it transferred here
         cover_query->track = it;
+        ddb->pl_item_ref(it);
         int64_t sid = dist(mersenne_twister);
         cover_query->source_id = sid;
         cover_query->_size = sizeof(ddb_cover_query_t);
@@ -226,14 +224,9 @@ bool queue_cover_jobs(
                 );
                 jobs->push(std::move(cover_job));
             }
-            // it is unref'd in the callback; we don't need to do it here
             delete creq;
         }
         items.pop_front();
-    }
-    if (cancelled) {
-        plug_logger->debug("Cancelled while queueing cover jobs");
-        return false;
     }
     return true;
 }
@@ -478,6 +471,10 @@ bool save_playlists(
     return out;
 }
 
+struct job_source {
+    std::shared_ptr<ddb_playItem_t> it;
+};
+
 // Returns false if cancelled, true if successful
 bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
     if (!jobs->empty()) {
@@ -495,7 +492,7 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
     // the playlist. Therefore we have to queue up items to dispatch cover
     // requests for once we are done traversing the playlist.
     std::unordered_set<path> cover_dirs{};
-    std::deque<DB_playItem_t*> cover_its{};
+    std::deque<std::shared_ptr<DB_playItem_t>> cover_its{};
 
     ddb_ows_plugin_t* ddb_ows =
         (ddb_ows_plugin_t*)ddb->plug_get_for_id("ddb_ows");
@@ -506,7 +503,8 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
 
     auto conv_settings = make_encoder_settings();
 
-    std::vector<ddb_playItem_t*> its;
+    // std::vector<ddb_playItem_t*> its;
+    std::vector<job_source> sources;
 
     ddb->pl_lock();
     for (auto plt : playlists) {
@@ -517,35 +515,31 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
         DB_playItem_t* it;
         it = ddb->plt_get_first(plt, PL_MAIN);
         while (it != NULL) {
-            its.push_back(it);
+            auto p = std::shared_ptr<DB_playItem_t>(it, ddb->pl_item_unref);
+            sources.push_back({.it = p});
             it = ddb->pl_get_next(it, PL_MAIN);
         }
     }
     ddb->pl_unlock();
 
-    std::unordered_set<std::string> sources{};
+    std::unordered_set<std::string> visited_sources{};
 
     ddb_ows->cancellationtoken = std::make_shared<CancellationToken>();
-    bool cancelled = false;
-
-    for (auto it : its) {
+    for (auto source : sources) {
+        auto it = source.it.get();
         path from;
         path to;
         from = std::string(ddb->pl_find_meta(it, ":URI"));
-        if (sources.count(from) > 0) {
+        if (visited_sources.count(from) > 0) {
             // This source file was already processed, avoid queueing redundant
             // jobs
-            ddb->pl_item_unref(it);
             continue;
         }
-        // Short-circuit to avoid having to check the token for every item
-        // We still need to process the entire vector to unref everyhing, so
-        // this can't be break.
-        if (cancelled || (cancelled = ddb_ows->cancellationtoken->get())) {
-            ddb->pl_item_unref(it);
-            continue;
+        // Items will be unref'd when sources goes out of scope
+        if (ddb_ows->cancellationtoken->get()) {
+            break;
         }
-        sources.insert(from);
+        visited_sources.insert(from);
         to = root / get_output_path(it, fmt);
         if (!exists(from)) {
             logger.err("Source file {} does not exist!", from);
@@ -558,25 +552,19 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
                 }
             } catch (std::filesystem::filesystem_error& e) {
                 logger.err("Could not queue job for {}: {}", from, e.what());
-                ddb->pl_item_unref(it);
                 continue;
             }
         }
 
         path target_dir = to.parent_path();
         if (ddb_ows->conf.get_cover_sync() && !cover_dirs.count(target_dir)) {
-            cover_its.push_back(it);
-            ddb->pl_item_ref(it);
+            cover_its.push_back(source.it);
             plug_logger->debug("Copying cover to {}", target_dir);
             cover_dirs.insert(target_dir);
         }
-        ddb->pl_item_unref(it);
     }
-    if (cancelled || ddb_ows->cancellationtoken->get()) {
+    if (ddb_ows->cancellationtoken->get()) {
         plug_logger->debug("Cancelled while queueing jobs");
-        for (auto it : cover_its) {
-            ddb->pl_item_unref(it);
-        }
         free(fmt);
         return false;
     }
