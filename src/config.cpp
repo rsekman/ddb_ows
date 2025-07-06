@@ -45,56 +45,57 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
     conv_wts
 )
 
-Configuration::Configuration() { _update_conf_with_default(); }
+Configuration::Configuration() {
+    auto res =
+        Gio::Resource::lookup_data_global("/ddb_ows/default_config.json");
+    auto size = res->get_size();
+    auto default_buf = static_cast<const char*>(res->get_data(size));
+    // This is safe because we fully control the input and can fix it at
+    // compile-time if it's invalid
+    _conf = json::parse(default_buf);
+}
 
 void Configuration::set_api(DB_functions_t* api) { ddb = api; }
 
-bool Configuration::update_conf() {
+bool Configuration::load_conf() {
     ddb->conf_lock();
     const char* buf;
     buf = ddb->conf_get_str_fast(DDB_OWS_CONFIG_MAIN, "{}");
-    _update_conf(buf);
+    load_conf_from_buffer(buf);
     ddb->conf_unlock();
     return true;
 }
 
-bool Configuration::_update_conf(const char* buf) {
+bool Configuration::load_conf_from_buffer(const char* buf) {
     auto logger = spdlog::get(DDB_OWS_PROJECT_ID);
+
     json upd;
     try {
         upd = json::parse(buf);
     } catch (json::exception& e) {
         logger->error("Configuration contains malformed JSON: {}", e.what());
+        return false;
     } catch (std::exception& e) {
         logger->error("Error reading configuration: {}", e.what());
+        return false;
     }
     if (!upd.is_object()) {
         logger->error(
-            "Configuration is not a JSON object. Falling back to default "
-            "configuration."
+            "Configuration is not a JSON object. Falling back to default."
         );
-        return _update_conf_with_default();
+        return false;
     }
     // ensures proper copying of strings
-    json conf = {};
+    json conf = _conf;
     conf.merge_patch(upd);
     try {
         _conf = conf;
     } catch (json::exception& e) {
         logger->error(
-            "Configuration from DeaDBeeF is not valid. Falling back "
-            "to default configuration."
+            "Configuration is not valid: {}. Falling back to default.", e.what()
         );
-        return _update_conf_with_default();
+        return false;
     }
-    return true;
-}
-
-bool Configuration::_update_conf_with_default() {
-    auto default_conf =
-        Gio::Resource::lookup_data_global("/ddb_ows/default_config.json");
-    auto size = default_conf->get_size();
-    _update_conf(static_cast<const char*>(default_conf->get_data(size)));
     return true;
 }
 

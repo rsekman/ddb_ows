@@ -47,7 +47,7 @@ class Configuration {
     // plumbing
     Configuration();
     void set_api(DB_functions_t* api);
-    bool update_conf();
+    bool load_conf();
 
     DDB_OWS_CONFIG_METHODS(root, std::string)
     DDB_OWS_CONFIG_METHODS(fn_formats, std::vector<std::string>)
@@ -65,8 +65,7 @@ class Configuration {
   private:
     DB_functions_t* ddb;
     ddb_ows_config _conf;
-    bool _update_conf(const char* buf);
-    bool _update_conf_with_default();
+    bool load_conf_from_buffer(const char* buf);
     bool write_conf();
 };
 
