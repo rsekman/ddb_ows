@@ -2,6 +2,8 @@
 
 #include <deadbeef/artwork.h>
 #include <deadbeef/converter.h>
+#include <fmt/chrono.h>
+// for formatting std::filesystem::path
 #include <fmt/std.h>
 #include <limits.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -184,9 +186,9 @@ bool queue_cover_jobs(
         });
         if (!creq->returned) {
             plug_logger->debug(
-                "Cover request timed out for {} after {}",
+                "Cover request timed out for {} after {:%Q %q}",
                 target_dir,
-                duration_cast<milliseconds>(DDB_OWS_COVER_TIMEOUT).count()
+                DDB_OWS_COVER_TIMEOUT
             );
             creq->timed_out = true;
         } else if (creq->cover == NULL) {
