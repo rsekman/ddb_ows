@@ -220,12 +220,12 @@ bool queue_cover_jobs(
             } else if (old_newer && *old_dest != to) {
                 auto cover_job =
                     std::make_unique<MoveJob>(logger, db, *old_dest, to, from);
-                jobs->push(std::move(cover_job));
+                jobs->push_back(std::move(cover_job));
             } else {
                 auto cover_job = std::make_unique<CopyJob>(
                     logger, db, creq->cover->image_filename, to
                 );
-                jobs->push(std::move(cover_job));
+                jobs->push_back(std::move(cover_job));
             }
         }
         items.pop_front();
@@ -294,8 +294,9 @@ bool should_convert(DB_playItem_t* it) {
     return false;
 }
 
-std::vector<std::unique_ptr<Job>> make_job(
+void make_job(
     DatabaseHandle db,
+    JobsQueue* out,
     Logger& logger,
     DB_playItem_t* it,
     path from,
@@ -305,7 +306,6 @@ std::vector<std::unique_ptr<Job>> make_job(
     // throws: can throw any filesystem error throw by checking ctime
     auto old = db->find_entry(from);
     auto old_dest = old ? std::optional{old->destination} : std::nullopt;
-    std::vector<std::unique_ptr<Job>> out{};
 
     bool dest_newer;
     try {
@@ -337,46 +337,45 @@ std::vector<std::unique_ptr<Job>> make_job(
                     from,
                     preset_title
                 );
-                return {};
+                return;
             } else if (old_newer && *old_dest != to) {
                 // The source was previously converted with a different
                 // destination, which is newer than the source
-                out.emplace_back(new MoveJob(logger, db, *old_dest, to, from));
+                out->emplace_back(new MoveJob(logger, db, *old_dest, to, from));
             } else {
                 // The source is newer => delete the old destination and
                 // reconvert with new destination
                 if (old_dest != to) {
-                    out.emplace_back(new DeleteJob(logger, db, *old_dest));
+                    out->emplace_back(new DeleteJob(logger, db, *old_dest));
                 }
-                out.push_back(std::move(cjob));
+                out->push_back(std::move(cjob));
             }
         } else {
-            out.push_back(std::move(cjob));
+            out->push_back(std::move(cjob));
             if (old && old->converter_preset != preset_title) {
                 // Clean up previous conversion with a different preset
-                out.emplace_back(new DeleteJob(logger, db, *old_dest));
+                out->emplace_back(new DeleteJob(logger, db, *old_dest));
             }
         }
     } else if (old_dest && *old_dest != to && exists(*old_dest)) {
         // This source file was synced previously, and was not converted
         if (old_newer && old->converter_preset == "") {
             // the destination file is newer than the source => move
-            out.emplace_back(new MoveJob(logger, db, *old_dest, to, from));
+            out->emplace_back(new MoveJob(logger, db, *old_dest, to, from));
         } else {
             // the source file is newer than the old copy, or was previously
             // converted but should not be now => delete the old copy/conversion
             // and copy anew
-            out.emplace_back(new DeleteJob(logger, db, *old_dest));
-            out.emplace_back(new CopyJob(logger, db, from, to));
+            out->emplace_back(new DeleteJob(logger, db, *old_dest));
+            out->emplace_back(new CopyJob(logger, db, from, to));
         }
     } else if (dest_newer) {
         logger.verbose(
             "Destination {} is newer than source {}; skipping.", to, from
         );
     } else {
-        out.emplace_back(new CopyJob(logger, db, from, to));
+        out->emplace_back(new CopyJob(logger, db, from, to));
     }
-    return out;
 }
 
 std::string plt_get_title(ddb_playlist_t* plt) {
@@ -547,11 +546,7 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
             logger.err("Source file {} does not exist!", from);
         } else {
             try {
-                auto new_jobs =
-                    make_job(db, logger, it, from, to, conv_settings);
-                for (auto& j : new_jobs) {
-                    jobs->push(std::move(j));
-                }
+                make_job(db, jobs, logger, it, from, to, conv_settings);
             } catch (std::filesystem::filesystem_error& e) {
                 logger.err("Could not queue job for {}: {}", from, e.what());
                 continue;

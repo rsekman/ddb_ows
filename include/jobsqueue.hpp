@@ -19,7 +19,8 @@ class JobsQueue {
 
   public:
     JobsQueue(void) : q(), c(), m() { isOpen = true; }
-    void push(std::unique_ptr<Job> job);
+    void push_back(std::unique_ptr<Job> job);
+    void emplace_back(Job* job);
     std::unique_ptr<Job> pop();
     void close();
     void open();

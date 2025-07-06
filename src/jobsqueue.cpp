@@ -6,7 +6,7 @@
 
 namespace ddb_ows {
 
-void JobsQueue::push(std::unique_ptr<Job> job) {
+void JobsQueue::push_back(std::unique_ptr<Job> job) {
     if (!isOpen) {
         return;
     }
@@ -14,6 +14,16 @@ void JobsQueue::push(std::unique_ptr<Job> job) {
     q.push_back(std::move(job));
     c.notify_one();
 }
+
+void JobsQueue::emplace_back(Job* job) {
+    if (!isOpen) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(m);
+    q.emplace_back(job);
+    c.notify_one();
+}
+
 std::unique_ptr<Job> JobsQueue::pop() {
     std::unique_lock<std::mutex> lock(m);
     c.wait(lock, [this] { return !this->q.empty() || !this->isOpen; });
