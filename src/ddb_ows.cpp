@@ -224,9 +224,9 @@ bool queue_cover_jobs(
                 jobs->push(std::move(cover_job));
             }
             // it is unref'd in the callback; we don't need to do it here
-            items.pop_front();
             delete creq;
         }
+        items.pop_front();
     }
     if (cancelled) {
         plug_logger->debug("Cancelled while queueing cover jobs");
