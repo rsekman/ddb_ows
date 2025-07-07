@@ -20,7 +20,7 @@
     "by foo_ows."
 #define DDB_OWS_PROJECT_URL "https://github.com/rsekman/ddb_ows"
 #define DDB_OWS_LICENSE_TEXT                                                 \
-    "Copyright 2021 Robin Ekman\n"                                           \
+    "Copyright 2025 Robin Ekman\n"                                           \
     "\n"                                                                     \
     "This program is free software: you can redistribute it and/or modify\n" \
     "it under the terms of the GNU General Public License as published by\n" \
