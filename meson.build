@@ -1,6 +1,6 @@
 project('ddb_ows', 'cpp', 'c',
   default_options : ['warning_level=1', 'cpp_std=c++17'],
-  version : '0.2.0'
+  version : '0.4.0',
   meson_version : '>=1.1'
 )
 

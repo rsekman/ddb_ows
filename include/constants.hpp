@@ -2,7 +2,7 @@
 #define DDB_OWS_CONSTANTS_HPP
 
 #define DDB_OWS_VERSION_MAJOR 0
-#define DDB_OWS_VERSION_MINOR 2
+#define DDB_OWS_VERSION_MINOR 4
 #define DDB_OWS_VERSION_PATCH 0
 
 // dark preprocessor magic
