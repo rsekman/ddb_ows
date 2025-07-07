@@ -1,5 +1,5 @@
-#include <condition_variable>
-#ifndef DDB_OWS_PROJECT_ID
+#ifndef DDB_OWS_HPP
+#define DDB_OWS_HPP
 
 #include <spdlog/spdlog.h>
 
