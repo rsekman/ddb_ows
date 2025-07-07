@@ -1,11 +1,11 @@
 add_global_arguments('-DLIBDIR="'  + get_option('libdir') + '"', language : 'cpp')
 add_global_arguments('-DDDB_OWS_LOGLEVEL=3', language : 'cpp')
 
-gio_dep = dependency('giomm-2.4')
-gtk_dep = dependency('gtkmm-3.0')
-uuid_dep = dependency('uuid')
 fmt_dep = dependency('fmt')
+gio_dep = dependency('giomm-2.4')
+nlohmann_dep = dependency('nlohmann_json')
 spdlog_dep = dependency('spdlog')
+uuid_dep = dependency('uuid')
 
 incdir = include_directories('../include')
 
@@ -23,7 +23,13 @@ lib = static_library('libddb_ows',
   'playlist_uuid.cpp',
   'cancellationtoken.cpp',
   include_directories: incdir,
-  dependencies : [gio_dep, fmt_dep, uuid_dep, spdlog_dep],
+  dependencies : [
+    fmt_dep,
+    gio_dep,
+    nlohmann_dep,
+    spdlog_dep,
+    uuid_dep,
+  ],
   name_prefix: ''
 )
 
