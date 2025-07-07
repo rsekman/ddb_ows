@@ -1,0 +1,11 @@
+option('log-level',
+  type : 'combo',
+  choices : [
+    'trace',
+    'debug',
+    'info',
+    'warn',
+    'error',
+    'critical'
+  ],
+  value : 'info')

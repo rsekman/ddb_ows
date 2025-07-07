@@ -33,6 +33,10 @@ using namespace std::chrono_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
+#ifndef DDB_OWS_LOGLEVEL
+#define DDB_OWS_LOGLEVEL info
+#endif
+
 namespace ddb_ows {
 
 static DB_functions_t* ddb;
@@ -704,7 +708,7 @@ ddb_ows_plugin_t plugin = {
 void init(DB_functions_t* api) {
     plugin.conf.set_api(api);
     plugin.logger = spdlog::stderr_color_mt(DDB_OWS_PROJECT_ID);
-    plugin.logger->set_level(spdlog::level::debug);
+    plugin.logger->set_level(spdlog::level::DDB_OWS_LOGLEVEL);
     plugin.logger->set_pattern("[%n] [%^%l%$] [thread %t] %v");
     plugin.conf.load_conf();
 }

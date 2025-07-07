@@ -1,5 +1,4 @@
-add_global_arguments('-DLIBDIR="'  + get_option('libdir') + '"', language : 'cpp')
-add_global_arguments('-DDDB_OWS_LOGLEVEL=3', language : 'cpp')
+add_global_arguments('-DDDB_OWS_LOGLEVEL=' + get_option('log-level'), language : 'cpp')
 
 fmt_dep = dependency('fmt')
 gio_dep = dependency('giomm-2.4')
