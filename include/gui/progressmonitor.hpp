@@ -5,26 +5,34 @@
 #include <glibmm/dispatcher.h>
 #include <gtkmm/progressbar.h>
 
+#include <atomic>
+
 class ProgressMonitor {
   public:
     ProgressMonitor(Gtk::ProgressBar* _pb);
+
+    void set_n_sources(size_t n);
+    void job_queued();
+
     void set_n_jobs(size_t n);
-    void tick();
-    void pulse();
-    void no_jobs();
+    void job_finished();
+
     void cancel();
 
   private:
-    void _tick();
-    void _pulse();
-    void _no_jobs();
+    void _job_queued();
+    void _job_finished();
+
     void _cancel();
 
+    size_t n_sources;
+    std::atomic<size_t> n_queued = 0;
     size_t n_jobs;
-    size_t n_finished = 0;
+    std::atomic<size_t> n_finished = 0;
     bool cancelled = false;
+
     Gtk::ProgressBar* pb;
-    Glib::Dispatcher sig_tick, sig_pulse, sig_no_jobs, sig_cancel;
+    Glib::Dispatcher sig_job_queued, sig_job_finished, sig_cancel;
 };
 
 #endif

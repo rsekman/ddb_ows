@@ -318,24 +318,6 @@ std::vector<ddb_playlist_t*> get_selected_playlists() {
     return pls;
 }
 
-void save_playlists(const char* ext, bool dry) {
-    std::vector<ddb_playlist_t*> pls = get_selected_playlists();
-    if (plugin.gui_logger) {
-        ddb_ows->save_playlists(ext, pls, *plugin.gui_logger, dry);
-    } else {
-        ddb_ows->save_playlists(ext, pls, terminal_logger, dry);
-    }
-}
-
-bool queue_jobs() {
-    std::vector<ddb_playlist_t*> pls = get_selected_playlists();
-    if (plugin.gui_logger) {
-        return ddb_ows->queue_jobs(pls, *plugin.gui_logger);
-    } else {
-        return ddb_ows->queue_jobs(pls, terminal_logger);
-    }
-}
-
 void conv_fts_save(Glib::RefPtr<Gtk::ListStore> model) {
     std::set<std::string> fts{};
     model->foreach_iter([&fts](const Gtk::TreeIter r) -> bool {
@@ -399,58 +381,53 @@ void loglevel_cb_populate(std::shared_ptr<TextBufferLogger> logger) {
 /* BEGIN EXTERN SIGNAL HANDLERS */
 // TODO consider moving these into their own file
 
-job_cb_t make_progress_callback() {
-    job_cb_t cb{};
-    if (plugin.pm != NULL) {
-        auto pm = plugin.pm;
-        cb = [pm](std::unique_ptr<Job>) { pm->tick(); };
-    }
-    return cb;
-}
-
-void execute(job_cb_t cb, bool dry) {
+void execute(bool dry) {
     if (plugin.gui_logger) {
         plugin.gui_logger->clear();
     }
+
     Gtk::ProgressBar* pb;
     builder->get_widget("progress_bar", pb);
-    if (ddb_ows->conf.get_sync_pls().dbpl) {
-        if (pb != NULL) {
-            pb->set_text("Saving playlists (DBPL)");
-        }
-        save_playlists("dbpl", dry);
+    if (pb) {
+        plugin.pm = std::make_shared<ProgressMonitor>(pb);
     }
-    if (ddb_ows->conf.get_sync_pls().m3u8) {
-        if (pb != NULL) {
-            pb->set_text("Saving playlists (M3U8)");
-        }
-        save_playlists("m3u8", dry);
-    }
+
+    playlist_save_cb_t pl_save_cb;
     if (pb != NULL) {
-        pb->set_text("Queueing jobs");
+        pl_save_cb = [pb](const char* ext) {
+            pb->set_text(fmt::format("Saving playlists ({})", ext));
+        };
     }
-    bool queueing_complete = false;
-    auto pm = plugin.pm;
-    std::thread t([&queueing_complete, pm] {
-        while (!queueing_complete) {
-            pm->pulse();
-            std::this_thread::sleep_for(5000ms / 60);
-        }
-    });
-    bool queue_successful = queue_jobs();
-    queueing_complete = true;
-    t.join();
-    if (!queue_successful) {
-        pm->cancel();
-        return;
+
+    sources_gathered_cb_t sources_gathered_cb;
+    job_queued_cb_t job_queued_cb;
+    job_finished_cb_t job_finished_cb;
+    queueing_complete_cb_t q_complete_cb;
+    if (plugin.pm != NULL) {
+        auto pm = plugin.pm;
+        sources_gathered_cb = [pm](size_t n) { pm->set_n_sources(n); };
+        job_queued_cb = [pm]() { pm->job_queued(); };
+        q_complete_cb = [pm](size_t n) { pm->set_n_jobs(n); };
+        job_finished_cb = [pm](std::unique_ptr<Job>, bool) {
+            pm->job_finished();
+        };
     }
-    ddb_ows_plugin_t* ddb_ows =
-        (ddb_ows_plugin_t*)ddb->plug_get_for_id("ddb_ows");
-    plugin.pm->set_n_jobs(ddb_ows->jobs_count());
-    if (ddb_ows->jobs_count() == 0) {
-        plugin.pm->no_jobs();
+
+    callback_t callbacks{
+        .on_playlist_save = pl_save_cb,
+        .on_sources_gathered = sources_gathered_cb,
+        .on_job_queued = job_queued_cb,
+        .on_queueing_complete = q_complete_cb,
+        .on_job_finished = job_finished_cb
+    };
+
+    std::vector<ddb_playlist_t*> pls = get_selected_playlists();
+
+    if (plugin.gui_logger) {
+        ddb_ows->run(dry, pls, *plugin.gui_logger, callbacks);
+    } else {
+        ddb_ows->run(dry, pls, terminal_logger, callbacks);
     }
-    ddb_ows->run(dry, make_progress_callback());
 }
 
 void execution_buttons_set_sensitive(bool sensitive) {
@@ -473,9 +450,9 @@ void execution_buttons_set_insensitive() {
     execution_buttons_set_sensitive(false);
 }
 
-auto execution_thread(job_cb_t cb, bool dry) {
-    return std::thread([cb, dry] {
-        execute(cb, dry);
+auto execution_thread(bool dry) {
+    return std::thread([dry] {
+        execute(dry);
         (*plugin.sig_execution_buttons_set_sensitive)();
     });
 }
@@ -816,11 +793,10 @@ void on_cancel_btn_clicked(GtkButton* button, gpointer data) {
 }
 
 void on_execution_btn_clicked(bool dry) {
-    job_cb_t cb = make_progress_callback();
     // signal handlers are called from the Gtk main thread, so we can set to
     // insensitive immediately
     execution_buttons_set_insensitive();
-    execution_thread(cb, dry).detach();
+    execution_thread(dry).detach();
 }
 
 void on_dry_run_btn_clicked(GtkButton* button, gpointer data) {
@@ -915,12 +891,6 @@ int create_ui() {
         log_buffer->create_mark("END", log_buffer->end(), false);
 
         loglevel_cb_populate(plugin.gui_logger);
-    }
-
-    Gtk::ProgressBar* pb;
-    builder->get_widget("progress_bar", pb);
-    if (pb) {
-        plugin.pm = std::make_shared<ProgressMonitor>(pb);
     }
 
     return 0;

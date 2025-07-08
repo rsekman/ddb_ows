@@ -1,67 +1,98 @@
 #include "gui/progressmonitor.hpp"
 
 ProgressMonitor::ProgressMonitor(Gtk::ProgressBar* _pb) : pb(_pb) {
-    sig_tick.connect(sigc::mem_fun(*this, &ProgressMonitor::_tick));
-    sig_pulse.connect(sigc::mem_fun(*this, &ProgressMonitor::_pulse));
-    sig_no_jobs.connect(sigc::mem_fun(*this, &ProgressMonitor::_no_jobs));
+    sig_job_queued.connect(sigc::mem_fun(*this, &ProgressMonitor::_job_queued));
+    sig_job_finished.connect(
+        sigc::mem_fun(*this, &ProgressMonitor::_job_finished)
+    );
+
     sig_cancel.connect(sigc::mem_fun(*this, &ProgressMonitor::_cancel));
+}
+
+inline float pct(size_t n, size_t n_total) {
+    float pct;
+    if (n_total > 0) {
+        pct = (float)n / (float)n_total;
+    } else {
+        pct = 1.0;
+    }
+    return pct;
+}
+
+void ProgressMonitor::set_n_sources(size_t n) {
+    cancelled = false;
+    n_sources = n;
+    sig_job_queued();
+}
+
+std::pair<float, std::string> queue_progress(
+    size_t n_queued, size_t n_sources
+) {
+    const float p = pct(n_queued, n_sources);
+    return {
+        p,
+        fmt::format("Queueing jobs ({}/{}, 0%)", n_queued, n_sources, 100 * p)
+    };
+}
+
+void ProgressMonitor::job_queued() {
+    n_queued += 1;
+    sig_job_queued();
+}
+
+void ProgressMonitor::_job_queued() {
+    // this method is only ever run in the Gtk main thread, so we don't need to
+    // worry about concurrency
+    if (pb == NULL) {
+        return;
+    }
+    auto [p, text] = queue_progress(n_queued, n_sources);
+    pb->set_fraction(p);
+    pb->set_text(text);
+    pb->queue_draw();
 }
 
 void ProgressMonitor::set_n_jobs(size_t n) {
     cancelled = false;
     n_jobs = n;
     n_finished = 0;
-    if (pb == NULL) {
+    sig_job_finished();
+}
+
+std::pair<float, std::string> job_progress(size_t n_finished, size_t n_jobs) {
+    if (n_jobs == 0) {
+        return {1, "Nothing to do"};
+    }
+
+    const float p = pct(n_finished, n_jobs);
+    return {
+        p,
+        fmt ::format(
+            "Executing jobs ({}/{}, {:.0f}%)", n_finished, n_jobs, 100 * p
+        )
+    };
+}
+
+void ProgressMonitor::job_finished() {
+    n_finished += 1;
+    sig_job_finished();
+}
+
+void ProgressMonitor::_job_finished() {
+    // this method is only ever run in the Gtk main thread, so we don't need to
+    // worry about concurrency
+    if (pb == NULL || cancelled) {
         return;
     }
-    pb->set_fraction(0.0);
-    pb->set_text(fmt::format("0/{} (0%)", n_jobs));
+    auto [p, text] = job_progress(n_finished, n_jobs);
+    pb->set_fraction(p);
+    pb->set_text(text);
     pb->queue_draw();
 }
 
 void ProgressMonitor::cancel() {
     cancelled = true;
     sig_cancel();
-}
-
-void ProgressMonitor::tick() { sig_tick(); }
-
-void ProgressMonitor::pulse() { sig_pulse(); }
-
-void ProgressMonitor::no_jobs() { sig_no_jobs(); }
-
-void ProgressMonitor::_tick() {
-    if (pb == NULL || cancelled) {
-        return;
-    }
-    // this method is only ever run in the Gtk main thread, so we don't need to
-    // worry about concurrency
-    n_finished += 1;
-    float pct;
-    if (n_jobs) {
-        pct = (float)n_finished / (float)n_jobs;
-    } else {
-        pct = 1.0;
-    }
-    pb->set_fraction(pct);
-    pb->set_text(fmt::format("{}/{} ({:.0f}%)", n_finished, n_jobs, 100 * pct));
-    pb->queue_draw();
-}
-
-void ProgressMonitor::_pulse() {
-    if (pb == NULL) {
-        return;
-    }
-    pb->pulse();
-    pb->queue_draw();
-}
-
-void ProgressMonitor::_no_jobs() {
-    if (pb == NULL) {
-        return;
-    }
-    pb->set_text("Nothing to do.");
-    pb->set_fraction(1.0);
 }
 
 void ProgressMonitor::_cancel() {

@@ -40,7 +40,7 @@ using namespace std::filesystem;
 
 namespace ddb_ows {
 
-typedef std::packaged_task<bool(bool, job_cb_t)> worker_thread_t;
+typedef std::packaged_task<bool(bool, job_finished_cb_t)> worker_thread_t;
 
 typedef struct wt_futures_s {
     std::mutex m;
@@ -156,10 +156,12 @@ bool is_newer(path a, path b) {
 
 // Returns false if cancelled, true if successful
 bool queue_cover_jobs(
+    bool dry,
     Logger& logger,
     DatabaseHandle db,
     sync_id_t sync_id,
-    std::deque<std::shared_ptr<DB_playItem_t>>& items
+    std::deque<std::shared_ptr<DB_playItem_t>>& items,
+    job_queued_cb_t queued_cb
 ) {
     path from;
     path to;
@@ -250,6 +252,9 @@ bool queue_cover_jobs(
                     logger, db, sync_id, creq->cover->image_filename, to
                 );
                 jobs->push_back(std::move(cover_job));
+            }
+            if (queued_cb) {
+                queued_cb();
             }
         }
         items.pop_front();
@@ -499,11 +504,12 @@ bool save_playlist(
     }
 }
 
-bool save_playlists(
+bool _save_playlists(
+    bool dry,
+    const std::vector<ddb_playlist_t*>& playlists,
     const char* ext,
-    std::vector<ddb_playlist_t*> playlists,
     Logger& logger,
-    bool dry
+    playlist_save_cb_t callback
 ) {
     // returns true if all playlists were successfully saved
     bool out = true;
@@ -514,12 +520,35 @@ bool save_playlists(
     return out;
 }
 
+bool save_playlists(
+    bool dry,
+    const std::vector<ddb_playlist_t*>& playlists,
+    Logger& logger,
+    playlist_save_cb_t callback
+) {
+    bool out = true;
+    if (conf.get_sync_pls().dbpl) {
+        out = out && _save_playlists(dry, playlists, "dbpl", logger, callback);
+    }
+    if (conf.get_sync_pls().m3u8) {
+        out = out && _save_playlists(dry, playlists, "m3u8", logger, callback);
+    }
+    return out;
+}
+
 struct job_source {
     std::shared_ptr<ddb_playItem_t> it;
 };
 
 // Returns false if cancelled, true if successful
-bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
+bool queue_jobs(
+    bool dry,
+    const std::vector<ddb_playlist_t*>& playlists,
+    Logger& logger,
+    sources_gathered_cb_t gathered_cb,
+    job_queued_cb_t queued_cb,
+    queueing_complete_cb_t complete_cb
+) {
     if (!jobs->empty()) {
         // To avoid double-queueing
         return false;
@@ -575,6 +604,9 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
         }
     }
     ddb->pl_unlock();
+    if (gathered_cb) {
+        gathered_cb(sources.size());
+    }
 
     std::unordered_set<std::string> visited_sources{};
 
@@ -615,6 +647,12 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
             cover_its.push_back(source.it);
             plug_logger->debug("Copying cover to {}", target_dir);
             cover_dirs.insert(target_dir);
+            if (gathered_cb) {
+                gathered_cb(sources.size() + cover_dirs.size());
+            }
+        }
+        if (queued_cb) {
+            queued_cb();
         }
     }
     if (ddb_ows->cancellationtoken->get()) {
@@ -624,39 +662,35 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
     }
 
     // Now we can dispatch cover requests
-    if (!queue_cover_jobs(logger, db, *sync_id, cover_its)) {
+    if (!queue_cover_jobs(dry, logger, db, *sync_id, cover_its, queued_cb)) {
         free(fmt);
         return false;
     }
     // TODO: delete unreferenced files
     jobs->close();
-    plug_logger->debug("Found {} jobs", jobs->size());
+    const size_t n_jobs = jobs->size();
+    if (complete_cb) {
+        complete_cb(n_jobs);
+    }
+    plug_logger->debug("Found {} jobs", n_jobs);
     free(fmt);
     return true;
 }
 
-size_t jobs_count() {
-    if (jobs) {
-        return jobs->size();
-    } else {
-        return 0;
-    }
-}
-
-bool worker_thread(bool dry, job_cb_t callback) {
+bool worker_thread(bool dry, job_finished_cb_t callback) {
     std::unique_ptr<Job> job;
     while ((job = jobs->pop())) {
         // unique_ptr is falsey if there is no object
         bool status = job->run(dry);
-        if (status && callback) {
+        if (callback) {
             // callback is falsy if the function object is empty
-            callback(std::move(job));
+            callback(std::move(job), status);
         }
     }
     return true;
 }
 
-bool run(bool dry, job_cb_t callback) {
+bool execute(bool dry, job_finished_cb_t callback) {
     ddb_ows_plugin_int* ddb_ows =
         (ddb_ows_plugin_int*)ddb->plug_get_for_id("ddb_ows");
     int n_wts = conf.get_conv_wts();
@@ -676,6 +710,24 @@ bool run(bool dry, job_cb_t callback) {
     }
     ddb_ows->worker_thread_futures.c.notify_all();
     return true;
+}
+
+bool run(
+    bool dry,
+    const std::vector<ddb_playlist_t*>& playlists,
+    Logger& logger,
+    callback_t callbacks
+) {
+    return save_playlists(dry, playlists, logger, callbacks.on_playlist_save) &&
+           queue_jobs(
+               dry,
+               playlists,
+               logger,
+               callbacks.on_sources_gathered,
+               callbacks.on_job_queued,
+               callbacks.on_queueing_complete
+           ) &&
+           execute(dry, callbacks.on_job_finished);
 }
 
 bool cancel(cancel_cb_t callback) {
@@ -742,10 +794,7 @@ DB_misc_t plugin_ddb{
 ddb_ows_plugin_t plugin_public = {
     .plugin = plugin_ddb,
     .conf = conf,
-    .queue_jobs = queue_jobs,
-    .jobs_count = jobs_count,
     .run = run,
-    .save_playlists = save_playlists,
     .cancel = cancel,
     .get_output_path = get_output_path,
     .plt_get_uuid = _plt_get_uuid,
