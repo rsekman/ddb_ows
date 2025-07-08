@@ -957,22 +957,17 @@ int start() { return 0; }
 int stop() { return 0; }
 
 int connect(void) {
-    DB_plugin_t* ddb_gtkui = ddb->plug_get_for_id(DDB_GTKUI_PLUGIN_ID);
-    ddb_converter_t* ddb_converter =
-        (ddb_converter_t*)ddb->plug_get_for_id("converter");
-    ddb_ows = (ddb_ows_plugin_t*)ddb->plug_get_for_id("ddb_ows");
     auto logger = get_logger();
 
-    if (!ddb_gtkui) {
-        logger->error("Matching gtkui plugin not found, quitting.");
-        return -1;
-    }
-    if (!ddb_converter) {
-        logger->error("Converter plugin not found, quitting.");
-        return -1;
-    }
+    ddb_ows = (ddb_ows_plugin_t*)ddb->plug_get_for_id("ddb_ows");
     if (!ddb_ows) {
         logger->error("ddb_ows plugin not found, quitting.");
+        return -1;
+    }
+
+    DB_plugin_t* ddb_gtkui = ddb->plug_get_for_id(DDB_GTKUI_PLUGIN_ID);
+    if (!ddb_gtkui) {
+        logger->error("Matching gtkui plugin not found, quitting.");
         return -1;
     }
     // Needed to make gtkmm play nice
