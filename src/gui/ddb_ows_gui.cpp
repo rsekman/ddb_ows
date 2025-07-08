@@ -483,11 +483,6 @@ auto execution_thread(job_cb_t cb, bool dry) {
 
 extern "C" {
 
-// TODO
-// This method and the following are actually agnostic re: which model we are
-// selecting/unselecting in. We should refactor them so we can reuse them for
-// the ft selection model
-
 void on_select_all_toggled(GtkListStore* ls, gpointer data) {
     // Taking ownership of the instance can lead to incorrect reference counts
     // so we must pass true as the second argument to take a new copy or ref
