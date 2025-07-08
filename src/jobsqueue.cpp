@@ -65,7 +65,7 @@ bool JobsQueue::empty() {
     return out;
 }
 
-int JobsQueue::size() {
+size_t JobsQueue::size() {
     std::lock_guard<std::mutex> lock(m);
     int out = q.size();
     c.notify_all();

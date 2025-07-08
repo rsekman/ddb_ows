@@ -635,7 +635,7 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
     return true;
 }
 
-int jobs_count() {
+size_t jobs_count() {
     if (jobs) {
         return jobs->size();
     } else {

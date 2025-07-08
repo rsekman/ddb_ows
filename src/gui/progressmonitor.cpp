@@ -1,6 +1,6 @@
 #include "gui/progressmonitor.hpp"
 
-ProgressMonitor::ProgressMonitor(int (*r_jobs_)(), Gtk::ProgressBar* _pb) :
+ProgressMonitor::ProgressMonitor(size_t (*r_jobs_)(), Gtk::ProgressBar* _pb) :
     r_jobs(r_jobs_), pb(_pb) {
     sig_tick.connect(sigc::mem_fun(*this, &ProgressMonitor::_tick));
     sig_pulse.connect(sigc::mem_fun(*this, &ProgressMonitor::_pulse));
@@ -8,9 +8,9 @@ ProgressMonitor::ProgressMonitor(int (*r_jobs_)(), Gtk::ProgressBar* _pb) :
     sig_cancel.connect(sigc::mem_fun(*this, &ProgressMonitor::_cancel));
 }
 
-int ProgressMonitor::set_n_jobs(int n) {
+void ProgressMonitor::set_n_jobs(size_t n) {
     cancelled = false;
-    return n_jobs = n;
+    n_jobs = n;
 }
 
 void ProgressMonitor::cancel() {
@@ -28,7 +28,7 @@ void ProgressMonitor::_tick() {
     if (pb == NULL || cancelled) {
         return;
     }
-    int r = r_jobs();
+    size_t r = r_jobs();
     float pct;
     if (n_jobs) {
         pct = ((float)n_jobs - (float)r) / (float)n_jobs;

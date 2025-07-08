@@ -26,7 +26,7 @@ class JobsQueue {
     void open();
     void cancel();
     bool empty();
-    int size();
+    size_t size();
 };
 
 }  // namespace ddb_ows

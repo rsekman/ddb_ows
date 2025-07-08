@@ -18,7 +18,7 @@ typedef struct {
     DB_misc_t plugin;
     ddb_ows::Configuration& conf;
     bool (*queue_jobs)(std::vector<ddb_playlist_t*> playlists, Logger& logger);
-    int (*jobs_count)();
+    size_t (*jobs_count)();
     bool (*run)(bool dry, job_cb_t callback);
     bool (*save_playlists)(
         const char* ext,
