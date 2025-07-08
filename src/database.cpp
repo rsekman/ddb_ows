@@ -13,7 +13,7 @@
 
 #define DDB_OWS_DATABASE_FNAME ".ddb_ows.json"
 #define DDB_OWS_SQL_DATABASE_FNAME ".ddb_ows.sqlite3"
-#define DDB_OWS_DATABASE_SCHEMA_VERSION 1
+#define DDB_OWS_DATABASE_SCHEMA_VERSION 2
 
 using namespace nlohmann;
 
@@ -132,7 +132,14 @@ Database::Database(path root) : m() {
 
     // Prepare all the statements we will need later from embedded resources
     const std::vector<std::string> stmt_names{
-        "latest_file_sync", "new_sync", "register_file", "register_synced_file"
+        "latest_file_sync",
+        "new_sync",
+        "register_file",
+        "register_synced_file",
+        "register_playlist",
+        "register_synced_playlist",
+        "register_file_in_playlist",
+        "clear_playlist"
     };
     for (const auto& n : stmt_names) {
         const auto resource_name = fmt::format("/ddb_ows/sql/{}.sql", n);
@@ -320,6 +327,91 @@ void Database::register_synced_file(const synced_file_data_t& data) {
         logger->warn(
             "Could not register job for {} (errno {}): {}",
             data.source,
+            status,
+            sqlite3_errmsg(sql_db)
+        );
+    }
+}
+
+void Database::register_playlist(
+    const std::string& uuid, const std::string& title
+) {
+    std::lock_guard lock(m);
+
+    sqlite3_stmt* stmt = _get_statement("register_playlist");
+    sqlite3_bind_str(stmt, ":uuid", uuid, SQLITE_STATIC);
+    sqlite3_bind_str(stmt, ":title", title, SQLITE_STATIC);
+
+    int status = sqlite3_step(stmt);
+    if (status != SQLITE_DONE) {
+        logger = spdlog::get(DDB_OWS_PROJECT_ID);
+        logger->warn(
+            "Could not register playlist {} (uuid: {}) (errno {}): {}",
+            title,
+            uuid,
+            status,
+            sqlite3_errmsg(sql_db)
+        );
+    }
+}
+
+void Database::register_synced_playlist(
+    const std::string& uuid, sync_id_t sync_id
+) {
+    std::lock_guard lock(m);
+
+    sqlite3_stmt* stmt = _get_statement("register_synced_playlist");
+    sqlite3_bind_str(stmt, ":uuid", uuid);
+    sqlite3_bind_int64(
+        stmt, sqlite3_bind_parameter_index(stmt, ":sync_id"), sync_id
+    );
+
+    int status = sqlite3_step(stmt);
+    if (status != SQLITE_DONE) {
+        logger = spdlog::get(DDB_OWS_PROJECT_ID);
+        logger->warn(
+            "Could not register sync of playlist (uuid: {}) (errno {}): {}",
+            uuid,
+            status,
+            sqlite3_errmsg(sql_db)
+        );
+    }
+}
+
+void Database::register_file_in_playlist(
+    const path& source, const std::string& plt_uuid
+) {
+    std::lock_guard lock(m);
+
+    sqlite3_stmt* stmt = _get_statement("register_file_in_playlist");
+    sqlite3_bind_str(stmt, ":source", source);
+    sqlite3_bind_str(stmt, ":playlist_uuid", plt_uuid, SQLITE_STATIC);
+
+    int status = sqlite3_step(stmt);
+    if (status != SQLITE_DONE) {
+        logger = spdlog::get(DDB_OWS_PROJECT_ID);
+        logger->warn(
+            "Could not register {} in playlist (uuid: {}) (errno {}): {}",
+            source,
+            plt_uuid,
+            status,
+            sqlite3_errmsg(sql_db)
+        );
+    }
+}
+
+void Database::clear_playlist(const std::string& plt_uuid) {
+    std::lock_guard lock(m);
+
+    sqlite3_stmt* stmt = _get_statement("clear_playlist");
+    sqlite3_bind_str(stmt, ":playlist_uuid", plt_uuid, SQLITE_STATIC);
+
+    int status = sqlite3_step(stmt);
+    if (status != SQLITE_DONE) {
+        logger = spdlog::get(DDB_OWS_PROJECT_ID);
+        logger->warn(
+            "Could not clear playlist (uuid: {}) (errno {}): {}",
+            plt_uuid,
             status,
             sqlite3_errmsg(sql_db)
         );
