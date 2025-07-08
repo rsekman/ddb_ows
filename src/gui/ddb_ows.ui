@@ -241,6 +241,7 @@
                             <property name="label" translatable="yes">Sync cover art</property>
                             <property name="can-focus">True</property>
                             <property name="receives-default">False</property>
+                            <property name="halign">end</property>
                             <property name="draw-indicator">True</property>
                             <signal name="show" handler="on_cover_sync_check_show" swapped="no"/>
                             <signal name="toggled" handler="on_cover_sync_check_toggled" swapped="no"/>
@@ -308,19 +309,6 @@
                             <property name="visible">True</property>
                             <property name="can-focus">False</property>
                             <child>
-                              <object class="GtkLabel">
-                                <property name="visible">True</property>
-                                <property name="can-focus">False</property>
-                                <property name="label" translatable="yes">Sync playlists as</property>
-                              </object>
-                              <packing>
-                                <property name="expand">False</property>
-                                <property name="fill">True</property>
-                                <property name="padding">6</property>
-                                <property name="position">0</property>
-                              </packing>
-                            </child>
-                            <child>
                               <object class="GtkCheckButton" id="sync_pls_dbpl_check">
                                 <property name="label" translatable="yes">DBPL</property>
                                 <property name="can-focus">True</property>
@@ -354,9 +342,9 @@
                             </child>
                           </object>
                           <packing>
-                            <property name="left-attach">0</property>
+                            <property name="left-attach">1</property>
                             <property name="top-attach">5</property>
-                            <property name="width">3</property>
+                            <property name="width">2</property>
                           </packing>
                         </child>
                         <child>
@@ -372,23 +360,28 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkAlignment" id="timeout_spinbutton_alignment">
+                          <object class="GtkLabel">
                             <property name="visible">True</property>
                             <property name="can-focus">False</property>
-                            <property name="xalign">0</property>
-                            <property name="xscale">0</property>
-                            <child>
-                              <object class="GtkSpinButton" id="cover_timeout_spinbutton">
-                                <property name="can-focus">True</property>
-                                <property name="width-chars">8</property>
-                                <property name="input-purpose">number</property>
-                                <property name="adjustment">timeout_adjustment</property>
-                                <property name="numeric">True</property>
-                                <property name="update-policy">if-valid</property>
-                                <signal name="show" handler="on_cover_timeout_spinbutton_show" swapped="no"/>
-                                <signal name="value-changed" handler="on_cover_timeout_spinbutton_value_changed" swapped="no"/>
-                              </object>
-                            </child>
+                            <property name="halign">end</property>
+                            <property name="label" translatable="yes">Sync playlists as</property>
+                          </object>
+                          <packing>
+                            <property name="left-attach">0</property>
+                            <property name="top-attach">5</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkSpinButton" id="cover_timeout_spinbutton">
+                            <property name="can-focus">True</property>
+                            <property name="halign">start</property>
+                            <property name="width-chars">8</property>
+                            <property name="input-purpose">number</property>
+                            <property name="adjustment">timeout_adjustment</property>
+                            <property name="numeric">True</property>
+                            <property name="update-policy">if-valid</property>
+                            <signal name="show" handler="on_cover_timeout_spinbutton_show" swapped="no"/>
+                            <signal name="value-changed" handler="on_cover_timeout_spinbutton_value_changed" swapped="no"/>
                           </object>
                           <packing>
                             <property name="left-attach">1</property>
@@ -467,6 +460,7 @@
                             <child>
                               <object class="GtkTreeViewColumn" id="pl_name">
                                 <property name="sizing">fixed</property>
+                                <property name="title" translatable="yes">Playlist</property>
                                 <property name="expand">True</property>
                                 <child>
                                   <object class="GtkCellRendererText" id="pl_name_rend">
