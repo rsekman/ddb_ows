@@ -4,6 +4,7 @@
 #include <deadbeef/gtkui_api.h>
 #include <execinfo.h>
 #include <fmt/core.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
 #include <memory>
@@ -53,7 +54,7 @@ StdioLogger terminal_logger{};
 Glib::RefPtr<Gtk::Builder> builder;
 
 std::shared_ptr<spdlog::logger> get_logger() {
-    auto logger = spdlog::get(DDB_OWS_PROJECT_ID);
+    auto logger = spdlog::get(DDB_OWS_GUI_PLUGIN_ID);
     return logger ? logger : spdlog::default_logger();
 }
 
@@ -962,25 +963,18 @@ int connect(void) {
     ddb_converter_t* ddb_converter =
         (ddb_converter_t*)ddb->plug_get_for_id("converter");
     ddb_ows = (ddb_ows_plugin_t*)ddb->plug_get_for_id("ddb_ows");
-    auto logger = ddb_ows->logger;
+    auto logger = get_logger();
 
     if (!ddb_gtkui) {
-        logger->error(
-            "{}: matching gtkui plugin not found, quitting.",
-            DDB_OWS_GUI_PLUGIN_NAME
-        );
+        logger->error("Matching gtkui plugin not found, quitting.");
         return -1;
     }
     if (!ddb_converter) {
-        logger->error(
-            "{}: converter plugin not found, quitting", DDB_OWS_GUI_PLUGIN_NAME
-        );
+        logger->error("Converter plugin not found, quitting.");
         return -1;
     }
     if (!ddb_ows) {
-        logger->error(
-            "{}: ddb_ows plugin not found, quitting", DDB_OWS_GUI_PLUGIN_NAME
-        );
+        logger->error("ddb_ows plugin not found, quitting.");
         return -1;
     }
     // Needed to make gtkmm play nice
@@ -1059,6 +1053,9 @@ void init(DB_functions_t* api) {
 DB_plugin_t* load(DB_functions_t* api) {
     ddb = api;
     ddb_ows_gui::init(api);
+    auto logger = spdlog::stderr_color_mt(DDB_OWS_GUI_PLUGIN_ID);
+    logger->set_level(spdlog::level::DDB_OWS_LOGLEVEL);
+    logger->set_pattern("[%n] [%^%l%$] [thread %t] %v");
     return (DB_plugin_t*)&ddb_ows_gui::plugin;
 }
 
