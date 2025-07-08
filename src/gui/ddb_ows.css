@@ -1,0 +1,15 @@
+.frame-margins {
+    margin: 0 4 0 4;
+}
+
+.frame-margins grid, .frame-margins scrolledwindow {
+    margin: 8 8 12 8;
+}
+
+progressbar text {
+    font-size: 12pt;
+}
+
+progressbar trough {
+    min-height: 20px;
+}

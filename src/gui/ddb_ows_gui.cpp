@@ -14,11 +14,13 @@
 
 #include "ddb_ows.hpp"
 #include "gdk/gdkkeysyms.h"
+#include "gdkmm/display.h"
 #include "glibmm/dispatcher.h"
 #include "glibmm/refptr.h"
 #include "gtkmm/builder.h"
 #include "gtkmm/checkbutton.h"
 #include "gtkmm/combobox.h"
+#include "gtkmm/cssprovider.h"
 #include "gtkmm/filechooserbutton.h"
 #include "gtkmm/liststore.h"
 #include "gtkmm/main.h"
@@ -29,6 +31,7 @@
 #include "gtkmm/textview.h"
 #include "gtkmm/togglebutton.h"
 #include "gtkmm/treeview.h"
+#include "gtkmm/widget.h"
 #include "gtkmm/window.h"
 #include "playlist_uuid.hpp"
 
@@ -830,6 +833,13 @@ int create_ui() {
         logger->error("Could not build ui: {}.", std::string(e.what()));
         return -1;
     }
+    auto provider = Gtk::CssProvider::create();
+    provider->load_from_resource("/ddb_ows/ddb_ows.css");
+    Gtk::StyleContext::add_provider_for_screen(
+        Gdk::Screen::get_default(),
+        provider,
+        GTK_STYLE_PROVIDER_PRIORITY_APPLICATION
+    );
 
     // Use introspection (backtrace) to figure out which file (.so) we are in.
     // This is necessary because we have to tell gtk to look for the signal
