@@ -142,7 +142,7 @@
                     <property name="label-xalign">0.019999999552965164</property>
                     <property name="shadow-type">in</property>
                     <child>
-                      <!-- n-columns=3 n-rows=7 -->
+                      <!-- n-columns=3 n-rows=8 -->
                       <object class="GtkGrid" id="gen_opts_table">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
@@ -264,7 +264,7 @@
                           </object>
                           <packing>
                             <property name="left-attach">0</property>
-                            <property name="top-attach">6</property>
+                            <property name="top-attach">7</property>
                             <property name="width">3</property>
                           </packing>
                         </child>
@@ -343,7 +343,7 @@
                           </object>
                           <packing>
                             <property name="left-attach">1</property>
-                            <property name="top-attach">5</property>
+                            <property name="top-attach">6</property>
                             <property name="width">2</property>
                           </packing>
                         </child>
@@ -356,7 +356,7 @@
                           </object>
                           <packing>
                             <property name="left-attach">0</property>
-                            <property name="top-attach">4</property>
+                            <property name="top-attach">5</property>
                           </packing>
                         </child>
                         <child>
@@ -368,7 +368,7 @@
                           </object>
                           <packing>
                             <property name="left-attach">0</property>
-                            <property name="top-attach">5</property>
+                            <property name="top-attach">6</property>
                           </packing>
                         </child>
                         <child>
@@ -385,8 +385,47 @@
                           </object>
                           <packing>
                             <property name="left-attach">1</property>
-                            <property name="top-attach">4</property>
+                            <property name="top-attach">5</property>
                             <property name="width">2</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkBox">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="halign">center</property>
+                            <child>
+                              <object class="GtkImage" id="warn_artwork_icon">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="no-show-all">True</property>
+                                <property name="icon-name">dialog-warning</property>
+                              </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">0</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="warn_artwork_label">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="halign">start</property>
+                                <property name="hexpand">True</property>
+                                <property name="label" translatable="yes">The artwork plugin is not available. Covers will not be synced.</property>
+                              </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">1</property>
+                              </packing>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="left-attach">0</property>
+                            <property name="top-attach">4</property>
+                            <property name="width">3</property>
                           </packing>
                         </child>
                       </object>
@@ -501,7 +540,7 @@
                     <property name="label-xalign">0.019999999552965164</property>
                     <property name="shadow-type">in</property>
                     <child>
-                      <!-- n-columns=3 n-rows=4 -->
+                      <!-- n-columns=3 n-rows=5 -->
                       <object class="GtkGrid">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
@@ -509,6 +548,7 @@
                         <property name="margin-end">8</property>
                         <property name="margin-top">8</property>
                         <property name="margin-bottom">12</property>
+                        <property name="row-spacing">4</property>
                         <property name="column-spacing">8</property>
                         <child>
                           <object class="GtkEntry" id="conv_ext_entry">
@@ -523,7 +563,7 @@
                           </object>
                           <packing>
                             <property name="left-attach">2</property>
-                            <property name="top-attach">2</property>
+                            <property name="top-attach">3</property>
                           </packing>
                         </child>
                         <child>
@@ -537,7 +577,7 @@
                           </object>
                           <packing>
                             <property name="left-attach">1</property>
-                            <property name="top-attach">2</property>
+                            <property name="top-attach">3</property>
                           </packing>
                         </child>
                         <child>
@@ -550,7 +590,7 @@
                           </object>
                           <packing>
                             <property name="left-attach">1</property>
-                            <property name="top-attach">1</property>
+                            <property name="top-attach">2</property>
                           </packing>
                         </child>
                         <child>
@@ -616,7 +656,7 @@
                           </object>
                           <packing>
                             <property name="left-attach">0</property>
-                            <property name="top-attach">0</property>
+                            <property name="top-attach">1</property>
                             <property name="height">4</property>
                           </packing>
                         </child>
@@ -638,7 +678,7 @@
                           </object>
                           <packing>
                             <property name="left-attach">2</property>
-                            <property name="top-attach">0</property>
+                            <property name="top-attach">1</property>
                           </packing>
                         </child>
                         <child>
@@ -652,7 +692,7 @@
                           </object>
                           <packing>
                             <property name="left-attach">1</property>
-                            <property name="top-attach">0</property>
+                            <property name="top-attach">1</property>
                           </packing>
                         </child>
                         <child>
@@ -673,7 +713,7 @@
                           </object>
                           <packing>
                             <property name="left-attach">2</property>
-                            <property name="top-attach">1</property>
+                            <property name="top-attach">2</property>
                           </packing>
                         </child>
                         <child>
@@ -684,8 +724,47 @@
                           </object>
                           <packing>
                             <property name="left-attach">1</property>
-                            <property name="top-attach">3</property>
+                            <property name="top-attach">4</property>
                             <property name="width">2</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkBox">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="halign">center</property>
+                            <property name="spacing">4</property>
+                            <child>
+                              <object class="GtkImage" id="warn_converter_icon">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="icon-name">dialog-warning</property>
+                              </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">0</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="warn_converter_label">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="halign">start</property>
+                                <property name="label" translatable="yes">The converter plugin is not available. Files will that need converting will be skipped.</property>
+                                <property name="wrap">True</property>
+                              </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">1</property>
+                              </packing>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="left-attach">0</property>
+                            <property name="top-attach">0</property>
+                            <property name="width">3</property>
                           </packing>
                         </child>
                       </object>
