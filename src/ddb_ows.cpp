@@ -696,6 +696,8 @@ bool cancel(cancel_cb_t callback) {
     return true;
 }
 
+plt_uuid _plt_get_uuid(ddb_playlist_t* plt) { return plt_get_uuid(plt, ddb); }
+
 int start() { return 0; }
 
 int stop() { return 0; }
@@ -713,8 +715,6 @@ int connect() {
 int handleMessage(uint32_t id, uintptr_t ctx, uint32_t p1, uint32_t p2) {
     return 0;
 }
-
-plt_uuid _plt_get_uuid(ddb_playlist_t* plt) { return plt_get_uuid(plt, ddb); }
 
 const char* configDialog_ = "";
 
