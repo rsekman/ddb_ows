@@ -20,10 +20,8 @@
 #include <mutex>
 #include <random>
 #include <string>
-#include <unordered_set>
 #include <vector>
 
-#include "config.hpp"
 #include "constants.hpp"
 #include "database.hpp"
 #include "job.hpp"
@@ -52,21 +50,86 @@ struct ddb_ows_plugin_int {
     ddb_ows_plugin_t pub;
     std::mutex running;
     std::shared_ptr<ddb_ows::CancellationToken> cancellationtoken;
+    std::shared_ptr<JobsQueue> jobs;
     std::shared_ptr<spdlog::logger> logger;
     wt_futures_t worker_thread_futures;
 };
 
 static DB_functions_t* ddb;
-Configuration conf = Configuration();
 
 // TODO: move these out of global scope
 
 ddb_artwork_plugin_t* ddb_artwork = NULL;
 ddb_converter_t* ddb_converter = NULL;
 
-std::random_device rd;
-std::mt19937 mersenne_twister(rd());
-auto dist = std::uniform_int_distribution<long>(LONG_MIN, LONG_MAX);
+int start() { return 0; }
+int stop() { return 0; }
+int disconnect() { return 0; }
+int connect();
+
+int handleMessage(uint32_t id, uintptr_t ctx, uint32_t p1, uint32_t p2) {
+    return 0;
+}
+
+const char* configDialog_ = "";
+
+DB_misc_t plugin_ddb{
+    .plugin = {
+        .type = DB_PLUGIN_MISC,
+        .api_vmajor = 1,
+        .api_vminor = 8,
+        .version_major = DDB_OWS_VERSION_MAJOR,
+        .version_minor = DDB_OWS_VERSION_MINOR,
+        .id = DDB_OWS_PROJECT_ID,
+        .name = DDB_OWS_PROJECT_NAME,
+        .descr = DDB_OWS_PROJECT_DESC,
+        .copyright = DDB_OWS_LICENSE_TEXT,
+        .website = DDB_OWS_PROJECT_URL,
+        .start = start,
+        .stop = stop,
+        .connect = connect,
+        .disconnect = disconnect,
+        .message = handleMessage,
+        .configdialog = configDialog_,
+    },
+};
+
+plt_uuid _plt_get_uuid(ddb_playlist_t* plt) { return plt_get_uuid(plt, ddb); }
+
+// These public interface function are so-to-speak non-static, viz., they need
+// the address of the plugin, so they have to be forward-declared. We use some
+// introspection to make it somewhat more readable.
+std::remove_reference_t<decltype(*ddb_ows_plugin_t::run)> run;
+std::remove_reference_t<decltype(*ddb_ows_plugin_t::cancel)> cancel;
+std::remove_reference_t<decltype(*ddb_ows_plugin_t::get_output_path)>
+    get_output_path;
+
+ddb_ows_plugin_t plugin_public = {
+    .plugin = plugin_ddb,
+    .run = run,
+    .cancel = cancel,
+    .get_output_path = get_output_path,
+    .plt_get_uuid = _plt_get_uuid,
+};
+
+ddb_ows_plugin_int plugin = {
+    .pub = plugin_public,
+    .cancellationtoken = std::make_shared<ddb_ows::CancellationToken>(),
+    .logger = std::shared_ptr<spdlog::logger>(),
+    .worker_thread_futures = wt_futures_t{
+        .m = std::mutex(),
+        .c = std::condition_variable(),
+        .futures = std::vector<std::shared_future<bool>>{}
+    },
+};
+
+int connect() {
+    ddb_converter = (ddb_converter_t*)ddb->plug_get_for_id("converter");
+    ddb_artwork = (ddb_artwork_plugin_t*)ddb->plug_get_for_id("artwork2");
+    plugin.jobs->close();
+    spdlog::get(DDB_OWS_PROJECT_ID)->info("Initialized successfully.");
+    return 0;
+}
 
 void escape(std::string& s) {
     for (auto& i : s) {
@@ -112,8 +175,6 @@ std::string get_output_path(DB_playItem_t* it, char* format) {
     ddb->pl_item_unref(copy);
     return std::string(out);
 }
-
-JobsQueue* jobs = new JobsQueue();
 
 struct cover_req_t {
     std::mutex m;
@@ -165,19 +226,23 @@ bool queue_cover_jobs(
 ) {
     path from;
     path to;
-    char* fmt = ddb->tf_compile(conf.get_fn_formats()[0].c_str());
+    auto conf = plugin.pub.conf;
+    auto jobs = plugin.jobs;
+    auto plug_logger = plugin.logger;
+
+    char* fmt = ddb->tf_compile(conf->get_fn_formats()[0].c_str());
     if (fmt == NULL) {
         return false;
     }
-    auto root = path(conf.get_root());
 
-    ddb_ows_plugin_int* ddb_ows =
-        (ddb_ows_plugin_int*)ddb->plug_get_for_id("ddb_ows");
-    auto plug_logger = ddb_ows->logger;
+    auto root = path(conf->get_root());
+    std::random_device rd;
+    std::mt19937 mersenne_twister(rd());
+    auto dist = std::uniform_int_distribution<long>(LONG_MIN, LONG_MAX);
 
     while (!items.empty()) {
         auto it = items.front().get();
-        if (ddb_ows->cancellationtoken->get()) {
+        if (plugin.cancellationtoken->get()) {
             plug_logger->debug("Cancelled while queueing cover jobs");
             break;
         }
@@ -204,8 +269,7 @@ bool queue_cover_jobs(
         cover_query->user_data = creq_copy;
 
         ddb_artwork->cover_get(cover_query, callback_cover_art_found);
-        auto timeout =
-            std::chrono::milliseconds(ddb_ows->pub.conf.get_cover_timeout_ms());
+        auto timeout = std::chrono::milliseconds(conf->get_cover_timeout_ms());
         std::unique_lock<std::mutex> lock(creq->m);
         if (!creq->returned) {
             creq->c.wait_for(lock, timeout, [&creq] { return creq->returned; });
@@ -222,7 +286,7 @@ bool queue_cover_jobs(
         } else {
             path from = creq->cover->image_filename;
             db->register_file(from);
-            path to = target_dir / conf.get_cover_fname();
+            path to = target_dir / conf->get_cover_fname();
             auto old = db->find_entry(from);
             auto old_dest =
                 old ? std::optional{old->destination} : std::nullopt;
@@ -264,7 +328,7 @@ bool queue_cover_jobs(
 
 ddb_converter_settings_t make_encoder_settings() {
     auto preset = ddb_converter->encoder_preset_get_list();
-    auto sel = conf.get_conv_preset();
+    auto sel = plugin.pub.conf->get_conv_preset();
     ddb_converter_settings_t out{
         // these two mean to use the same sample format as input
         .output_bps = -1,
@@ -290,7 +354,7 @@ bool should_convert(DB_playItem_t* it) {
     // decoders and decoders[i]->exts are null-terminated arrays
     int i = 0;
     std::string::size_type n;
-    std::set<std::string> sels = conf.get_conv_fts();
+    std::set<std::string> sels = plugin.pub.conf->get_conv_fts();
     const char* fname = ddb->pl_find_meta(it, ":URI");
     const char* ext = strrchr(fname, '.');
     auto logger = spdlog::get(DDB_OWS_PROJECT_ID);
@@ -325,7 +389,7 @@ bool should_convert(DB_playItem_t* it) {
 
 void make_job(
     DatabaseHandle db,
-    JobsQueue* out,
+    std::shared_ptr<JobsQueue> out,
     Logger& logger,
     DB_playItem_t* it,
     sync_id_t sync_id,
@@ -334,6 +398,7 @@ void make_job(
     ddb_converter_settings_t conv_settings
 ) {
     // throws: can throw any filesystem error throw by checking ctime
+    auto conf = plugin.pub.conf;
     const auto old = db->find_entry(from);
     const std::optional<path> old_dest = old ? old->destination : std::nullopt;
 
@@ -351,7 +416,7 @@ void make_job(
     }
 
     if (should_convert(it)) {
-        to.replace_extension(conf.get_conv_ext());
+        to.replace_extension(conf->get_conv_ext());
         std::string preset_title = conv_settings.encoder_preset->title;
         auto cjob = std::make_unique<ConvertJob>(
             logger, db, ddb, conv_settings, it, sync_id, from, to
@@ -438,7 +503,8 @@ std::string plt_get_title(ddb_playlist_t* plt) {
 bool save_playlist(
     const char* ext, ddb_playlist_t* plt_in, Logger& logger, bool dry
 ) {
-    path root(conf.get_root());
+    auto conf = plugin.pub.conf;
+    path root(conf->get_root());
     std::string title = plt_get_title(plt_in);
     std::string escaped = title;
     escape(escaped);
@@ -451,7 +517,7 @@ bool save_playlist(
     plug_logger->debug("Saving playlist to {}", pl_to);
     int out = 0;
 
-    char* fmt = ddb->tf_compile(conf.get_fn_formats()[0].c_str());
+    char* fmt = ddb->tf_compile(conf->get_fn_formats()[0].c_str());
     if (fmt == NULL) {
         return false;
     }
@@ -478,7 +544,7 @@ bool save_playlist(
             path out_path = get_output_path(new_it, fmt);
 
             if (should_convert(new_it)) {
-                out_path.replace_extension(conf.get_conv_ext());
+                out_path.replace_extension(conf->get_conv_ext());
             }
 
             ddb->pl_replace_meta(new_it, ":URI", out_path.c_str());
@@ -527,10 +593,11 @@ bool save_playlists(
     playlist_save_cb_t callback
 ) {
     bool out = true;
-    if (conf.get_sync_pls().dbpl) {
+    auto conf = plugin.pub.conf;
+    if (conf->get_sync_pls().dbpl) {
         out = out && _save_playlists(dry, playlists, "dbpl", logger, callback);
     }
-    if (conf.get_sync_pls().m3u8) {
+    if (conf->get_sync_pls().m3u8) {
         out = out && _save_playlists(dry, playlists, "m3u8", logger, callback);
     }
     return out;
@@ -549,6 +616,7 @@ bool queue_jobs(
     job_queued_cb_t queued_cb,
     queueing_complete_cb_t complete_cb
 ) {
+    auto jobs = plugin.jobs;
     if (!jobs->empty()) {
         // To avoid double-queueing
         return false;
@@ -558,13 +626,14 @@ bool queue_jobs(
         (ddb_ows_plugin_int*)ddb->plug_get_for_id("ddb_ows");
     auto plug_logger = ddb_ows->logger;
 
-    path root(conf.get_root());
+    auto conf = plugin.pub.conf;
+    path root(conf->get_root());
     DatabaseHandle db = std::make_shared<Database>(root);
 
-    const auto tf_str = conf.get_fn_formats()[0];
-    const auto cover_sync = conf.get_cover_sync();
-    const auto cover_fname = conf.get_cover_fname();
-    const auto rm_unref = conf.get_rm_unref();
+    const auto tf_str = conf->get_fn_formats()[0];
+    const auto cover_sync = conf->get_cover_sync();
+    const auto cover_fname = conf->get_cover_fname();
+    const auto rm_unref = conf->get_rm_unref();
     const auto sync_id =
         db->new_sync(tf_str, cover_sync, cover_fname, rm_unref);
 
@@ -642,7 +711,8 @@ bool queue_jobs(
         }
 
         path target_dir = to.parent_path();
-        if (ddb_ows->pub.conf.get_cover_sync() && !cover_dirs.count(target_dir))
+        if (ddb_ows->pub.conf->get_cover_sync() &&
+            !cover_dirs.count(target_dir))
         {
             cover_its.push_back(source.it);
             plug_logger->debug("Copying cover to {}", target_dir);
@@ -679,7 +749,7 @@ bool queue_jobs(
 
 bool worker_thread(bool dry, job_finished_cb_t callback) {
     std::unique_ptr<Job> job;
-    while ((job = jobs->pop())) {
+    while ((job = plugin.jobs->pop())) {
         // unique_ptr is falsey if there is no object
         bool status = job->run(dry);
         if (callback) {
@@ -691,9 +761,10 @@ bool worker_thread(bool dry, job_finished_cb_t callback) {
 }
 
 bool execute(bool dry, job_finished_cb_t callback) {
+    auto conf = plugin.pub.conf;
     ddb_ows_plugin_int* ddb_ows =
         (ddb_ows_plugin_int*)ddb->plug_get_for_id("ddb_ows");
-    int n_wts = conf.get_conv_wts();
+    int n_wts = conf->get_conv_wts();
     ddb_ows->worker_thread_futures.futures.clear();
     for (int i = 0; i < n_wts; i++) {
         auto task = worker_thread_t(worker_thread);
@@ -735,7 +806,7 @@ bool cancel(cancel_cb_t callback) {
         (ddb_ows_plugin_int*)ddb->plug_get_for_id("ddb_ows");
     ddb_ows->logger->debug("Cancelling");
     ddb_ows->cancellationtoken->cancel();
-    jobs->cancel();
+    plugin.jobs->cancel();
     std::lock_guard lock(ddb_ows->worker_thread_futures.m);
     for (auto t = ddb_ows->worker_thread_futures.futures.begin();
          t != ddb_ows->worker_thread_futures.futures.end();
@@ -748,75 +819,15 @@ bool cancel(cancel_cb_t callback) {
     return true;
 }
 
-plt_uuid _plt_get_uuid(ddb_playlist_t* plt) { return plt_get_uuid(plt, ddb); }
-
-int start() { return 0; }
-
-int stop() { return 0; }
-
-int disconnect() { return 0; }
-
-int connect() {
-    ddb_converter = (ddb_converter_t*)ddb->plug_get_for_id("converter");
-    ddb_artwork = (ddb_artwork_plugin_t*)ddb->plug_get_for_id("artwork2");
-    jobs->close();
-    spdlog::get(DDB_OWS_PROJECT_ID)->info("Initialized successfully.");
-    return 0;
-}
-
-int handleMessage(uint32_t id, uintptr_t ctx, uint32_t p1, uint32_t p2) {
-    return 0;
-}
-
-const char* configDialog_ = "";
-
-DB_misc_t plugin_ddb{
-    .plugin = {
-        .type = DB_PLUGIN_MISC,
-        .api_vmajor = 1,
-        .api_vminor = 8,
-        .version_major = DDB_OWS_VERSION_MAJOR,
-        .version_minor = DDB_OWS_VERSION_MINOR,
-        .id = DDB_OWS_PROJECT_ID,
-        .name = DDB_OWS_PROJECT_NAME,
-        .descr = DDB_OWS_PROJECT_DESC,
-        .copyright = DDB_OWS_LICENSE_TEXT,
-        .website = DDB_OWS_PROJECT_URL,
-        .start = start,
-        .stop = stop,
-        .connect = connect,
-        .disconnect = disconnect,
-        .message = handleMessage,
-        .configdialog = configDialog_,
-    },
-};
-
-ddb_ows_plugin_t plugin_public = {
-    .plugin = plugin_ddb,
-    .conf = conf,
-    .run = run,
-    .cancel = cancel,
-    .get_output_path = get_output_path,
-    .plt_get_uuid = _plt_get_uuid,
-};
-
-ddb_ows_plugin_int plugin = {
-    .pub = plugin_public,
-    .cancellationtoken = std::make_shared<ddb_ows::CancellationToken>(),
-    .logger = std::shared_ptr<spdlog::logger>(),
-    .worker_thread_futures = wt_futures_t{
-        .m = std::mutex(),
-        .c = std::condition_variable(),
-        .futures = std::vector<std::shared_future<bool>>{}
-    },
-};
-
 void init(DB_functions_t* api) {
-    plugin.pub.conf.set_api(api);
     plugin.logger = spdlog::stderr_color_mt(DDB_OWS_PROJECT_ID);
     plugin.logger->set_level(spdlog::level::DDB_OWS_LOGLEVEL);
     plugin.logger->set_pattern("[%n] [%^%l%$] [thread %t] %v");
-    plugin.pub.conf.load_conf();
+
+    plugin.jobs = std::make_shared<JobsQueue>();
+
+    plugin.pub.conf = std::make_shared<Configuration>(api);
+    plugin.pub.conf->load_conf();
 }
 
 DB_plugin_t* load(DB_functions_t* api) {

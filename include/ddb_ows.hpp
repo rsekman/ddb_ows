@@ -32,7 +32,7 @@ using namespace ddb_ows;
 
 typedef struct {
     DB_misc_t plugin;
-    ddb_ows::Configuration& conf;
+    std::shared_ptr<ddb_ows::Configuration> conf;
     bool (*run)(
         bool dry,
         const std::vector<ddb_playlist_t*>& playlists,
