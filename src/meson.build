@@ -4,6 +4,7 @@ fmt_dep = dependency('fmt')
 gio_dep = dependency('giomm-2.4')
 nlohmann_dep = dependency('nlohmann_json')
 spdlog_dep = dependency('spdlog')
+sqlite_dep = dependency('sqlite3')
 uuid_dep = dependency('uuid')
 
 incdir = include_directories('../include')
@@ -27,6 +28,7 @@ lib = static_library('libddb_ows',
     gio_dep,
     nlohmann_dep,
     spdlog_dep,
+    sqlite_dep,
     uuid_dep,
   ],
   name_prefix: ''

@@ -3,6 +3,7 @@
 #include <fmt/std.h>
 
 #include <filesystem>
+#include <optional>
 #include <system_error>
 
 using namespace std::filesystem;
@@ -19,19 +20,12 @@ void clean_parents(path p) {
     }
 }
 
-db_entry_t Job::make_entry() {
-    return db_entry_t{
-        .destination = to,
-        .timestamp = static_cast<uint64_t>(std::time(nullptr)),
-        .converter_preset = ""
-    };
+std::chrono::seconds now() {
+    using namespace std::chrono;
+    return duration_cast<std::chrono::seconds>(
+        system_clock::now().time_since_epoch()
+    );
 }
-
-void Job::register_job() { db->insert_or_update(from, make_entry()); }
-void Job::register_job(db_entry_t entry) { db->insert_or_update(from, entry); }
-
-CopyJob::CopyJob(Logger& _logger, DatabaseHandle _db, path _from, path _to) :
-    Job(_logger, _db, _from, _to) {};
 
 bool CopyJob::run(bool dry) {
     bool success;
@@ -57,14 +51,38 @@ bool CopyJob::run(bool dry) {
     return success;
 }
 
-MoveJob::MoveJob(
-    Logger& _logger, DatabaseHandle _db, path _from, path _to, path _source
-) :
-    Job(_logger, _db, _from, _to), source(_source) {};
-
-void MoveJob::register_job(db_entry_t entry) {
-    db->insert_or_update(source, entry);
+void CopyJob::register_job() {
+    db->register_synced_file(
+        {.sync_id = sync_id,
+         .source = from,
+         .destination = to,
+         .converter_preset = std::nullopt,
+         .timestamp = now()}
+    );
 }
+
+CopyJob::CopyJob(
+    Logger& _logger,
+    DatabaseHandle _db,
+    sync_id_t _sync_id,
+    path _from,
+    path _to
+) :
+    Job(_logger, _db, _sync_id, _from, _to) {};
+
+MoveJob::MoveJob(
+    Logger& _logger,
+    DatabaseHandle _db,
+    sync_id_t _sync_id,
+    path _from,
+    path _to,
+    path _source,
+    std::optional<std::string> _converter_preset
+) :
+    Job(_logger, _db, _sync_id, _from, _to),
+    source(_source),
+    converter_preset(_converter_preset) {};
+
 bool MoveJob::run(bool dry) {
     std::string from_to_str = fmt::format("from {} to {}", from, to);
     bool success;
@@ -72,12 +90,7 @@ bool MoveJob::run(bool dry) {
         if (!dry) {
             create_directories(to.parent_path());
             rename(from, to);
-            db_entry_t entry = make_entry();
-            auto old = db->find_entry(from);
-            if (old) {
-                entry.converter_preset = old->converter_preset;
-            }
-            register_job(entry);
+            register_job();
             clean_parents(from.parent_path());
             logger.log("Moved from {}.", from_to_str);
         } else {
@@ -91,6 +104,24 @@ bool MoveJob::run(bool dry) {
     return success;
 }
 
+void MoveJob::register_job() {
+    // a move is registered as a delete followed by a recreation
+    db->register_synced_file(
+        {.sync_id = sync_id,
+         .source = from,
+         .destination = std::nullopt,
+         .converter_preset = std::nullopt,
+         .timestamp = now()}
+    );
+    db->register_synced_file(
+        {.sync_id = sync_id,
+         .source = from,
+         .destination = to,
+         .converter_preset = converter_preset,
+         .timestamp = now()}
+    );
+}
+
 ConvertJob::~ConvertJob() { ddb->pl_item_unref(it); }
 
 ConvertJob::ConvertJob(
@@ -99,10 +130,11 @@ ConvertJob::ConvertJob(
     DB_functions_t* _ddb,
     ddb_converter_settings_t _settings,
     DB_playItem_t* _it,
+    sync_id_t _sync_id,
     path _from,
     path _to
 ) :
-    Job(_logger, _db, _from, _to),
+    Job(_logger, _db, _sync_id, _from, _to),
     ddb(_ddb),
     settings(_settings),
     it(_it),
@@ -122,9 +154,7 @@ bool ConvertJob::run(bool dry) {
         int out =
             ddb_conv->convert2(&settings, it, std::string(to).c_str(), &pabort);
         if (!out) {
-            db_entry_t entry = make_entry();
-            entry.converter_preset = settings.encoder_preset->title;
-            register_job(entry);
+            register_job();
             logger.log("Conversion of {} successful.", from_to_str);
         } else {
             logger.err("Converting {} failed.", from_to_str);
@@ -136,32 +166,56 @@ bool ConvertJob::run(bool dry) {
     }
 }
 
+void ConvertJob::register_job() {
+    db->register_synced_file(
+        {.sync_id = sync_id,
+         .source = from,
+         .destination = to,
+         .converter_preset = settings.encoder_preset->title,
+         .timestamp = now()}
+    );
+}
+
 void ConvertJob::abort() { pabort = 1; }
 
-DeleteJob::DeleteJob(Logger& _logger, DatabaseHandle _db, path _target) :
-    Job(_logger, _db, "", ""), target(_target) {};
+DeleteJob::DeleteJob(
+    Logger& _logger,
+    DatabaseHandle _db,
+    sync_id_t _sync_id,
+    path _source,
+    path _target
+) :
+    Job(_logger, _db, _sync_id, _source, _target) {};
 
 bool DeleteJob::run(bool dry) {
     bool success;
     if (!dry) {
         try {
-            success = remove(target);
+            success = remove(to);
         } catch (filesystem_error& e) {
-            logger.log("Failed to delete {}: {}.", target, e.what());
+            logger.log("Failed to delete {}: {}.", to, e.what());
             success = false;
         }
         if (success) {
             register_job();
             clean_parents(to.parent_path());
-            logger.log("Deleted {} .", target);
+            logger.log("Deleted {}.", to);
         }
     } else {
-        logger.log("Would delete {} .", target);
+        logger.log("Would delete {}.", to);
         success = true;
     }
     return success;
 }
 
-void DeleteJob::register_job() { db->erase(target); }
+void DeleteJob::register_job() {
+    db->register_synced_file(
+        {.sync_id = sync_id,
+         .source = from,
+         .destination = std::nullopt,
+         .converter_preset = std::nullopt,
+         .timestamp = now()}
+    );
+}
 
 }  // namespace ddb_ows

@@ -141,6 +141,7 @@ bool is_newer(path a, path b) {
 bool queue_cover_jobs(
     Logger& logger,
     DatabaseHandle db,
+    sync_id_t sync_id,
     std::deque<std::shared_ptr<DB_playItem_t>>& items
 ) {
     path from;
@@ -201,6 +202,7 @@ bool queue_cover_jobs(
             plug_logger->debug("No cover found for {}", target_dir);
         } else {
             path from = creq->cover->image_filename;
+            db->register_file(from);
             path to = target_dir / conf.get_cover_fname();
             auto old = db->find_entry(from);
             auto old_dest =
@@ -222,12 +224,13 @@ bool queue_cover_jobs(
             if (dest_newer) {
                 logger.verbose("Cover at {} is newer than source {}", to, from);
             } else if (old_newer && *old_dest != to) {
-                auto cover_job =
-                    std::make_unique<MoveJob>(logger, db, *old_dest, to, from);
+                auto cover_job = std::make_unique<MoveJob>(
+                    logger, db, sync_id, *old_dest, to, from, ""
+                );
                 jobs->push_back(std::move(cover_job));
             } else {
                 auto cover_job = std::make_unique<CopyJob>(
-                    logger, db, creq->cover->image_filename, to
+                    logger, db, sync_id, creq->cover->image_filename, to
                 );
                 jobs->push_back(std::move(cover_job));
             }
@@ -303,13 +306,14 @@ void make_job(
     JobsQueue* out,
     Logger& logger,
     DB_playItem_t* it,
+    sync_id_t sync_id,
     path from,
     path to,
     ddb_converter_settings_t conv_settings
 ) {
     // throws: can throw any filesystem error throw by checking ctime
-    auto old = db->find_entry(from);
-    auto old_dest = old ? std::optional{old->destination} : std::nullopt;
+    const auto old = db->find_entry(from);
+    const std::optional<path> old_dest = old ? old->destination : std::nullopt;
 
     bool dest_newer;
     try {
@@ -328,7 +332,7 @@ void make_job(
         to.replace_extension(conf.get_conv_ext());
         std::string preset_title = conv_settings.encoder_preset->title;
         auto cjob = std::make_unique<ConvertJob>(
-            logger, db, ddb, conv_settings, it, from, to
+            logger, db, ddb, conv_settings, it, sync_id, from, to
         );
         if (old && old->converter_preset == preset_title) {
             // This source file was synced previously and the same encoder
@@ -342,15 +346,25 @@ void make_job(
                     preset_title
                 );
                 return;
-            } else if (old_newer && *old_dest != to) {
+            } else if (old_newer && old_dest != to) {
                 // The source was previously converted with a different
                 // destination, which is newer than the source
-                out->emplace_back(new MoveJob(logger, db, *old_dest, to, from));
+                out->emplace_back(new MoveJob(
+                    logger,
+                    db,
+                    sync_id,
+                    *old_dest,
+                    to,
+                    from,
+                    old->converter_preset
+                ));
             } else {
                 // The source is newer => delete the old destination and
                 // reconvert with new destination
                 if (old_dest != to) {
-                    out->emplace_back(new DeleteJob(logger, db, *old_dest));
+                    out->emplace_back(
+                        new DeleteJob(logger, db, sync_id, from, *old_dest)
+                    );
                 }
                 out->push_back(std::move(cjob));
             }
@@ -358,7 +372,9 @@ void make_job(
             // This source file was previously synced, but with a different
             // encoder. Convert it, and clean up the old file.
             out->push_back(std::move(cjob));
-            out->emplace_back(new DeleteJob(logger, db, *old_dest));
+            out->emplace_back(
+                new DeleteJob(logger, db, sync_id, from, *old_dest)
+            );
         } else {
             // This source file was not previously synced. All we have to do is
             // convert it.
@@ -366,22 +382,26 @@ void make_job(
         }
     } else if (old_dest && *old_dest != to && exists(*old_dest)) {
         // This source file was synced previously, and was not converted
-        if (old_newer && old->converter_preset == "") {
+        if (old_newer && !old->converter_preset) {
             // the destination file is newer than the source => move
-            out->emplace_back(new MoveJob(logger, db, *old_dest, to, from));
+            out->emplace_back(
+                new MoveJob(logger, db, sync_id, *old_dest, to, from, "")
+            );
         } else {
             // the source file is newer than the old copy, or was previously
             // converted but should not be now => delete the old copy/conversion
             // and copy anew
-            out->emplace_back(new DeleteJob(logger, db, *old_dest));
-            out->emplace_back(new CopyJob(logger, db, from, to));
+            out->emplace_back(
+                new DeleteJob(logger, db, sync_id, from, *old_dest)
+            );
+            out->emplace_back(new CopyJob(logger, db, sync_id, from, to));
         }
     } else if (dest_newer) {
         logger.verbose(
             "Destination {} is newer than source {}; skipping.", to, from
         );
     } else {
-        out->emplace_back(new CopyJob(logger, db, from, to));
+        out->emplace_back(new CopyJob(logger, db, sync_id, from, to));
     }
 }
 
@@ -489,7 +509,25 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
         // To avoid double-queueing
         return false;
     }
-    char* fmt = ddb->tf_compile(conf.get_fn_formats()[0].c_str());
+
+    ddb_ows_plugin_t* ddb_ows =
+        (ddb_ows_plugin_t*)ddb->plug_get_for_id("ddb_ows");
+    auto plug_logger = ddb_ows->logger;
+
+    path root(conf.get_root());
+    DatabaseHandle db = std::make_shared<Database>(root);
+
+    const auto tf_str = conf.get_fn_formats()[0];
+    const auto cover_sync = conf.get_cover_sync();
+    const auto cover_fname = conf.get_cover_fname();
+    const auto rm_unref = conf.get_rm_unref();
+    const auto sync_id =
+        db->new_sync(tf_str, cover_sync, cover_fname, rm_unref);
+
+    if (!sync_id) {
+        return false;
+    }
+    char* fmt = ddb->tf_compile(tf_str.c_str());
     if (fmt == NULL) {
         return false;
     }
@@ -501,13 +539,6 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
     // requests for once we are done traversing the playlist.
     std::unordered_set<path> cover_dirs{};
     std::deque<std::shared_ptr<DB_playItem_t>> cover_its{};
-
-    ddb_ows_plugin_t* ddb_ows =
-        (ddb_ows_plugin_t*)ddb->plug_get_for_id("ddb_ows");
-    auto plug_logger = ddb_ows->logger;
-
-    path root(conf.get_root());
-    DatabaseHandle db = std::make_shared<Database>(root);
 
     auto conv_settings = make_encoder_settings();
 
@@ -538,6 +569,7 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
         path from;
         path to;
         from = std::string(ddb->pl_find_meta(it, ":URI"));
+        db->register_file(from);
         if (visited_sources.count(from) > 0) {
             // This source file was already processed, avoid queueing redundant
             // jobs
@@ -553,7 +585,9 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
             logger.err("Source file {} does not exist!", from);
         } else {
             try {
-                make_job(db, jobs, logger, it, from, to, conv_settings);
+                make_job(
+                    db, jobs, logger, it, *sync_id, from, to, conv_settings
+                );
             } catch (std::filesystem::filesystem_error& e) {
                 logger.err("Could not queue job for {}: {}", from, e.what());
                 continue;
@@ -574,7 +608,7 @@ bool queue_jobs(std::vector<ddb_playlist_t*> playlists, Logger& logger) {
     }
 
     // Now we can dispatch cover requests
-    if (!queue_cover_jobs(logger, db, cover_its)) {
+    if (!queue_cover_jobs(logger, db, *sync_id, cover_its)) {
         free(fmt);
         return false;
     }

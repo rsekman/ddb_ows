@@ -2,5 +2,11 @@
 <gresources>
   <gresource prefix="/ddb_ows">
     <file compressed="true">default_config.json</file>
+    <file compressed="true">sql/init.sql</file>
+    <file compressed="true">sql/schema_v1.sql</file>
+    <file compressed="false">sql/latest_file_sync.sql</file>
+    <file compressed="false">sql/new_sync.sql</file>
+    <file compressed="false">sql/register_file.sql</file>
+    <file compressed="false">sql/register_synced_file.sql</file>
   </gresource>
 </gresources>
