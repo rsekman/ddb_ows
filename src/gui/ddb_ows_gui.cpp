@@ -444,7 +444,6 @@ void execute(job_cb_t cb, bool dry) {
         pm->cancel();
         return;
     }
-    pm->tick();
     ddb_ows_plugin_t* ddb_ows =
         (ddb_ows_plugin_t*)ddb->plug_get_for_id("ddb_ows");
     plugin.pm->set_n_jobs(ddb_ows->jobs_count());
@@ -921,7 +920,7 @@ int create_ui() {
     Gtk::ProgressBar* pb;
     builder->get_widget("progress_bar", pb);
     if (pb) {
-        plugin.pm = std::make_shared<ProgressMonitor>(ddb_ows->jobs_count, pb);
+        plugin.pm = std::make_shared<ProgressMonitor>(pb);
     }
 
     return 0;

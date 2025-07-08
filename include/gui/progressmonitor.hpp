@@ -7,7 +7,7 @@
 
 class ProgressMonitor {
   public:
-    ProgressMonitor(size_t (*r_jobs_)(), Gtk::ProgressBar* _pb);
+    ProgressMonitor(Gtk::ProgressBar* _pb);
     void set_n_jobs(size_t n);
     void tick();
     void pulse();
@@ -19,9 +19,10 @@ class ProgressMonitor {
     void _pulse();
     void _no_jobs();
     void _cancel();
+
     size_t n_jobs;
+    size_t n_finished = 0;
     bool cancelled = false;
-    size_t (*r_jobs)();
     Gtk::ProgressBar* pb;
     Glib::Dispatcher sig_tick, sig_pulse, sig_no_jobs, sig_cancel;
 };
