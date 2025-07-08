@@ -234,8 +234,6 @@ void pl_selection_clear(Glib::RefPtr<Gtk::ListStore> model) {
         ddb->plt_unref(plt);
         return false;
     });
-    Gtk::CheckButton* toggle;
-    builder->get_widget("pl_select_all", toggle);
     model->clear();
 }
 
