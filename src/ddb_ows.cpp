@@ -706,6 +706,7 @@ int connect() {
     ddb_converter = (ddb_converter_t*)ddb->plug_get_for_id("converter");
     ddb_artwork = (ddb_artwork_plugin_t*)ddb->plug_get_for_id("artwork2");
     jobs->close();
+    spdlog::get(DDB_OWS_PROJECT_ID)->info("Initialized successfully.");
     return 0;
 }
 

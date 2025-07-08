@@ -978,6 +978,7 @@ int connect(void) {
     // Needed to make gtkmm play nice
     auto __attribute__((unused)) app = new Gtk::Main(0, NULL, false);
     builder = Gtk::Builder::create();
+    logger->info("Initialized successfully.");
     return create_ui();
 }
 
