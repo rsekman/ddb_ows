@@ -354,12 +354,15 @@ void make_job(
                 }
                 out->push_back(std::move(cjob));
             }
-        } else {
+        } else if (old) {
+            // This source file was previously synced, but with a different
+            // encoder. Convert it, and clean up the old file.
             out->push_back(std::move(cjob));
-            if (old && old->converter_preset != preset_title) {
-                // Clean up previous conversion with a different preset
-                out->emplace_back(new DeleteJob(logger, db, *old_dest));
-            }
+            out->emplace_back(new DeleteJob(logger, db, *old_dest));
+        } else {
+            // This source file was not previously synced. All we have to do is
+            // convert it.
+            out->push_back(std::move(cjob));
         }
     } else if (old_dest && *old_dest != to && exists(*old_dest)) {
         // This source file was synced previously, and was not converted
