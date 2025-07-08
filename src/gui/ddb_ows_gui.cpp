@@ -839,9 +839,9 @@ int create_ui() {
     int trace_l = backtrace(trace, 1);
     bt_symbols = backtrace_symbols(trace, trace_l);
     // Backtrace looks something like
-    // "/usr/lib/deadbeef/ddb_ows_gtk2.so(create_ui+0x53) [0x7f7b0ae932a3] We
-    // need to account for the possibility that the path is silly and contains
-    // '(' => find last position
+    // "/usr/lib/deadbeef/ddb_ows_gtk3.so(create_ui+0x53) [0x7f7b0ae932a3]"
+    // We need to account for the possibility that the path is silly and
+    // contains '(' => find last position
     char* last_bracket = strrchr(bt_symbols[0], '(');
     if (last_bracket) {
         *last_bracket = '\0';
@@ -1026,7 +1026,7 @@ extern "C" DB_plugin_t*
 #if GTK_CHECK_VERSION(3, 0, 0)
 ddb_ows_gtk3_load(DB_functions_t* api) {
 #else
-ddb_ows_gtk2_load(DB_functions_t* api) {
+#error "Only Gtk 3 is supported!"
 #endif
     return load(api);
 }
