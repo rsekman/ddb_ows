@@ -17,16 +17,16 @@ std::size_t plt_uuid::hash() const noexcept {
 }
 
 std::string plt_uuid::str() const {
-    char buf[37];
+    char buf[UUID_STR_LEN];
     uuid_unparse(uuid, buf);
     return std::string(buf);
 }
 
 plt_uuid plt_get_uuid(ddb_playlist_t* plt, DB_functions_t* ddb) {
-    char buf[37];
+    char buf[UUID_STR_LEN];
     uuid_t id;
 
-    int exists = ddb->plt_get_meta(plt, DDB_OWS_PL_UUID_KEY, buf, 37);
+    int exists = ddb->plt_get_meta(plt, DDB_OWS_PL_UUID_KEY, buf, UUID_STR_LEN);
     if (!exists || uuid_parse(buf, id) < 0) {
         uuid_generate(id);
         uuid_unparse(id, buf);
