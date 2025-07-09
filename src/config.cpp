@@ -45,7 +45,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
     conv_wts
 )
 
-Configuration::Configuration() {
+Configuration::Configuration(DB_functions_t* api) : ddb(api) {
     auto res =
         Gio::Resource::lookup_data_global("/ddb_ows/default_config.json");
     auto size = res->get_size();
@@ -54,8 +54,6 @@ Configuration::Configuration() {
     // compile-time if it's invalid
     _conf = json::parse(default_buf);
 }
-
-void Configuration::set_api(DB_functions_t* api) { ddb = api; }
 
 bool Configuration::load_conf() {
     ddb->conf_lock();

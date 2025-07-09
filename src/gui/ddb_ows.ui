@@ -2,6 +2,7 @@
 <!-- Generated with glade 3.40.0 -->
 <interface>
   <requires lib="gtk+" version="3.24"/>
+  <!-- interface-css-provider-path ddb_ows.css -->
   <object class="GtkImage" id="cancel_img">
     <property name="visible">True</property>
     <property name="can-focus">False</property>
@@ -137,8 +138,6 @@
                   <object class="GtkFrame" id="gen_opts_frame">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="margin-start">4</property>
-                    <property name="margin-end">4</property>
                     <property name="label-xalign">0.019999999552965164</property>
                     <property name="shadow-type">in</property>
                     <child>
@@ -146,10 +145,6 @@
                       <object class="GtkGrid" id="gen_opts_table">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
-                        <property name="margin-start">8</property>
-                        <property name="margin-end">12</property>
-                        <property name="margin-top">8</property>
-                        <property name="margin-bottom">8</property>
                         <property name="row-spacing">4</property>
                         <property name="column-spacing">8</property>
                         <child>
@@ -214,6 +209,7 @@
                             <property name="visible">True</property>
                             <property name="can-focus">False</property>
                             <property name="tooltip-text" translatable="yes">The selected format string is valid</property>
+                            <property name="xpad">8</property>
                             <property name="ypad">4</property>
                             <property name="icon-name">gtk-yes</property>
                           </object>
@@ -438,6 +434,9 @@
                         <property name="use-markup">True</property>
                       </object>
                     </child>
+                    <style>
+                      <class name="frame-margins"/>
+                    </style>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -450,8 +449,6 @@
                     <property name="height-request">240</property>
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="margin-start">4</property>
-                    <property name="margin-end">4</property>
                     <property name="label-xalign">0.019999999552965164</property>
                     <property name="shadow-type">in</property>
                     <child>
@@ -459,10 +456,6 @@
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="no-show-all">True</property>
-                        <property name="margin-start">8</property>
-                        <property name="margin-end">12</property>
-                        <property name="margin-top">8</property>
-                        <property name="margin-bottom">8</property>
                         <property name="kinetic-scrolling">False</property>
                         <property name="overlay-scrolling">False</property>
                         <child>
@@ -523,6 +516,9 @@
                         <property name="use-markup">True</property>
                       </object>
                     </child>
+                    <style>
+                      <class name="frame-margins"/>
+                    </style>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -535,8 +531,6 @@
                     <property name="height-request">240</property>
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="margin-start">4</property>
-                    <property name="margin-end">4</property>
                     <property name="label-xalign">0.019999999552965164</property>
                     <property name="shadow-type">in</property>
                     <child>
@@ -544,10 +538,6 @@
                       <object class="GtkGrid">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
-                        <property name="margin-start">8</property>
-                        <property name="margin-end">8</property>
-                        <property name="margin-top">8</property>
-                        <property name="margin-bottom">12</property>
                         <property name="row-spacing">4</property>
                         <property name="column-spacing">8</property>
                         <child>
@@ -663,8 +653,8 @@
                         <child>
                           <object class="GtkSpinButton" id="wt_spinbutton">
                             <property name="can-focus">True</property>
-                            <property name="halign">end</property>
                             <property name="valign">start</property>
+                            <property name="hexpand">True</property>
                             <property name="invisible-char">•</property>
                             <property name="text" translatable="yes">1</property>
                             <property name="primary-icon-activatable">False</property>
@@ -777,6 +767,9 @@
                         <property name="use-markup">True</property>
                       </object>
                     </child>
+                    <style>
+                      <class name="frame-margins"/>
+                    </style>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -872,8 +865,6 @@
           <object class="GtkFrame">
             <property name="visible">True</property>
             <property name="can-focus">False</property>
-            <property name="margin-start">4</property>
-            <property name="margin-end">4</property>
             <property name="margin-bottom">4</property>
             <property name="label-xalign">0.019999999552965164</property>
             <property name="shadow-type">in</property>
@@ -895,6 +886,9 @@
                 <property name="use-markup">True</property>
               </object>
             </child>
+            <style>
+              <class name="frame-margins"/>
+            </style>
           </object>
           <packing>
             <property name="expand">False</property>

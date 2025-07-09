@@ -2,5 +2,6 @@
 <gresources>
   <gresource prefix="/ddb_ows">
     <file compressed="true">ddb_ows.ui</file>
+    <file compressed="true">ddb_ows.css</file>
   </gresource>
 </gresources>

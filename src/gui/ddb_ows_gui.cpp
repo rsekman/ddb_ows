@@ -14,11 +14,13 @@
 
 #include "ddb_ows.hpp"
 #include "gdk/gdkkeysyms.h"
+#include "gdkmm/display.h"
 #include "glibmm/dispatcher.h"
 #include "glibmm/refptr.h"
 #include "gtkmm/builder.h"
 #include "gtkmm/checkbutton.h"
 #include "gtkmm/combobox.h"
+#include "gtkmm/cssprovider.h"
 #include "gtkmm/filechooserbutton.h"
 #include "gtkmm/liststore.h"
 #include "gtkmm/main.h"
@@ -29,6 +31,7 @@
 #include "gtkmm/textview.h"
 #include "gtkmm/togglebutton.h"
 #include "gtkmm/treeview.h"
+#include "gtkmm/widget.h"
 #include "gtkmm/window.h"
 #include "playlist_uuid.hpp"
 
@@ -131,11 +134,11 @@ void fn_formats_save(Glib::RefPtr<Gtk::ListStore> model) {
         fmts.push_back(f);
         return false;
     });
-    ddb_ows->conf.set_fn_formats(fmts);
+    ddb_ows->conf->set_fn_formats(fmts);
 }
 
 void fn_formats_populate(Glib::RefPtr<Gtk::ListStore> model) {
-    std::vector<std::string> fmts = ddb_ows->conf.get_fn_formats();
+    std::vector<std::string> fmts = ddb_ows->conf->get_fn_formats();
     if (!fmts.size()) {
         // No formats save in config => use formats from .ui file
         // This has the side effect of bootstrapping the user's config from the
@@ -211,7 +214,7 @@ void cp_populate(Glib::RefPtr<Gtk::ListStore> model) {
     Gtk::TreeModel::iterator row;
     Gtk::ComboBox* cp_combobox;
     builder->get_widget("cp_combobox", cp_combobox);
-    std::string conf_preset_name = ddb_ows->conf.get_conv_preset();
+    std::string conf_preset_name = ddb_ows->conf->get_conv_preset();
     while (enc != NULL) {
         row = model->append();
         std::string preset_name = std::string(enc->title);
@@ -234,8 +237,6 @@ void pl_selection_clear(Glib::RefPtr<Gtk::ListStore> model) {
         ddb->plt_unref(plt);
         return false;
     });
-    Gtk::CheckButton* toggle;
-    builder->get_widget("pl_select_all", toggle);
     model->clear();
 }
 
@@ -251,7 +252,7 @@ void pl_selection_save(Glib::RefPtr<Gtk::ListStore> model) {
         }
         return false;
     });
-    ddb_ows->conf.set_pl_selection(pls);
+    ddb_ows->conf->set_pl_selection(pls);
 }
 void pl_selection_populate(
     Glib::RefPtr<Gtk::ListStore> model,
@@ -320,24 +321,6 @@ std::vector<ddb_playlist_t*> get_selected_playlists() {
     return pls;
 }
 
-void save_playlists(const char* ext, bool dry) {
-    std::vector<ddb_playlist_t*> pls = get_selected_playlists();
-    if (plugin.gui_logger) {
-        ddb_ows->save_playlists(ext, pls, *plugin.gui_logger, dry);
-    } else {
-        ddb_ows->save_playlists(ext, pls, terminal_logger, dry);
-    }
-}
-
-bool queue_jobs() {
-    std::vector<ddb_playlist_t*> pls = get_selected_playlists();
-    if (plugin.gui_logger) {
-        return ddb_ows->queue_jobs(pls, *plugin.gui_logger);
-    } else {
-        return ddb_ows->queue_jobs(pls, terminal_logger);
-    }
-}
-
 void conv_fts_save(Glib::RefPtr<Gtk::ListStore> model) {
     std::set<std::string> fts{};
     model->foreach_iter([&fts](const Gtk::TreeIter r) -> bool {
@@ -350,7 +333,7 @@ void conv_fts_save(Glib::RefPtr<Gtk::ListStore> model) {
         }
         return false;
     });
-    ddb_ows->conf.set_conv_fts(fts);
+    ddb_ows->conf->set_conv_fts(fts);
 }
 
 void conv_fts_populate(
@@ -363,7 +346,7 @@ void conv_fts_populate(
     int i = 0;
     std::string::size_type n;
     Gtk::TreeModel::iterator row;
-    std::set<std::string> sels = ddb_ows->conf.get_conv_fts();
+    std::set<std::string> sels = ddb_ows->conf->get_conv_fts();
     while (decoders[i]) {
         row = model->append();
         std::string s(decoders[i]->plugin.name);
@@ -401,59 +384,53 @@ void loglevel_cb_populate(std::shared_ptr<TextBufferLogger> logger) {
 /* BEGIN EXTERN SIGNAL HANDLERS */
 // TODO consider moving these into their own file
 
-job_cb_t make_progress_callback() {
-    job_cb_t cb{};
-    if (plugin.pm != NULL) {
-        auto pm = plugin.pm;
-        cb = [pm](std::unique_ptr<Job>) { pm->tick(); };
-    }
-    return cb;
-}
-
-void execute(job_cb_t cb, bool dry) {
+void execute(bool dry) {
     if (plugin.gui_logger) {
         plugin.gui_logger->clear();
     }
+
     Gtk::ProgressBar* pb;
     builder->get_widget("progress_bar", pb);
-    if (ddb_ows->conf.get_sync_pls().dbpl) {
-        if (pb != NULL) {
-            pb->set_text("Saving playlists (DBPL)");
-        }
-        save_playlists("dbpl", dry);
+    if (pb) {
+        plugin.pm = std::make_shared<ProgressMonitor>(pb);
     }
-    if (ddb_ows->conf.get_sync_pls().m3u8) {
-        if (pb != NULL) {
-            pb->set_text("Saving playlists (M3U8)");
-        }
-        save_playlists("m3u8", dry);
-    }
+
+    playlist_save_cb_t pl_save_cb;
     if (pb != NULL) {
-        pb->set_text("Queueing jobs");
+        pl_save_cb = [pb](const char* ext) {
+            pb->set_text(fmt::format("Saving playlists ({})", ext));
+        };
     }
-    bool queueing_complete = false;
-    auto pm = plugin.pm;
-    std::thread t([&queueing_complete, pm] {
-        while (!queueing_complete) {
-            pm->pulse();
-            std::this_thread::sleep_for(5000ms / 60);
-        }
-    });
-    bool queue_successful = queue_jobs();
-    queueing_complete = true;
-    t.join();
-    if (!queue_successful) {
-        pm->cancel();
-        return;
+
+    sources_gathered_cb_t sources_gathered_cb;
+    job_queued_cb_t job_queued_cb;
+    job_finished_cb_t job_finished_cb;
+    queueing_complete_cb_t q_complete_cb;
+    if (plugin.pm != NULL) {
+        auto pm = plugin.pm;
+        sources_gathered_cb = [pm](size_t n) { pm->set_n_sources(n); };
+        job_queued_cb = [pm]() { pm->job_queued(); };
+        q_complete_cb = [pm](size_t n) { pm->set_n_jobs(n); };
+        job_finished_cb = [pm](std::unique_ptr<Job>, bool) {
+            pm->job_finished();
+        };
     }
-    pm->tick();
-    ddb_ows_plugin_t* ddb_ows =
-        (ddb_ows_plugin_t*)ddb->plug_get_for_id("ddb_ows");
-    plugin.pm->set_n_jobs(ddb_ows->jobs_count());
-    if (ddb_ows->jobs_count() == 0) {
-        plugin.pm->no_jobs();
+
+    callback_t callbacks{
+        .on_playlist_save = pl_save_cb,
+        .on_sources_gathered = sources_gathered_cb,
+        .on_job_queued = job_queued_cb,
+        .on_queueing_complete = q_complete_cb,
+        .on_job_finished = job_finished_cb
+    };
+
+    std::vector<ddb_playlist_t*> pls = get_selected_playlists();
+
+    if (plugin.gui_logger) {
+        ddb_ows->run(dry, pls, *plugin.gui_logger, callbacks);
+    } else {
+        ddb_ows->run(dry, pls, terminal_logger, callbacks);
     }
-    ddb_ows->run(dry, make_progress_callback());
 }
 
 void execution_buttons_set_sensitive(bool sensitive) {
@@ -476,19 +453,14 @@ void execution_buttons_set_insensitive() {
     execution_buttons_set_sensitive(false);
 }
 
-auto execution_thread(job_cb_t cb, bool dry) {
-    return std::thread([cb, dry] {
-        execute(cb, dry);
+auto execution_thread(bool dry) {
+    return std::thread([dry] {
+        execute(dry);
         (*plugin.sig_execution_buttons_set_sensitive)();
     });
 }
 
 extern "C" {
-
-// TODO
-// This method and the following are actually agnostic re: which model we are
-// selecting/unselecting in. We should refactor them so we can reuse them for
-// the ft selection model
 
 void on_select_all_toggled(GtkListStore* ls, gpointer data) {
     // Taking ownership of the instance can lead to incorrect reference counts
@@ -562,7 +534,7 @@ void on_target_root_chooser_selection_changed(
     // menu.
     GFile* root = gtk_file_chooser_get_file(GTK_FILE_CHOOSER(fcb));
     char* root_path = g_file_get_path(root);
-    ddb_ows->conf.set_root(std::string(root_path));
+    ddb_ows->conf->set_root(std::string(root_path));
     g_free(root_path);
     g_object_unref(root);
 }
@@ -654,17 +626,19 @@ void on_loglevel_cb_changed(GtkComboBox* loglevel_cb, gpointer data) {
 
 void on_cover_fname_entry_show(GtkWidget* widget, gpointer data) {
     gtk_entry_set_text(
-        GTK_ENTRY(widget), ddb_ows->conf.get_cover_fname().c_str()
+        GTK_ENTRY(widget), ddb_ows->conf->get_cover_fname().c_str()
     );
 }
 
 void on_conv_ext_entry_show(GtkWidget* widget, gpointer data) {
-    gtk_entry_set_text(GTK_ENTRY(widget), ddb_ows->conf.get_conv_ext().c_str());
+    gtk_entry_set_text(
+        GTK_ENTRY(widget), ddb_ows->conf->get_conv_ext().c_str()
+    );
 }
 
 void on_target_root_chooser_show(GtkWidget* widget, gpointer data) {
     auto logger = get_logger();
-    std::string root = ddb_ows->conf.get_root();
+    std::string root = ddb_ows->conf->get_root();
     logger->debug("Setting root to {}", root);
     const char* path = root.c_str();
     gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(widget), path);
@@ -690,38 +664,38 @@ void on_fn_format_combobox_show(GtkWidget* widget, gpointer data) {
 
 void on_cover_sync_check_show(GtkWidget* widget, gpointer data) {
     gtk_toggle_button_set_active(
-        GTK_TOGGLE_BUTTON(widget), ddb_ows->conf.get_cover_sync()
+        GTK_TOGGLE_BUTTON(widget), ddb_ows->conf->get_cover_sync()
     );
 }
 
 void on_cover_timeout_spinbutton_show(GtkWidget* widget, gpointer data) {
     GtkAdjustment* adjustment =
         gtk_spin_button_get_adjustment(GTK_SPIN_BUTTON(widget));
-    unsigned int timeout_ms = ddb_ows->conf.get_cover_timeout_ms();
+    unsigned int timeout_ms = ddb_ows->conf->get_cover_timeout_ms();
     gtk_adjustment_set_value(adjustment, timeout_ms);
 }
 
 void on_sync_pls_dbpl_check_show(GtkWidget* widget, gpointer data) {
     gtk_toggle_button_set_active(
-        GTK_TOGGLE_BUTTON(widget), ddb_ows->conf.get_sync_pls().dbpl
+        GTK_TOGGLE_BUTTON(widget), ddb_ows->conf->get_sync_pls().dbpl
     );
 }
 
 void on_sync_pls_m3u8_check_show(GtkWidget* widget, gpointer data) {
     gtk_toggle_button_set_active(
-        GTK_TOGGLE_BUTTON(widget), ddb_ows->conf.get_sync_pls().m3u8
+        GTK_TOGGLE_BUTTON(widget), ddb_ows->conf->get_sync_pls().m3u8
     );
 }
 
 void on_rm_unref_check_show(GtkWidget* widget, gpointer data) {
     gtk_toggle_button_set_active(
-        GTK_TOGGLE_BUTTON(widget), ddb_ows->conf.get_rm_unref()
+        GTK_TOGGLE_BUTTON(widget), ddb_ows->conf->get_rm_unref()
     );
 }
 
 void on_wt_spinbutton_show(GtkWidget* widget, gpointer data) {
     gtk_spin_button_set_value(
-        GTK_SPIN_BUTTON(widget), ddb_ows->conf.get_conv_wts()
+        GTK_SPIN_BUTTON(widget), ddb_ows->conf->get_conv_wts()
     );
 }
 
@@ -736,7 +710,7 @@ void pl_selection_save(
 
 void on_cover_fname_entry_changed(GtkEntry* entry, gpointer data) {
     const gchar* cover_fname = gtk_entry_get_text(entry);
-    ddb_ows->conf.set_cover_fname(std::string(cover_fname));
+    ddb_ows->conf->set_cover_fname(std::string(cover_fname));
 }
 
 void on_cover_timeout_spinbutton_value_changed(
@@ -746,36 +720,36 @@ void on_cover_timeout_spinbutton_value_changed(
 
     adjustment = gtk_spin_button_get_adjustment(timeout);
     unsigned int timeout_ms = gtk_adjustment_get_value(adjustment);
-    ddb_ows->conf.set_cover_timeout_ms(timeout_ms);
+    ddb_ows->conf->set_cover_timeout_ms(timeout_ms);
 }
 
 void on_cover_sync_check_toggled(GtkToggleButton* toggle, gpointer data) {
     gboolean cover_sync = gtk_toggle_button_get_active(toggle);
-    ddb_ows->conf.set_cover_sync(cover_sync);
+    ddb_ows->conf->set_cover_sync(cover_sync);
 }
 
 void on_sync_pls_dbpl_check_toggled(GtkToggleButton* toggle, gpointer data) {
     gboolean sync_pls = gtk_toggle_button_get_active(toggle);
-    auto s = ddb_ows->conf.get_sync_pls();
+    auto s = ddb_ows->conf->get_sync_pls();
     s.dbpl = sync_pls;
-    ddb_ows->conf.set_sync_pls(s);
+    ddb_ows->conf->set_sync_pls(s);
 }
 
 void on_sync_pls_m3u8_check_toggled(GtkToggleButton* toggle, gpointer data) {
     gboolean sync_pls = gtk_toggle_button_get_active(toggle);
-    auto s = ddb_ows->conf.get_sync_pls();
+    auto s = ddb_ows->conf->get_sync_pls();
     s.m3u8 = sync_pls;
-    ddb_ows->conf.set_sync_pls(s);
+    ddb_ows->conf->set_sync_pls(s);
 }
 
 void on_rm_unref_check_toggled(GtkToggleButton* toggle, gpointer data) {
     gboolean rm_unref = gtk_toggle_button_get_active(toggle);
-    ddb_ows->conf.set_rm_unref(rm_unref);
+    ddb_ows->conf->set_rm_unref(rm_unref);
 }
 
 void on_wt_spinbutton_value_changed(GtkSpinButton* spinbutton, gpointer data) {
     int wt = (int)gtk_spin_button_get_value(spinbutton);
-    ddb_ows->conf.set_conv_wts(wt);
+    ddb_ows->conf->set_conv_wts(wt);
 }
 
 void conv_fts_save(
@@ -787,7 +761,7 @@ void conv_fts_save(
 
 void on_conv_ext_entry_changed(GtkEntry* entry, gpointer data) {
     const gchar* conv_ext = gtk_entry_get_text(entry);
-    ddb_ows->conf.set_conv_ext(std::string(conv_ext));
+    ddb_ows->conf->set_conv_ext(std::string(conv_ext));
 }
 
 void on_cp_combobox_changed(GtkComboBox* combobox, gpointer data) {
@@ -798,7 +772,7 @@ void on_cp_combobox_changed(GtkComboBox* combobox, gpointer data) {
     auto iter = cb->get_active();
     std::string out;
     iter->get_value(0, out);
-    ddb_ows->conf.set_conv_preset(out);
+    ddb_ows->conf->set_conv_preset(out);
 }
 
 /* Clean-up actions */
@@ -824,11 +798,10 @@ void on_cancel_btn_clicked(GtkButton* button, gpointer data) {
 }
 
 void on_execution_btn_clicked(bool dry) {
-    job_cb_t cb = make_progress_callback();
     // signal handlers are called from the Gtk main thread, so we can set to
     // insensitive immediately
     execution_buttons_set_insensitive();
-    execution_thread(cb, dry).detach();
+    execution_thread(dry).detach();
 }
 
 void on_dry_run_btn_clicked(GtkButton* button, gpointer data) {
@@ -860,6 +833,13 @@ int create_ui() {
         logger->error("Could not build ui: {}.", std::string(e.what()));
         return -1;
     }
+    auto provider = Gtk::CssProvider::create();
+    provider->load_from_resource("/ddb_ows/ddb_ows.css");
+    Gtk::StyleContext::add_provider_for_screen(
+        Gdk::Screen::get_default(),
+        provider,
+        GTK_STYLE_PROVIDER_PRIORITY_APPLICATION
+    );
 
     // Use introspection (backtrace) to figure out which file (.so) we are in.
     // This is necessary because we have to tell gtk to look for the signal
@@ -869,9 +849,9 @@ int create_ui() {
     int trace_l = backtrace(trace, 1);
     bt_symbols = backtrace_symbols(trace, trace_l);
     // Backtrace looks something like
-    // "/usr/lib/deadbeef/ddb_ows_gtk2.so(create_ui+0x53) [0x7f7b0ae932a3] We
-    // need to account for the possibility that the path is silly and contains
-    // '(' => find last position
+    // "/usr/lib/deadbeef/ddb_ows_gtk3.so(create_ui+0x53) [0x7f7b0ae932a3]"
+    // We need to account for the possibility that the path is silly and
+    // contains '(' => find last position
     char* last_bracket = strrchr(bt_symbols[0], '(');
     if (last_bracket) {
         *last_bracket = '\0';
@@ -900,7 +880,7 @@ int create_ui() {
     auto pl_model = Glib::RefPtr<Gtk::ListStore>::cast_static(
         builder->get_object("pl_selection_model")
     );
-    pl_selection_populate(pl_model, ddb_ows->conf.get_pl_selection());
+    pl_selection_populate(pl_model, ddb_ows->conf->get_pl_selection());
 
     auto ft_model = Glib::RefPtr<Gtk::ListStore>::cast_static(
         builder->get_object("ft_model")
@@ -923,12 +903,6 @@ int create_ui() {
         log_buffer->create_mark("END", log_buffer->end(), false);
 
         loglevel_cb_populate(plugin.gui_logger);
-    }
-
-    Gtk::ProgressBar* pb;
-    builder->get_widget("progress_bar", pb);
-    if (pb) {
-        plugin.pm = std::make_shared<ProgressMonitor>(ddb_ows->jobs_count, pb);
     }
 
     return 0;
@@ -1057,7 +1031,7 @@ extern "C" DB_plugin_t*
 #if GTK_CHECK_VERSION(3, 0, 0)
 ddb_ows_gtk3_load(DB_functions_t* api) {
 #else
-ddb_ows_gtk2_load(DB_functions_t* api) {
+#error "Only Gtk 3 is supported!"
 #endif
     return load(api);
 }

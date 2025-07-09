@@ -45,8 +45,7 @@ typedef struct {
 class Configuration {
   public:
     // plumbing
-    Configuration();
-    void set_api(DB_functions_t* api);
+    Configuration(DB_functions_t* api);
     bool load_conf();
 
     DDB_OWS_CONFIG_METHODS(root, std::string)
