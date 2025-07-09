@@ -277,7 +277,9 @@ bool queue_cover_jobs(
             plug_logger->debug("No cover found for {}", target_dir);
         } else {
             path from = creq->cover->image_filename;
-            db->register_file(from);
+            if (!dry) {
+                db->register_file(from);
+            }
             path to = target_dir / conf->get_cover_fname();
             auto old = db->find_entry(from);
             auto old_dest =
@@ -638,10 +640,14 @@ bool queue_jobs(
     const auto cover_sync = conf->get_cover_sync();
     const auto cover_fname = conf->get_cover_fname();
     const auto rm_unref = conf->get_rm_unref();
+    // Use 0 as a dummy value for dry runs. Probably would be more correct to
+    // use a sum type, but then we have to touch all the Job interfaces.
     const auto sync_id =
-        db->new_sync(tf_str, cover_sync, cover_fname, rm_unref);
+        dry ? std::make_optional<sync_id_t>(0)
+            : db->new_sync(tf_str, cover_sync, cover_fname, rm_unref);
 
     if (!sync_id) {
+        logger.err("Could not create a new sync in the database.");
         return false;
     }
     char* fmt = ddb->tf_compile(tf_str.c_str());
@@ -690,7 +696,9 @@ bool queue_jobs(
         path from;
         path to;
         from = std::string(ddb->pl_find_meta(it, ":URI"));
-        db->register_file(from);
+        if (!dry) {
+            db->register_file(from);
+        }
         if (visited_sources.count(from) > 0) {
             // This source file was already processed, avoid queueing redundant
             // jobs
