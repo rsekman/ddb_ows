@@ -60,10 +60,43 @@ std::shared_ptr<spdlog::logger> get_logger() {
     return logger ? logger : spdlog::default_logger();
 }
 
+// adapted from boost::hash_combine
+size_t hash_combine(size_t x, size_t y) {
+    x ^= y + 0x9e3779b97f4a7c16 + (x << 6) + (x >> 2);
+    return x;
+}
+
+struct signal_handler_id {
+    GObject* object;
+    std::string signal_name;
+    std::string handler_name;
+
+    bool operator==(const signal_handler_id& other) const {
+        return (object == other.object) && (signal_name == other.signal_name) &&
+               (handler_name == other.handler_name);
+    }
+};
+struct signal_handler_id_hash {
+    std::size_t operator()(const signal_handler_id& id) const noexcept {
+        const auto obj_hash = std::hash<const void*>{}(id.object);
+        const auto sig_hash = std::hash<std::string>{}(id.signal_name);
+        const auto handler_hash = std::hash<std::string>{}(id.handler_name);
+        return hash_combine(hash_combine(obj_hash, sig_hash), handler_hash);
+    }
+};
+typedef std::unordered_map<
+    ddb_ows_gui::signal_handler_id,
+    gulong,
+    signal_handler_id_hash>
+    signal_map;
+
 typedef struct {
     GModule* gmodule;
     gpointer data;
+    signal_map* map;
 } connect_args;
+
+signal_map* signals = new signal_map();
 
 static void gtk_builder_connect_signals_default(
     GtkBuilder* builder,
@@ -82,14 +115,27 @@ static void gtk_builder_connect_signals_default(
         return;
     }
 
+    gulong id;
     if (connect_object) {
-        g_signal_connect_object(
+        id = g_signal_connect_object(
             object, signal_name, func, connect_object, flags
         );
     } else {
-        g_signal_connect_data(
+        id = g_signal_connect_data(
             object, signal_name, func, args->data, nullptr, flags
         );
+    }
+
+    if (args->map != nullptr) {
+        get_logger()->debug(
+            "Connected {}::{} -> {} (id: {}). {} signals",
+            static_cast<const void*>(object),
+            signal_name,
+            handler_name,
+            id,
+            args->map->size()
+        );
+        args->map->insert({{object, signal_name, handler_name}, id});
     }
 }
 
@@ -144,6 +190,22 @@ void fn_formats_populate(Glib::RefPtr<Gtk::ListStore> model) {
         // .ui file
         return;
     }
+
+    // This function *reads* from the configuration and sets the model
+    // accordingly. But the model has signal handlers that *write* to the
+    // configuration. We need to block them until we are done to not issue
+    // configuration writes in incorrect states. Issue: #35
+    GObject* const obj = reinterpret_cast<GObject*>(model->gobj());
+    const gulong on_change =
+        signals->at({obj, "row-changed", "fn_formats_save"});
+    const gulong on_insert =
+        signals->at({obj, "row-inserted", "fn_formats_save"});
+    const gulong on_delete =
+        signals->at({obj, "row-deleted", "fn_formats_save_on_delete"});
+    g_signal_handler_block(obj, on_change);
+    g_signal_handler_block(obj, on_insert);
+    g_signal_handler_block(obj, on_delete);
+
     model->clear();
     Gtk::TreeModel::iterator r;
     auto logger = get_logger();
@@ -152,6 +214,10 @@ void fn_formats_populate(Glib::RefPtr<Gtk::ListStore> model) {
         r = model->append();
         r->set_value(0, i);
     }
+
+    g_signal_handler_unblock(obj, on_change);
+    g_signal_handler_unblock(obj, on_insert);
+    g_signal_handler_unblock(obj, on_delete);
 }
 
 char* validate_fn_format(std::string fmt) {
@@ -263,20 +329,28 @@ void pl_selection_populate(
     logger->debug(
         "Populating playlist selection model with {} playlists.", plt_count
     );
+
+    GObject* const obj = reinterpret_cast<GObject*>(model->gobj());
+    const gulong on_change =
+        signals->at({obj, "row-changed", "pl_selection_save"});
+    g_signal_handler_block(obj, on_change);
+
     char buf[4096];
     ddb_playlist_t* plt;
     Gtk::TreeModel::iterator row;
-    bool s;
+    pl_selection_clear(model);
     for (int i = 0; i < plt_count; i++) {
         plt = ddb->plt_get_for_idx(i);
         ddb->plt_get_title(plt, buf, sizeof(buf));
         row = model->append();
         plt_uuid uuid = ddb_ows->plt_get_uuid(plt);
-        s = selected_uuids.count(uuid) > 0;
+        bool s = selected_uuids.count(uuid) > 0;
         row->set_value(0, s);
         row->set_value(1, std::string(buf));
         row->set_value(2, plt);
     }
+
+    g_signal_handler_unblock(obj, on_change);
 }
 
 void pl_selection_update_model(Glib::RefPtr<Gtk::ListStore> model) {
@@ -292,9 +366,6 @@ void pl_selection_update_model(Glib::RefPtr<Gtk::ListStore> model) {
         return false;
     });
     // now rebuild the model using the map to assign selection statuses
-    Gtk::CheckButton* toggle;
-    builder->get_widget("pl_select_all", toggle);
-    pl_selection_clear(model);
     pl_selection_populate(model, selected_uuids);
     ddb->pl_unlock();
 }
@@ -352,12 +423,18 @@ void conv_fts_populate(
     std::unordered_map<std::string, bool> selected = {}
 ) {
     auto logger = get_logger();
-    DB_decoder_t** decoders = ddb->plug_get_decoder_list();
+
+    GObject* const obj = reinterpret_cast<GObject*>(model->gobj());
+    const gulong on_change = signals->at({obj, "row-changed", "conv_fts_save"});
+    g_signal_handler_block(obj, on_change);
+
     // decoders and decoders[i]->exts are null-terminated arrays
+    DB_decoder_t** decoders = ddb->plug_get_decoder_list();
     int i = 0;
     std::string::size_type n;
     Gtk::TreeModel::iterator row;
     std::set<std::string> sels = ddb_ows->conf->get_conv_fts();
+
     while (decoders[i]) {
         row = model->append();
         std::string s(decoders[i]->plugin.name);
@@ -371,6 +448,9 @@ void conv_fts_populate(
         row->set_value(2, decoders[i]);
         i++;
     }
+
+    g_signal_handler_unblock(obj, on_change);
+
     logger->debug("Finished reading decoders.");
 }
 
@@ -884,6 +964,7 @@ int create_ui() {
     connect_args* args = g_slice_new0(connect_args);
     args->gmodule = g_module_open(bt_symbols[0], G_MODULE_BIND_LAZY);
     args->data = nullptr;
+    args->map = signals;
     gtk_builder_connect_signals_full(
         builder->gobj(), gtk_builder_connect_signals_default, args
     );
