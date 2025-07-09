@@ -43,7 +43,7 @@ void ProgressMonitor::job_queued() {
 void ProgressMonitor::_job_queued() {
     // this method is only ever run in the Gtk main thread, so we don't need to
     // worry about concurrency
-    if (pb == NULL) {
+    if (pb == nullptr) {
         return;
     }
     auto [p, text] = queue_progress(n_queued, n_sources);
@@ -81,7 +81,7 @@ void ProgressMonitor::job_finished() {
 void ProgressMonitor::_job_finished() {
     // this method is only ever run in the Gtk main thread, so we don't need to
     // worry about concurrency
-    if (pb == NULL || cancelled) {
+    if (pb == nullptr || cancelled) {
         return;
     }
     auto [p, text] = job_progress(n_finished, n_jobs);
@@ -96,7 +96,7 @@ void ProgressMonitor::cancel() {
 }
 
 void ProgressMonitor::_cancel() {
-    if (pb == NULL) {
+    if (pb == nullptr) {
         return;
     }
     pb->set_fraction(0.0);

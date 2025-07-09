@@ -88,7 +88,7 @@ static void gtk_builder_connect_signals_default(
         );
     } else {
         g_signal_connect_data(
-            object, signal_name, func, args->data, NULL, flags
+            object, signal_name, func, args->data, nullptr, flags
         );
     }
 }
@@ -159,7 +159,7 @@ char* validate_fn_format(std::string fmt) {
     Gtk::Image* valid_indicator;
     builder->get_widget("fn_format_valid_indicator", valid_indicator);
     Gtk::BuiltinStockID icon;
-    if (bc != NULL) {
+    if (bc != nullptr) {
         icon = Gtk::Stock::YES;
     } else {
         icon = Gtk::Stock::NO;
@@ -175,7 +175,7 @@ void clear_fn_preview() {
 }
 
 void update_fn_preview(char* format) {
-    if (format == NULL) {
+    if (format == nullptr) {
         // This should never happen
         return;
     }
@@ -205,7 +205,7 @@ void cp_populate(Glib::RefPtr<Gtk::ListStore> model) {
     auto logger = get_logger();
     ddb_converter_t* enc_plug =
         (ddb_converter_t*)ddb->plug_get_for_id("converter");
-    if (enc_plug == NULL) {
+    if (enc_plug == nullptr) {
         logger->warn("Converter plugin not present!");
         return;
     }
@@ -214,7 +214,7 @@ void cp_populate(Glib::RefPtr<Gtk::ListStore> model) {
     Gtk::ComboBox* cp_combobox;
     builder->get_widget("cp_combobox", cp_combobox);
     std::string conf_preset_name = ddb_ows->conf->get_conv_preset();
-    while (enc != NULL) {
+    while (enc != nullptr) {
         row = model->append();
         std::string preset_name = std::string(enc->title);
         row->set_value(0, preset_name);
@@ -246,7 +246,7 @@ void pl_selection_save(Glib::RefPtr<Gtk::ListStore> model) {
         r->get_value(0, checked);
         ddb_playlist_t* p;
         r->get_value(2, p);
-        if (checked && p != NULL) {
+        if (checked && p != nullptr) {
             pls.insert(ddb_ows->plt_get_uuid(p));
         }
         return false;
@@ -407,7 +407,7 @@ void execute(bool dry) {
     }
 
     playlist_save_cb_t pl_save_cb;
-    if (pb != NULL) {
+    if (pb != nullptr) {
         pl_save_cb = [pb](const char* ext) {
             pb->set_text(fmt::format("Saving playlists ({})", ext));
         };
@@ -417,7 +417,7 @@ void execute(bool dry) {
     job_queued_cb_t job_queued_cb;
     job_finished_cb_t job_finished_cb;
     queueing_complete_cb_t q_complete_cb;
-    if (plugin.pm != NULL) {
+    if (plugin.pm != nullptr) {
         auto pm = plugin.pm;
         sources_gathered_cb = [pm](size_t n) { pm->set_n_sources(n); };
         job_queued_cb = [pm]() { pm->job_queued(); };
@@ -445,8 +445,8 @@ void execute(bool dry) {
 }
 
 void execution_buttons_set_sensitive(bool sensitive) {
-    Button* dry_run_btn = NULL;
-    Button* execute_btn = NULL;
+    Button* dry_run_btn = nullptr;
+    Button* execute_btn = nullptr;
     builder->get_widget("execute_btn", execute_btn);
     builder->get_widget("dry_run_btn", dry_run_btn);
     if (dry_run_btn) {
@@ -497,7 +497,7 @@ void on_select_all_toggled(GtkListStore* ls, gpointer data) {
 void on_selected_rend_toggled(
     GtkCellRendererToggle* rend, char* path, gpointer data
 ) {
-    if (data == NULL) {
+    if (data == nullptr) {
         return;
     }
     Glib::RefPtr<Gtk::ListStore> model = Glib::wrap(GTK_LIST_STORE(data), true);
@@ -511,7 +511,7 @@ void on_selected_rend_toggled(
 void list_store_check_consistent(
     GtkListStore* ls, GtkTreePath* path, GtkTreeIter* iter, gpointer data
 ) {
-    if (data == NULL) {
+    if (data == nullptr) {
         return;
     }
     Glib::RefPtr<Gtk::ListStore> model = Glib::wrap(ls, true);
@@ -524,7 +524,7 @@ void list_store_check_consistent(
 void list_store_check_consistent_on_delete(
     GtkListStore* ls, GtkTreePath* path, gpointer data
 ) {
-    list_store_check_consistent(ls, path, NULL, data);
+    list_store_check_consistent(ls, path, nullptr, data);
 }
 
 /* UI initalisation -- populate the various ListStores with data from DeadBeeF
@@ -562,7 +562,7 @@ void fn_formats_save(
 void fn_formats_save_on_delete(
     GtkListStore* ls, GtkTreePath* path, gpointer data
 ) {
-    fn_formats_save(ls, path, NULL, data);
+    fn_formats_save(ls, path, nullptr, data);
 }
 
 void on_fn_format_entered(Gtk::Entry* entry) {
@@ -571,7 +571,7 @@ void on_fn_format_entered(Gtk::Entry* entry) {
     );
     std::string fn_format = entry->get_text();
     char* format = validate_fn_format(fn_format);
-    if (format == NULL) {
+    if (format == nullptr) {
         return;
     }
     auto rows = model->children();
@@ -612,7 +612,7 @@ void on_fn_format_combobox_changed(GtkComboBox* fn_combobox, gpointer data) {
     }
 
     char* format = validate_fn_format(fn_format);
-    if (format != NULL) {
+    if (format != nullptr) {
         update_fn_preview(format);
     } else {
         clear_fn_preview();
@@ -866,7 +866,7 @@ int create_ui() {
     // Use introspection (backtrace) to figure out which file (.so) we are in.
     // This is necessary because we have to tell gtk to look for the signal
     // handlers in the .so, rather than in the main deadbeef executable.
-    char** bt_symbols = NULL;
+    char** bt_symbols = nullptr;
     void* trace[1];
     int trace_l = backtrace(trace, 1);
     bt_symbols = backtrace_symbols(trace, trace_l);
@@ -883,7 +883,7 @@ int create_ui() {
     // Now we are ready to connect signal handlers;
     connect_args* args = g_slice_new0(connect_args);
     args->gmodule = g_module_open(bt_symbols[0], G_MODULE_BIND_LAZY);
-    args->data = NULL;
+    args->data = nullptr;
     gtk_builder_connect_signals_full(
         builder->gobj(), gtk_builder_connect_signals_default, args
     );
@@ -931,7 +931,7 @@ int create_ui() {
 }
 
 int show_ui(DB_plugin_action_t* action, ddb_action_context_t ctx) {
-    Gtk::Window* ddb_ows_win = NULL;
+    Gtk::Window* ddb_ows_win = nullptr;
     builder->get_widget("ddb_ows", ddb_ows_win);
     ddb_ows_win->present();
     ddb_ows_win->show_all();
@@ -942,7 +942,7 @@ static DB_plugin_action_t gui_action = {
     .title = "File/One-Way Sync",
     .name = "ddb_ows_ui",
     .flags = DB_ACTION_COMMON | DB_ACTION_ADD_MENU,
-    .next = NULL,
+    .next = nullptr,
     .callback2 = show_ui,
 };
 
@@ -967,7 +967,7 @@ int connect(void) {
         return -1;
     }
     // Needed to make gtkmm play nice
-    auto __attribute__((unused)) app = new Gtk::Main(0, NULL, false);
+    auto __attribute__((unused)) app = new Gtk::Main(0, nullptr, false);
     builder = Gtk::Builder::create();
     logger->info("Initialized successfully.");
     return create_ui();
@@ -1007,7 +1007,7 @@ int handleMessage(uint32_t id, uintptr_t ctx, uint32_t p1, uint32_t p2) {
             break;
         case DB_EV_SONGCHANGED:
             if (fn_combobox->gobj()) {
-                on_fn_format_combobox_changed(fn_combobox->gobj(), NULL);
+                on_fn_format_combobox_changed(fn_combobox->gobj(), nullptr);
             }
             break;
     }

@@ -45,7 +45,7 @@ Database::Database(path root) : m() {
         db_fname.c_str(),
         &sql_db,
         SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
-        NULL
+        nullptr
     );
     if (status != SQLITE_OK) {
         const auto err_msg = fmt::format(
@@ -149,8 +149,8 @@ Database::Database(path root) : m() {
                 resource_name,
                 sqlite3_errmsg(sql_db)
             );
-            // no need to call sqlite3_finalize; stmt will be NULL if an error
-            // occurs
+            // no need to call sqlite3_finalize; stmt will be nullptr if an
+            // error occurs
             throw std::runtime_error(err_msg);
         }
         statements.try_emplace(n, stmt, sqlite3_finalize);
@@ -237,14 +237,14 @@ std::optional<synced_file_data_t> Database::find_entry(path key) {
         std::optional<path> destination;
         const auto dest =
             reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
-        if (dest != NULL) {
+        if (dest != nullptr) {
             destination = dest;
         }
 
         std::optional<std::string> conv_preset;
         const auto conv_preset_ =
             reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
-        if (conv_preset_ != NULL) {
+        if (conv_preset_ != nullptr) {
             conv_preset = conv_preset_;
         }
 

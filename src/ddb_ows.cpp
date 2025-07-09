@@ -59,8 +59,8 @@ static DB_functions_t* ddb;
 
 // TODO: move these out of global scope
 
-ddb_artwork_plugin_t* ddb_artwork = NULL;
-ddb_converter_t* ddb_converter = NULL;
+ddb_artwork_plugin_t* ddb_artwork = nullptr;
+ddb_converter_t* ddb_converter = nullptr;
 
 int start() { return 0; }
 int stop() { return 0; }
@@ -145,7 +145,7 @@ std::string get_output_path(DB_playItem_t* it, char* format) {
     // std::basic_regex escape("[/\\:*?\"<>|]");
     ddb->pl_lock();
     DB_metaInfo_t* meta = ddb->pl_get_metadata_head(it);
-    while (meta != NULL) {
+    while (meta != nullptr) {
         std::string val(meta->value);
         escape(val);
         ddb->pl_add_meta(copy, meta->key, val.c_str());
@@ -157,7 +157,7 @@ std::string get_output_path(DB_playItem_t* it, char* format) {
         ._size = sizeof(ddb_tf_context_t),
         .flags = 0,
         .it = copy,
-        .plt = NULL,
+        .plt = nullptr,
         // TODO change this?
         .idx = 0,
         .id = 0,
@@ -187,10 +187,10 @@ void callback_cover_art_found(
         std::lock_guard<std::mutex> lock((*creq)->m);
         if (!(*creq)->timed_out) {
             (*creq)->returned = true;
-            if ((query->flags & DDB_ARTWORK_FLAG_CANCELLED) || cover == NULL ||
-                cover->image_filename == NULL)
+            if ((query->flags & DDB_ARTWORK_FLAG_CANCELLED) ||
+                cover == nullptr || cover->image_filename == nullptr)
             {
-                (*creq)->cover = NULL;
+                (*creq)->cover = nullptr;
             } else {
                 logger->debug("Found cover: {}", cover->image_filename);
                 (*creq)->cover = cover;
@@ -223,7 +223,7 @@ bool queue_cover_jobs(
     auto plug_logger = plugin.logger;
 
     char* fmt = ddb->tf_compile(conf->get_fn_formats()[0].c_str());
-    if (fmt == NULL) {
+    if (fmt == nullptr) {
         return false;
     }
 
@@ -273,7 +273,7 @@ bool queue_cover_jobs(
                 timeout
             );
             creq->timed_out = true;
-        } else if (creq->cover == NULL) {
+        } else if (creq->cover == nullptr) {
             plug_logger->debug("No cover found for {}", target_dir);
         } else {
             path from = creq->cover->image_filename;
@@ -330,12 +330,12 @@ std::optional<ddb_converter_settings_t> make_encoder_settings() {
         // these two mean to use the same sample format as input
         .output_bps = -1,
         .output_is_float = -1,
-        .encoder_preset = NULL,
-        .dsp_preset = NULL,
+        .encoder_preset = nullptr,
+        .dsp_preset = nullptr,
         .bypass_conversion_on_same_format = 0,
         .rewrite_tags_after_copy = 0,
     };
-    while (preset != NULL) {
+    while (preset != nullptr) {
         if (sel == std::string(preset->title)) {
             out.encoder_preset = preset;
             break;
@@ -524,7 +524,7 @@ bool save_playlist(
     int out = 0;
 
     char* fmt = ddb->tf_compile(conf->get_fn_formats()[0].c_str());
-    if (fmt == NULL) {
+    if (fmt == nullptr) {
         return false;
     }
 
@@ -561,8 +561,9 @@ bool save_playlist(
 
         head = ddb->plt_get_head_item(plt_out, PL_MAIN);
         tail = ddb->plt_get_tail_item(plt_out, PL_MAIN);
-        out =
-            ddb->plt_save(plt_out, head, tail, pl_to.c_str(), NULL, NULL, NULL);
+        out = ddb->plt_save(
+            plt_out, head, tail, pl_to.c_str(), nullptr, nullptr, nullptr
+        );
         ddb->pl_item_unref(head);
         ddb->pl_item_unref(tail);
         ddb->plt_unref(plt_out);
@@ -651,7 +652,7 @@ bool queue_jobs(
         return false;
     }
     char* fmt = ddb->tf_compile(tf_str.c_str());
-    if (fmt == NULL) {
+    if (fmt == nullptr) {
         return false;
     }
     jobs->open();
@@ -676,7 +677,7 @@ bool queue_jobs(
 
         DB_playItem_t* it;
         it = ddb->plt_get_first(plt, PL_MAIN);
-        while (it != NULL) {
+        while (it != nullptr) {
             auto p = std::shared_ptr<DB_playItem_t>(it, ddb->pl_item_unref);
             sources.push_back({.it = p});
             it = ddb->pl_get_next(it, PL_MAIN);
