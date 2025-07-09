@@ -14,7 +14,6 @@
 
 #include "ddb_ows.hpp"
 #include "gdk/gdkkeysyms.h"
-#include "gdkmm/display.h"
 #include "glibmm/dispatcher.h"
 #include "glibmm/refptr.h"
 #include "gtkmm/builder.h"
