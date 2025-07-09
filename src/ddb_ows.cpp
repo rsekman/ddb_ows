@@ -123,14 +123,6 @@ ddb_ows_plugin_int plugin = {
     },
 };
 
-int connect() {
-    ddb_converter = (ddb_converter_t*)ddb->plug_get_for_id("converter");
-    ddb_artwork = (ddb_artwork_plugin_t*)ddb->plug_get_for_id("artwork2");
-    plugin.jobs->close();
-    spdlog::get(DDB_OWS_PROJECT_ID)->info("Initialized successfully.");
-    return 0;
-}
-
 void escape(std::string& s) {
     for (auto& i : s) {
         switch (i) {
@@ -326,7 +318,10 @@ bool queue_cover_jobs(
     return true;
 }
 
-ddb_converter_settings_t make_encoder_settings() {
+std::optional<ddb_converter_settings_t> make_encoder_settings() {
+    if (ddb_converter == nullptr) {
+        return {};
+    }
     auto preset = ddb_converter->encoder_preset_get_list();
     auto sel = plugin.pub.conf->get_conv_preset();
     ddb_converter_settings_t out{
@@ -395,7 +390,7 @@ void make_job(
     sync_id_t sync_id,
     path from,
     path to,
-    ddb_converter_settings_t conv_settings
+    const std::optional<ddb_converter_settings_t>& conv_settings
 ) {
     // throws: can throw any filesystem error throw by checking ctime
     auto conf = plugin.pub.conf;
@@ -417,9 +412,18 @@ void make_job(
 
     if (should_convert(it)) {
         to.replace_extension(conf->get_conv_ext());
-        std::string preset_title = conv_settings.encoder_preset->title;
+        if (!conv_settings) {
+            logger.warn(
+                "Source {} should be converted, but converter plugin is not "
+                "available.",
+                from
+            );
+            return;
+        }
+        to.replace_extension(conf->get_conv_ext());
+        std::string preset_title = conv_settings->encoder_preset->title;
         auto cjob = std::make_unique<ConvertJob>(
-            logger, db, ddb, conv_settings, it, sync_id, from, to
+            logger, db, ddb, *conv_settings, it, sync_id, from, to
         );
         if (old && old->converter_preset == preset_title) {
             // This source file was synced previously and the same encoder
@@ -653,7 +657,7 @@ bool queue_jobs(
     std::unordered_set<path> cover_dirs{};
     std::deque<std::shared_ptr<DB_playItem_t>> cover_its{};
 
-    auto conv_settings = make_encoder_settings();
+    const auto conv_settings = make_encoder_settings();
 
     // std::vector<ddb_playItem_t*> its;
     std::vector<job_source> sources;
@@ -680,6 +684,7 @@ bool queue_jobs(
     std::unordered_set<std::string> visited_sources{};
 
     ddb_ows->cancellationtoken = std::make_shared<CancellationToken>();
+    const bool artwork_available = ddb_artwork != nullptr;
     for (auto source : sources) {
         auto it = source.it.get();
         path from;
@@ -710,19 +715,26 @@ bool queue_jobs(
             }
         }
 
-        path target_dir = to.parent_path();
-        if (ddb_ows->pub.conf->get_cover_sync() &&
-            !cover_dirs.count(target_dir))
-        {
-            cover_its.push_back(source.it);
-            plug_logger->debug("Copying cover to {}", target_dir);
-            cover_dirs.insert(target_dir);
-            if (gathered_cb) {
-                gathered_cb(sources.size() + cover_dirs.size());
-            }
-        }
         if (queued_cb) {
             queued_cb();
+        }
+
+        path target_dir = to.parent_path();
+        if (cover_sync && !cover_dirs.count(target_dir)) {
+            cover_its.push_back(source.it);
+            if (artwork_available) {
+                if (gathered_cb) {
+                    gathered_cb(sources.size() + cover_dirs.size());
+                }
+                plug_logger->debug("Copying cover to {}", target_dir);
+                cover_dirs.insert(target_dir);
+            } else {
+                logger.warn(
+                    "Would sync cover to directory {}, but artwork plugin is "
+                    "not available.",
+                    target_dir
+                );
+            }
         }
     }
     if (ddb_ows->cancellationtoken->get()) {
@@ -732,7 +744,9 @@ bool queue_jobs(
     }
 
     // Now we can dispatch cover requests
-    if (!queue_cover_jobs(dry, logger, db, *sync_id, cover_its, queued_cb)) {
+    if (artwork_available &&
+        !queue_cover_jobs(dry, logger, db, *sync_id, cover_its, queued_cb))
+    {
         free(fmt);
         return false;
     }
@@ -834,6 +848,25 @@ DB_plugin_t* load(DB_functions_t* api) {
     ddb = api;
     init(api);
     return (DB_plugin_t*)&plugin;
+}
+
+int connect() {
+    ddb_converter = (ddb_converter_t*)ddb->plug_get_for_id("converter");
+    if (ddb_converter == nullptr) {
+        plugin.logger->warn(
+            "Converter plugin not available. Conversion jobs will be skipped."
+        );
+    }
+
+    ddb_artwork = (ddb_artwork_plugin_t*)ddb->plug_get_for_id("artwork2");
+    if (ddb_artwork == nullptr) {
+        plugin.logger->warn(
+            "Artwork plugin not available. Cover art will not be synced."
+        );
+    }
+    plugin.jobs->close();
+    spdlog::get(DDB_OWS_PROJECT_ID)->info("Initialized successfully.");
+    return 0;
 }
 
 extern "C" DB_plugin_t* ddb_ows_load(DB_functions_t* api) { return load(api); }

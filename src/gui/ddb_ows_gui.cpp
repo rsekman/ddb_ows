@@ -334,6 +334,13 @@ void conv_fts_save(Glib::RefPtr<Gtk::ListStore> model) {
         return false;
     });
     ddb_ows->conf->set_conv_fts(fts);
+
+    Gtk::Box* box;
+    builder->get_widget("warn_converter_box", box);
+    if (box != nullptr) {
+        bool converter_available = ddb->plug_get_for_id("converter") != nullptr;
+        box->set_visible(fts.size() > 0 && !converter_available);
+    }
 }
 
 void conv_fts_populate(
@@ -726,6 +733,13 @@ void on_cover_timeout_spinbutton_value_changed(
 void on_cover_sync_check_toggled(GtkToggleButton* toggle, gpointer data) {
     gboolean cover_sync = gtk_toggle_button_get_active(toggle);
     ddb_ows->conf->set_cover_sync(cover_sync);
+
+    Gtk::Box* box;
+    builder->get_widget("warn_artwork_box", box);
+    if (box != nullptr) {
+        bool artwork_available = ddb->plug_get_for_id("artwork2") != nullptr;
+        box->set_visible(cover_sync && !artwork_available);
+    }
 }
 
 void on_sync_pls_dbpl_check_toggled(GtkToggleButton* toggle, gpointer data) {
@@ -931,22 +945,17 @@ int start() { return 0; }
 int stop() { return 0; }
 
 int connect(void) {
-    DB_plugin_t* ddb_gtkui = ddb->plug_get_for_id(DDB_GTKUI_PLUGIN_ID);
-    ddb_converter_t* ddb_converter =
-        (ddb_converter_t*)ddb->plug_get_for_id("converter");
-    ddb_ows = (ddb_ows_plugin_t*)ddb->plug_get_for_id("ddb_ows");
     auto logger = get_logger();
 
-    if (!ddb_gtkui) {
-        logger->error("Matching gtkui plugin not found, quitting.");
-        return -1;
-    }
-    if (!ddb_converter) {
-        logger->error("Converter plugin not found, quitting.");
-        return -1;
-    }
+    ddb_ows = (ddb_ows_plugin_t*)ddb->plug_get_for_id("ddb_ows");
     if (!ddb_ows) {
         logger->error("ddb_ows plugin not found, quitting.");
+        return -1;
+    }
+
+    DB_plugin_t* ddb_gtkui = ddb->plug_get_for_id(DDB_GTKUI_PLUGIN_ID);
+    if (!ddb_gtkui) {
+        logger->error("Matching gtkui plugin not found, quitting.");
         return -1;
     }
     // Needed to make gtkmm play nice
