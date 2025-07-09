@@ -320,6 +320,16 @@ std::vector<ddb_playlist_t*> get_selected_playlists() {
     return pls;
 }
 
+void warn_converter() {
+    const auto fts = ddb_ows->conf->get_conv_fts();
+    Gtk::Box* box;
+    builder->get_widget("warn_converter_box", box);
+    if (box != nullptr) {
+        bool converter_available = ddb->plug_get_for_id("converter") != nullptr;
+        box->set_visible(fts.size() > 0 && !converter_available);
+    }
+}
+
 void conv_fts_save(Glib::RefPtr<Gtk::ListStore> model) {
     std::set<std::string> fts{};
     model->foreach_iter([&fts](const Gtk::TreeIter r) -> bool {
@@ -334,12 +344,7 @@ void conv_fts_save(Glib::RefPtr<Gtk::ListStore> model) {
     });
     ddb_ows->conf->set_conv_fts(fts);
 
-    Gtk::Box* box;
-    builder->get_widget("warn_converter_box", box);
-    if (box != nullptr) {
-        bool converter_available = ddb->plug_get_for_id("converter") != nullptr;
-        box->set_visible(fts.size() > 0 && !converter_available);
-    }
+    warn_converter();
 }
 
 void conv_fts_populate(
@@ -640,6 +645,10 @@ void on_conv_ext_entry_show(GtkWidget* widget, gpointer data) {
     gtk_entry_set_text(
         GTK_ENTRY(widget), ddb_ows->conf->get_conv_ext().c_str()
     );
+}
+
+void on_convert_ft_tv_show(GtkWidget* widget, gpointer data) {
+    warn_converter();
 }
 
 void on_target_root_chooser_show(GtkWidget* widget, gpointer data) {

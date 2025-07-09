@@ -583,14 +583,12 @@
                           <object class="GtkScrolledWindow" id="convert_ft_sw">
                             <property name="visible">True</property>
                             <property name="can-focus">True</property>
-                            <property name="no-show-all">True</property>
                             <property name="hexpand">True</property>
                             <property name="min-content-width">180</property>
                             <property name="kinetic-scrolling">False</property>
                             <property name="overlay-scrolling">False</property>
                             <child>
                               <object class="GtkTreeView" id="convert_ft_tv">
-                                <property name="visible">True</property>
                                 <property name="can-focus">True</property>
                                 <property name="tooltip-text" translatable="yes">ddb_ows can insert a conversion step in the source to destination pipeline. Useful to save destination space through lossy compression of lossless files, for example.  Select a decoder plugin to indicate that files handled by that plugin should be converted.</property>
                                 <property name="vexpand">True</property>
@@ -601,6 +599,7 @@
                                 <property name="search-column">0</property>
                                 <property name="fixed-height-mode">True</property>
                                 <property name="enable-grid-lines">vertical</property>
+                                <signal name="show" handler="on_convert_ft_tv_show" swapped="no"/>
                                 <child internal-child="selection">
                                   <object class="GtkTreeSelection"/>
                                 </child>
