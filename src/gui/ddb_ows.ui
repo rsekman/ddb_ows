@@ -386,15 +386,12 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkBox">
-                            <property name="visible">True</property>
+                          <object class="GtkBox" id="warn_artwork_box">
                             <property name="can-focus">False</property>
-                            <property name="halign">center</property>
+                            <property name="halign">start</property>
                             <child>
                               <object class="GtkImage" id="warn_artwork_icon">
-                                <property name="visible">True</property>
                                 <property name="can-focus">False</property>
-                                <property name="no-show-all">True</property>
                                 <property name="icon-name">dialog-warning</property>
                               </object>
                               <packing>
@@ -405,7 +402,6 @@
                             </child>
                             <child>
                               <object class="GtkLabel" id="warn_artwork_label">
-                                <property name="visible">True</property>
                                 <property name="can-focus">False</property>
                                 <property name="halign">start</property>
                                 <property name="hexpand">True</property>
@@ -719,14 +715,12 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkBox">
-                            <property name="visible">True</property>
+                          <object class="GtkBox" id="warn_converter_box">
                             <property name="can-focus">False</property>
-                            <property name="halign">center</property>
+                            <property name="halign">start</property>
                             <property name="spacing">4</property>
                             <child>
                               <object class="GtkImage" id="warn_converter_icon">
-                                <property name="visible">True</property>
                                 <property name="can-focus">False</property>
                                 <property name="icon-name">dialog-warning</property>
                               </object>
@@ -738,9 +732,9 @@
                             </child>
                             <child>
                               <object class="GtkLabel" id="warn_converter_label">
-                                <property name="visible">True</property>
                                 <property name="can-focus">False</property>
                                 <property name="halign">start</property>
+                                <property name="hexpand">True</property>
                                 <property name="label" translatable="yes">The converter plugin is not available. Files will that need converting will be skipped.</property>
                                 <property name="wrap">True</property>
                               </object>
