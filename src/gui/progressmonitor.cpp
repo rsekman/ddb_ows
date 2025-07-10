@@ -31,7 +31,9 @@ std::pair<float, std::string> queue_progress(
     const float p = pct(n_queued, n_sources);
     return {
         p,
-        fmt::format("Queueing jobs ({}/{}, 0%)", n_queued, n_sources, 100 * p)
+        fmt::format(
+            "Queueing jobs ({}/{}, {:.0f}%)", n_queued, n_sources, 100 * p
+        )
     };
 }
 
