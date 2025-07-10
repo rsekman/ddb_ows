@@ -4,7 +4,7 @@
 
 void close_callback(NotifyNotification*, void* user_data) {
     auto ptr = static_cast<ProgressMonitor::notification_ptr*>(user_data);
-    *ptr->get() = nullptr;
+    (*ptr)->store(nullptr);
     delete ptr;
 };
 
