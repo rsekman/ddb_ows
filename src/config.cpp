@@ -3,6 +3,7 @@
 #include <giomm/resource.h>
 #include <spdlog/spdlog.h>
 
+#include <mutex>
 #include <nlohmann/json.hpp>
 #include <stdexcept>
 
@@ -53,6 +54,17 @@ Configuration::Configuration(DB_functions_t* api) : ddb(api) {
     // This is safe because we fully control the input and can fix it at
     // compile-time if it's invalid
     _conf = json::parse(default_buf);
+}
+
+ddb_ows_config Configuration::get() {
+    std::lock_guard lk(m);
+    return _conf;
+}
+
+void Configuration::set(const ddb_ows_config& conf) {
+    std::lock_guard lk(m);
+    _conf = conf;
+    write_conf();
 }
 
 bool Configuration::load_conf() {

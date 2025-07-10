@@ -51,6 +51,8 @@ class Configuration {
   public:
     // plumbing
     Configuration(DB_functions_t* api);
+    ddb_ows_config get();
+    void set(const ddb_ows_config& c);
     bool load_conf();
 
     DDB_OWS_CONFIG_METHODS(root, std::string)
