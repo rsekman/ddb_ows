@@ -607,6 +607,7 @@ void build_conv_ext_cache(const std::set<std::string>& sels) {
     int i = 0;
     std::string::size_type n;
 
+    plugin.conv_exts.clear();
     while (decoders[i]) {
         std::string s(decoders[i]->plugin.name);
         if ((n = s.find(" decoder")) != std::string::npos ||
