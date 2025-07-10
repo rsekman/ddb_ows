@@ -211,6 +211,7 @@ bool is_newer(path a, path b) {
 // Returns false if cancelled, true if successful
 bool queue_cover_jobs(
     bool dry,
+    const ddb_ows_config& conf,
     Logger& logger,
     DatabaseHandle db,
     sync_id_t sync_id,
@@ -219,20 +220,21 @@ bool queue_cover_jobs(
 ) {
     path from;
     path to;
-    auto conf = plugin.pub.conf;
     auto jobs = plugin.jobs;
     auto plug_logger = plugin.logger;
 
-    char* fmt = ddb->tf_compile(conf->get_fn_formats()[0].c_str());
+    char* fmt = ddb->tf_compile(conf.fn_formats[0].c_str());
     if (fmt == nullptr) {
         return false;
     }
 
-    auto root = path(conf->get_root());
+    auto root = path(conf.root);
     std::random_device rd;
     std::mt19937 mersenne_twister(rd());
     auto dist = std::uniform_int_distribution<long>(LONG_MIN, LONG_MAX);
 
+    const auto timeout = std::chrono::milliseconds(conf.cover_timeout_ms);
+    const auto fname = conf.cover_fname;
     while (!items.empty()) {
         auto it = items.front().get();
         if (plugin.cancellationtoken->get()) {
@@ -262,7 +264,6 @@ bool queue_cover_jobs(
         cover_query->user_data = creq_copy;
 
         ddb_artwork->cover_get(cover_query, callback_cover_art_found);
-        auto timeout = std::chrono::milliseconds(conf->get_cover_timeout_ms());
         std::unique_lock<std::mutex> lock(creq->m);
         if (!creq->returned) {
             creq->c.wait_for(lock, timeout, [&creq] { return creq->returned; });
@@ -281,7 +282,7 @@ bool queue_cover_jobs(
             if (!dry) {
                 db->register_file(from);
             }
-            path to = target_dir / conf->get_cover_fname();
+            path to = target_dir / fname;
             auto old = db->find_entry(from);
             auto old_dest =
                 old ? std::optional{old->destination} : std::nullopt;
@@ -321,12 +322,13 @@ bool queue_cover_jobs(
     return true;
 }
 
-std::optional<ddb_converter_settings_t> make_encoder_settings() {
+std::optional<ddb_converter_settings_t> make_encoder_settings(
+    const std::string& selected
+) {
     if (ddb_converter == nullptr) {
         return {};
     }
     auto preset = ddb_converter->encoder_preset_get_list();
-    auto sel = plugin.pub.conf->get_conv_preset();
     ddb_converter_settings_t out{
         // these two mean to use the same sample format as input
         .output_bps = -1,
@@ -337,7 +339,7 @@ std::optional<ddb_converter_settings_t> make_encoder_settings() {
         .rewrite_tags_after_copy = 0,
     };
     while (preset != nullptr) {
-        if (sel == std::string(preset->title)) {
+        if (selected == std::string(preset->title)) {
             out.encoder_preset = preset;
             break;
         }
@@ -347,10 +349,9 @@ std::optional<ddb_converter_settings_t> make_encoder_settings() {
     return out;
 }
 
-bool should_convert(DB_playItem_t* it) {
+bool should_convert(DB_playItem_t* it, const std::set<std::string>& sels) {
     auto logger = spdlog::get(DDB_OWS_PROJECT_ID);
 
-    std::set<std::string> sels = plugin.pub.conf->get_conv_fts();
     const char* fname = ddb->pl_find_meta(it, ":URI");
     const char* ext = strrchr(fname, '.');
 
@@ -364,6 +365,7 @@ bool should_convert(DB_playItem_t* it) {
 }
 
 void make_job(
+    const ddb_ows_config& conf,
     DatabaseHandle db,
     std::shared_ptr<JobsQueue> out,
     Logger& logger,
@@ -374,7 +376,6 @@ void make_job(
     const std::optional<ddb_converter_settings_t>& conv_settings
 ) {
     // throws: can throw any filesystem error throw by checking ctime
-    auto conf = plugin.pub.conf;
     const auto old = db->find_entry(from);
     const std::optional<path> old_dest = old ? old->destination : std::nullopt;
 
@@ -391,8 +392,8 @@ void make_job(
         old_newer = false;
     }
 
-    if (should_convert(it)) {
-        to.replace_extension(conf->get_conv_ext());
+    if (should_convert(it, conf.conv_fts)) {
+        to.replace_extension(conf.conv_ext);
         if (!conv_settings) {
             logger.warn(
                 "Source {} should be converted, but converter plugin is not "
@@ -401,7 +402,7 @@ void make_job(
             );
             return;
         }
-        to.replace_extension(conf->get_conv_ext());
+        to.replace_extension(conf.conv_ext);
         std::string preset_title = conv_settings->encoder_preset->title;
         auto cjob = std::make_unique<ConvertJob>(
             logger, db, ddb, *conv_settings, it, sync_id, from, to
@@ -486,10 +487,13 @@ std::string plt_get_title(ddb_playlist_t* plt) {
 }
 
 bool save_playlist(
-    const char* ext, ddb_playlist_t* plt_in, Logger& logger, bool dry
+    const ddb_ows_config& conf,
+    const char* ext,
+    ddb_playlist_t* plt_in,
+    Logger& logger,
+    bool dry
 ) {
-    auto conf = plugin.pub.conf;
-    path root(conf->get_root());
+    path root(conf.root);
     std::string title = plt_get_title(plt_in);
     std::string escaped = title;
     escape(escaped);
@@ -502,7 +506,7 @@ bool save_playlist(
     plug_logger->debug("Saving playlist to {}", pl_to);
     int out = 0;
 
-    char* fmt = ddb->tf_compile(conf->get_fn_formats()[0].c_str());
+    char* fmt = ddb->tf_compile(conf.fn_formats[0].c_str());
     if (fmt == nullptr) {
         return false;
     }
@@ -528,8 +532,8 @@ bool save_playlist(
             ddb->pl_item_unref(its[k]);
             path out_path = get_output_path(new_it, fmt);
 
-            if (should_convert(new_it)) {
-                out_path.replace_extension(conf->get_conv_ext());
+            if (should_convert(new_it, conf.conv_fts)) {
+                out_path.replace_extension(conf.conv_ext);
             }
 
             ddb->pl_replace_meta(new_it, ":URI", out_path.c_str());
@@ -558,6 +562,7 @@ bool save_playlist(
 
 bool _save_playlists(
     bool dry,
+    const ddb_ows_config& conf,
     const std::vector<ddb_playlist_t*>& playlists,
     const char* ext,
     Logger& logger,
@@ -566,7 +571,7 @@ bool _save_playlists(
     // returns true if all playlists were successfully saved
     bool out = true;
     for (ddb_playlist_t* plt : playlists) {
-        bool saved = save_playlist(ext, plt, logger, dry);
+        bool saved = save_playlist(conf, ext, plt, logger, dry);
         out = out && saved;
     }
     return out;
@@ -574,29 +579,30 @@ bool _save_playlists(
 
 bool save_playlists(
     bool dry,
+    const ddb_ows_config& conf,
     const std::vector<ddb_playlist_t*>& playlists,
     Logger& logger,
     playlist_save_cb_t callback
 ) {
     bool out = true;
-    auto conf = plugin.pub.conf;
-    if (conf->get_sync_pls().dbpl) {
-        out = out && _save_playlists(dry, playlists, "dbpl", logger, callback);
+    if (conf.sync_pls.dbpl) {
+        out = out &&
+              _save_playlists(dry, conf, playlists, "dbpl", logger, callback);
     }
-    if (conf->get_sync_pls().m3u8) {
-        out = out && _save_playlists(dry, playlists, "m3u8", logger, callback);
+    if (conf.sync_pls.m3u8) {
+        out = out &&
+              _save_playlists(dry, conf, playlists, "m3u8", logger, callback);
     }
     return out;
 }
 
-void build_conv_ext_cache() {
+void build_conv_ext_cache(const std::set<std::string>& sels) {
     auto logger = spdlog::get(DDB_OWS_PROJECT_ID);
 
     DB_decoder_t** decoders = ddb->plug_get_decoder_list();
     // decoders and decoders[i]->exts are null-terminated arrays
     int i = 0;
     std::string::size_type n;
-    std::set<std::string> sels = plugin.pub.conf->get_conv_fts();
 
     while (decoders[i]) {
         std::string s(decoders[i]->plugin.name);
@@ -627,6 +633,7 @@ struct job_source {
 // Returns false if cancelled, true if successful
 bool queue_jobs(
     bool dry,
+    const ddb_ows_config& conf,
     const std::vector<ddb_playlist_t*>& playlists,
     Logger& logger,
     sources_gathered_cb_t gathered_cb,
@@ -643,14 +650,13 @@ bool queue_jobs(
         (ddb_ows_plugin_int*)ddb->plug_get_for_id("ddb_ows");
     auto plug_logger = ddb_ows->logger;
 
-    auto conf = plugin.pub.conf;
-    path root(conf->get_root());
+    path root(conf.root);
     DatabaseHandle db = std::make_shared<Database>(root);
 
-    const auto tf_str = conf->get_fn_formats()[0];
-    const auto cover_sync = conf->get_cover_sync();
-    const auto cover_fname = conf->get_cover_fname();
-    const auto rm_unref = conf->get_rm_unref();
+    const auto tf_str = conf.fn_formats[0];
+    const auto cover_sync = conf.cover_sync;
+    const auto cover_fname = conf.cover_fname;
+    const auto rm_unref = conf.rm_unref;
     // Use 0 as a dummy value for dry runs. Probably would be more correct to
     // use a sum type, but then we have to touch all the Job interfaces.
     const auto sync_id =
@@ -674,8 +680,8 @@ bool queue_jobs(
     std::unordered_set<path> cover_dirs{};
     std::deque<std::shared_ptr<DB_playItem_t>> cover_its{};
 
-    const auto conv_settings = make_encoder_settings();
-    build_conv_ext_cache();
+    const auto conv_settings = make_encoder_settings(conf.conv_preset);
+    build_conv_ext_cache(conf.conv_fts);
 
     std::vector<job_source> sources;
 
@@ -726,7 +732,15 @@ bool queue_jobs(
         } else {
             try {
                 make_job(
-                    db, jobs, logger, it, *sync_id, from, to, conv_settings
+                    conf,
+                    db,
+                    jobs,
+                    logger,
+                    it,
+                    *sync_id,
+                    from,
+                    to,
+                    conv_settings
                 );
             } catch (std::filesystem::filesystem_error& e) {
                 logger.err("Could not queue job for {}: {}", from, e.what());
@@ -764,7 +778,9 @@ bool queue_jobs(
 
     // Now we can dispatch cover requests
     if (artwork_available &&
-        !queue_cover_jobs(dry, logger, db, *sync_id, cover_its, queued_cb))
+        !queue_cover_jobs(
+            dry, conf, logger, db, *sync_id, cover_its, queued_cb
+        ))
     {
         free(fmt);
         return false;
@@ -793,11 +809,10 @@ bool worker_thread(bool dry, job_finished_cb_t callback) {
     return true;
 }
 
-bool execute(bool dry, job_finished_cb_t callback) {
-    auto conf = plugin.pub.conf;
+bool execute(bool dry, const ddb_ows_config& conf, job_finished_cb_t callback) {
     ddb_ows_plugin_int* ddb_ows =
         (ddb_ows_plugin_int*)ddb->plug_get_for_id("ddb_ows");
-    int n_wts = conf->get_conv_wts();
+    int n_wts = conf.conv_wts;
     ddb_ows->worker_thread_futures.futures.clear();
     for (int i = 0; i < n_wts; i++) {
         auto task = worker_thread_t(worker_thread);
@@ -822,16 +837,20 @@ bool run(
     Logger& logger,
     callback_t callbacks
 ) {
-    return save_playlists(dry, playlists, logger, callbacks.on_playlist_save) &&
+    const ddb_ows_config conf = plugin.pub.conf->get();
+    return save_playlists(
+               dry, conf, playlists, logger, callbacks.on_playlist_save
+           ) &&
            queue_jobs(
                dry,
+               conf,
                playlists,
                logger,
                callbacks.on_sources_gathered,
                callbacks.on_job_queued,
                callbacks.on_queueing_complete
            ) &&
-           execute(dry, callbacks.on_job_finished);
+           execute(dry, conf, callbacks.on_job_finished);
 }
 
 bool cancel(cancel_cb_t callback) {
