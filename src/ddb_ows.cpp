@@ -53,6 +53,7 @@ struct ddb_ows_plugin_int {
     std::shared_ptr<JobsQueue> jobs;
     std::shared_ptr<spdlog::logger> logger;
     wt_futures_t worker_thread_futures;
+    std::unordered_set<std::string> conv_exts;
 };
 
 static DB_functions_t* ddb;
@@ -347,41 +348,19 @@ std::optional<ddb_converter_settings_t> make_encoder_settings() {
 }
 
 bool should_convert(DB_playItem_t* it) {
-    DB_decoder_t** decoders = ddb->plug_get_decoder_list();
-    // decoders and decoders[i]->exts are null-terminated arrays
-    int i = 0;
-    std::string::size_type n;
+    auto logger = spdlog::get(DDB_OWS_PROJECT_ID);
+
     std::set<std::string> sels = plugin.pub.conf->get_conv_fts();
     const char* fname = ddb->pl_find_meta(it, ":URI");
     const char* ext = strrchr(fname, '.');
-    auto logger = spdlog::get(DDB_OWS_PROJECT_ID);
 
     if (ext) {
         ext++;
+        return plugin.conv_exts.count(ext);
     } else {
         logger->warn("Unable to determine filetype for {}.");
         return false;
     }
-    while (decoders[i]) {
-        std::string s(decoders[i]->plugin.name);
-        if ((n = s.find(" decoder")) != std::string::npos ||
-            (n = s.find(" player")) != std::string::npos)
-        {
-            s = s.substr(0, n);
-        }
-        if (sels.count(s)) {
-            const char** exts = decoders[i]->exts;
-            if (exts) {
-                for (int j = 0; exts[j]; j++) {
-                    if (!strcasecmp(exts[j], ext) || !strcmp(exts[j], "*")) {
-                        return true;
-                    }
-                }
-            }
-        }
-        i++;
-    }
-    return false;
 }
 
 void make_job(
@@ -610,6 +589,37 @@ bool save_playlists(
     return out;
 }
 
+void build_conv_ext_cache() {
+    auto logger = spdlog::get(DDB_OWS_PROJECT_ID);
+
+    DB_decoder_t** decoders = ddb->plug_get_decoder_list();
+    // decoders and decoders[i]->exts are null-terminated arrays
+    int i = 0;
+    std::string::size_type n;
+    std::set<std::string> sels = plugin.pub.conf->get_conv_fts();
+
+    while (decoders[i]) {
+        std::string s(decoders[i]->plugin.name);
+        if ((n = s.find(" decoder")) != std::string::npos ||
+            (n = s.find(" player")) != std::string::npos)
+        {
+            s = s.substr(0, n);
+        }
+        if (sels.count(s)) {
+            const char** exts = decoders[i]->exts;
+            if (exts) {
+                for (int j = 0; exts[j]; j++) {
+                    plugin.conv_exts.insert(exts[j]);
+                }
+            }
+        }
+        i++;
+    }
+    logger->debug(
+        "Determined {} extensions for conversion", plugin.conv_exts.size()
+    );
+}
+
 struct job_source {
     std::shared_ptr<ddb_playItem_t> it;
 };
@@ -665,8 +675,8 @@ bool queue_jobs(
     std::deque<std::shared_ptr<DB_playItem_t>> cover_its{};
 
     const auto conv_settings = make_encoder_settings();
+    build_conv_ext_cache();
 
-    // std::vector<ddb_playItem_t*> its;
     std::vector<job_source> sources;
 
     ddb->pl_lock();
