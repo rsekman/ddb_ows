@@ -1,10 +1,12 @@
 gtk_dep = dependency('gtkmm-3.0')
+notify_dep = dependency('libnotify')
 
 gui_resources = gnome.compile_resources('ddb_ows_gui_resources',
   'resources.xml'
 )
 
-shared_module('ddb_ows_gtk3', 'ddb_ows_gui.cpp',
+shared_module('ddb_ows_gtk3',
+'ddb_ows_gui.cpp',
   'textbufferlogger.cpp',
   'progressmonitor.cpp',
   gui_resources,
@@ -15,6 +17,7 @@ shared_module('ddb_ows_gtk3', 'ddb_ows_gui.cpp',
     fmt_dep,
     gtk_dep,
     nlohmann_dep,
+    notify_dep,
     spdlog_dep,
     uuid_dep,
   ],

@@ -1,5 +1,13 @@
 #include "gui/progressmonitor.hpp"
 
+#include <libnotify/notify.h>
+
+void close_callback(NotifyNotification*, void* user_data) {
+    auto ptr = static_cast<ProgressMonitor::notification_ptr*>(user_data);
+    *ptr->get() = nullptr;
+    delete ptr;
+};
+
 ProgressMonitor::ProgressMonitor(Gtk::ProgressBar* _pb) : pb(_pb) {
     sig_job_queued.connect(sigc::mem_fun(*this, &ProgressMonitor::_job_queued));
     sig_job_finished.connect(
@@ -7,6 +15,19 @@ ProgressMonitor::ProgressMonitor(Gtk::ProgressBar* _pb) : pb(_pb) {
     );
 
     sig_cancel.connect(sigc::mem_fun(*this, &ProgressMonitor::_cancel));
+
+    if (notify_init("ddb_ows")) {
+        auto ptr = notify_notification_new("Started sync", "", nullptr);
+        notification.reset(new std::atomic(ptr), g_object_unref);
+
+        auto data = new notification_ptr(notification);
+        g_signal_connect(
+            *notification, "closed", (GCallback)close_callback, data
+
+        );
+
+        notify_notification_show(*notification, nullptr);
+    }
 }
 
 inline float pct(size_t n, size_t n_total) {
@@ -45,13 +66,24 @@ void ProgressMonitor::job_queued() {
 void ProgressMonitor::_job_queued() {
     // this method is only ever run in the Gtk main thread, so we don't need to
     // worry about concurrency
-    if (pb == nullptr) {
+
+    if (cancelled) {
         return;
     }
+
     auto [p, text] = queue_progress(n_queued, n_sources);
-    pb->set_fraction(p);
-    pb->set_text(text);
-    pb->queue_draw();
+    if (pb != nullptr) {
+        pb->set_fraction(p);
+        pb->set_text(text);
+        pb->queue_draw();
+    }
+
+    if (*notification != nullptr) {
+        notify_notification_update(
+            *notification, "Syncing", text.c_str(), nullptr
+        );
+        notify_notification_show(*notification, nullptr);
+    }
 }
 
 void ProgressMonitor::set_n_jobs(size_t n) {
@@ -83,13 +115,24 @@ void ProgressMonitor::job_finished() {
 void ProgressMonitor::_job_finished() {
     // this method is only ever run in the Gtk main thread, so we don't need to
     // worry about concurrency
-    if (pb == nullptr || cancelled) {
+
+    if (cancelled) {
         return;
     }
+
     auto [p, text] = job_progress(n_finished, n_jobs);
-    pb->set_fraction(p);
-    pb->set_text(text);
-    pb->queue_draw();
+    if (pb != nullptr) {
+        pb->set_fraction(p);
+        pb->set_text(text);
+        pb->queue_draw();
+    }
+
+    if (*notification) {
+        notify_notification_update(
+            *notification, "Syncing", text.c_str(), nullptr
+        );
+        notify_notification_show(*notification, nullptr);
+    }
 }
 
 void ProgressMonitor::cancel() {
@@ -98,10 +141,16 @@ void ProgressMonitor::cancel() {
 }
 
 void ProgressMonitor::_cancel() {
-    if (pb == nullptr) {
-        return;
+    if (pb != nullptr) {
+        pb->set_fraction(0.0);
+        pb->set_text("Cancelled");
+        pb->queue_draw();
     }
-    pb->set_fraction(0.0);
-    pb->set_text("Cancelled");
-    pb->queue_draw();
+
+    if (*notification) {
+        notify_notification_update(
+            *notification, "Sync cancelled", "", nullptr
+        );
+        notify_notification_show(*notification, nullptr);
+    }
 }

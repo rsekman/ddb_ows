@@ -4,6 +4,7 @@
 #include <fmt/format.h>
 #include <glibmm/dispatcher.h>
 #include <gtkmm/progressbar.h>
+#include <libnotify/notification.h>
 
 #include <atomic>
 
@@ -19,6 +20,8 @@ class ProgressMonitor {
 
     void cancel();
 
+    typedef std::shared_ptr<std::atomic<NotifyNotification*>> notification_ptr;
+
   private:
     void _job_queued();
     void _job_finished();
@@ -33,6 +36,9 @@ class ProgressMonitor {
 
     Gtk::ProgressBar* pb;
     Glib::Dispatcher sig_job_queued, sig_job_finished, sig_cancel;
+
+    notification_ptr notification;
+    void close_notification();
 };
 
 #endif
