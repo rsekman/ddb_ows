@@ -2,6 +2,7 @@
 
 #define DDB_OWS_CONFIG_H
 
+#include <mutex>
 #include <set>
 #include <string>
 #include <unordered_set>
@@ -12,12 +13,16 @@
 
 #define DDB_OWS_CONFIG_MAIN "ddb_ows.settings"
 
-#define DDB_OWS_CONFIG_METHODS(name, type)    \
-    type get_##name() { return _conf.name; }; \
-    bool set_##name(type val) {               \
-        _conf.name = val;                     \
-        write_conf();                         \
-        return true;                          \
+#define DDB_OWS_CONFIG_METHODS(name, type) \
+    type get_##name() {                    \
+        std::lock_guard lk(m);             \
+        return _conf.name;                 \
+    };                                     \
+    bool set_##name(type val) {            \
+        std::lock_guard lk(m);             \
+        _conf.name = val;                  \
+        write_conf();                      \
+        return true;                       \
     };
 
 namespace ddb_ows {
@@ -66,6 +71,8 @@ class Configuration {
     ddb_ows_config _conf;
     bool load_conf_from_buffer(const char* buf);
     bool write_conf();
+
+    std::mutex m;
 };
 
 }  // namespace ddb_ows
