@@ -379,6 +379,11 @@ void make_job(
     const auto old = db->find_entry(from);
     const std::optional<path> old_dest = old ? old->destination : std::nullopt;
 
+    bool should_conv = should_convert(it, conf.conv_fts);
+    if (should_conv) {
+        to.replace_extension(conf.conv_ext);
+    }
+
     bool dest_newer;
     try {
         dest_newer = is_newer(to, from);
@@ -392,8 +397,7 @@ void make_job(
         old_newer = false;
     }
 
-    if (should_convert(it, conf.conv_fts)) {
-        to.replace_extension(conf.conv_ext);
+    if (should_conv) {
         if (!conv_settings) {
             logger.warn(
                 "Source {} should be converted, but converter plugin is not "
@@ -402,7 +406,6 @@ void make_job(
             );
             return;
         }
-        to.replace_extension(conf.conv_ext);
         std::string preset_title = conv_settings->encoder_preset->title;
         auto cjob = std::make_unique<ConvertJob>(
             logger, db, ddb, *conv_settings, it, sync_id, from, to
