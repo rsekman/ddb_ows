@@ -727,7 +727,7 @@ void on_conv_ext_entry_show(GtkWidget* widget, gpointer data) {
     );
 }
 
-void on_convert_ft_tv_show(GtkWidget* widget, gpointer data) {
+void on_warn_converter_box_show(GtkWidget* widget, gpointer data) {
     warn_converter();
 }
 
@@ -818,16 +818,21 @@ void on_cover_timeout_spinbutton_value_changed(
     ddb_ows->conf->set_cover_timeout_ms(timeout_ms);
 }
 
-void on_cover_sync_check_toggled(GtkToggleButton* toggle, gpointer data) {
-    gboolean cover_sync = gtk_toggle_button_get_active(toggle);
-    ddb_ows->conf->set_cover_sync(cover_sync);
-
+void warn_artwork() {
     Gtk::Box* box;
     builder->get_widget("warn_artwork_box", box);
+    auto cover_sync = ddb_ows->conf->get_cover_sync();
     if (box != nullptr) {
         bool artwork_available = ddb->plug_get_for_id("artwork2") != nullptr;
         box->set_visible(cover_sync && !artwork_available);
     }
+}
+
+void on_warn_artwork_box_show(GtkWidget*, gpointer) { warn_artwork(); }
+
+void on_cover_sync_check_toggled(GtkToggleButton* toggle, gpointer data) {
+    gboolean cover_sync = gtk_toggle_button_get_active(toggle);
+    ddb_ows->conf->set_cover_sync(cover_sync);
 }
 
 void on_sync_pls_dbpl_check_toggled(GtkToggleButton* toggle, gpointer data) {

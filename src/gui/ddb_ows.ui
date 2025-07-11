@@ -389,6 +389,7 @@
                           <object class="GtkBox" id="warn_artwork_box">
                             <property name="can-focus">False</property>
                             <property name="halign">start</property>
+                            <signal name="show" handler="on_warn_artwork_box_show" swapped="no"/>
                             <child>
                               <object class="GtkImage" id="warn_artwork_icon">
                                 <property name="can-focus">False</property>
@@ -599,10 +600,6 @@
                                 <property name="search-column">0</property>
                                 <property name="fixed-height-mode">True</property>
                                 <property name="enable-grid-lines">vertical</property>
-                                <signal name="show" handler="on_convert_ft_tv_show" swapped="no"/>
-                                <child internal-child="selection">
-                                  <object class="GtkTreeSelection"/>
-                                </child>
                                 <child>
                                   <object class="GtkTreeViewColumn" id="ft_selected">
                                     <property name="sizing">fixed</property>
@@ -718,6 +715,7 @@
                             <property name="can-focus">False</property>
                             <property name="halign">start</property>
                             <property name="spacing">4</property>
+                            <signal name="show" handler="on_warn_converter_box_show" swapped="no"/>
                             <child>
                               <object class="GtkImage" id="warn_converter_icon">
                                 <property name="can-focus">False</property>
