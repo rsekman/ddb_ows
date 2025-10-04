@@ -809,7 +809,24 @@ bool queue_jobs(
         free(fmt);
         return false;
     }
-    // TODO: delete unreferenced files
+
+    if (rm_unref) {
+        const auto unrefd = db->get_unreferenced_files();
+        if (unrefd) {
+            if (gathered_cb) {
+                gathered_cb(sources.size() + cover_its.size() + unrefd->size());
+            }
+            for (const auto& [from, to] : *unrefd) {
+                jobs->emplace_back(
+                    new DeleteJob(logger, db, *sync_id, from, to)
+                );
+                if (queued_cb) {
+                    queued_cb();
+                }
+            }
+        }
+    }
+
     jobs->close();
     const size_t n_jobs = jobs->size();
     if (complete_cb) {

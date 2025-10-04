@@ -139,7 +139,8 @@ Database::Database(path root) : m() {
         "register_playlist",
         "register_synced_playlist",
         "register_file_in_playlist",
-        "clear_playlist"
+        "clear_playlist",
+        "get_unreferenced_files"
     };
     for (const auto& n : stmt_names) {
         const auto resource_name = fmt::format("/ddb_ows/sql/{}.sql", n);
@@ -278,6 +279,32 @@ std::optional<synced_file_data_t> Database::find_entry(path key) {
         );
         return std::nullopt;
     }
+}
+
+std::optional<std::vector<std::tuple<path, path>>>
+Database::get_unreferenced_files() {
+    std::lock_guard lock(m);
+
+    sqlite3_stmt* stmt = _get_statement("get_unreferenced_files");
+
+    std::vector<std::tuple<path, path>> out;
+    int status;
+    while ((status = sqlite3_step(stmt)) == SQLITE_ROW) {
+        const auto from =
+            reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+        const auto to =
+            reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+        out.emplace_back(from, to);
+    }
+    if (status != SQLITE_DONE) {
+        logger->warn(
+            "Could not query database for unreferenced files (errno {}): {}",
+            status,
+            sqlite3_errmsg(sql_db)
+        );
+        return std::nullopt;
+    }
+    return out;
 }
 
 void Database::register_file(const path& source) {

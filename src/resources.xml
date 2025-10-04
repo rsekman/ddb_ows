@@ -13,5 +13,6 @@
     <file compressed="true">sql/register_file_in_playlist.sql</file>
     <file compressed="true">sql/register_synced_playlist.sql</file>
     <file compressed="true">sql/clear_playlist.sql</file>
+    <file compressed="true">sql/get_unreferenced_files.sql</file>
   </gresource>
 </gresources>

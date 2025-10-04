@@ -44,6 +44,8 @@ class Database {
     );
     void clear_playlist(const std::string& plt_uuid);
 
+    std::optional<std::vector<std::tuple<path, path>>> get_unreferenced_files();
+
     std::optional<sync_id_t> new_sync(
         const std::string& fn_format,
         bool cover_sync,
