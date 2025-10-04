@@ -713,6 +713,11 @@ bool queue_jobs(
     ddb_ows->cancellationtoken = std::make_shared<CancellationToken>();
     const bool artwork_available = ddb_artwork != nullptr;
     for (auto source : sources) {
+        // Items will be unref'd when sources goes out of scope
+        if (ddb_ows->cancellationtoken->get()) {
+            break;
+        }
+
         auto it = source.it.get();
         path from;
         path to;
@@ -724,10 +729,6 @@ bool queue_jobs(
             // This source file was already processed, avoid queueing redundant
             // jobs
             continue;
-        }
-        // Items will be unref'd when sources goes out of scope
-        if (ddb_ows->cancellationtoken->get()) {
-            break;
         }
         visited_sources.insert(from);
         to = root / get_output_path(it, fmt);
