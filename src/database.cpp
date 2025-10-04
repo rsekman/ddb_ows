@@ -195,6 +195,8 @@ std::optional<sync_id_t> Database::new_sync(
     const std::optional<std::string>& cover_fname,
     bool rm_unref
 ) {
+    std::lock_guard lock(m);
+
     sqlite3_stmt* stmt = _get_statement("new_sync");
     sqlite3_bind_str(stmt, ":ddb_ows_version", DDB_OWS_VERSION);
     sqlite3_bind_str(stmt, ":fn_format", fn_format);
@@ -272,8 +274,9 @@ std::optional<synced_file_data_t> Database::find_entry(path key) {
 }
 
 void Database::register_file(const path& source) {
-    sqlite3_stmt* stmt = _get_statement("register_file");
+    std::lock_guard lock(m);
 
+    sqlite3_stmt* stmt = _get_statement("register_file");
     sqlite3_bind_str(stmt, ":source", source);
 
     int status = sqlite3_step(stmt);
