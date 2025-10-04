@@ -37,6 +37,15 @@ class Database {
     void register_file(const path& source);
     void register_synced_file(const synced_file_data_t& data);
 
+    void register_playlist(const std::string& uuid, const std::string& title);
+    void register_synced_playlist(const std::string& uuid, sync_id_t sync_id);
+    void register_file_in_playlist(
+        const path& source, const std::string& plt_uuid
+    );
+    void clear_playlist(const std::string& plt_uuid);
+
+    std::optional<std::vector<std::tuple<path, path>>> get_unreferenced_files();
+
     std::optional<sync_id_t> new_sync(
         const std::string& fn_format,
         bool cover_sync,

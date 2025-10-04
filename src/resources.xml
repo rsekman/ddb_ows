@@ -8,5 +8,11 @@
     <file compressed="false">sql/new_sync.sql</file>
     <file compressed="false">sql/register_file.sql</file>
     <file compressed="false">sql/register_synced_file.sql</file>
+    <file compressed="true">sql/schema_v2.sql</file>
+    <file compressed="true">sql/register_playlist.sql</file>
+    <file compressed="true">sql/register_file_in_playlist.sql</file>
+    <file compressed="true">sql/register_synced_playlist.sql</file>
+    <file compressed="true">sql/clear_playlist.sql</file>
+    <file compressed="true">sql/get_unreferenced_files.sql</file>
   </gresource>
 </gresources>

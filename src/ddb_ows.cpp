@@ -14,12 +14,16 @@
 #include <cstring>
 #include <ctime>
 #include <filesystem>
+#include <forward_list>
 #include <functional>
 #include <future>
 #include <memory>
 #include <mutex>
 #include <random>
+#include <set>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "constants.hpp"
@@ -208,6 +212,11 @@ bool is_newer(path a, path b) {
     return last_write_time(a) > last_write_time(b);
 }
 
+struct cover_job_source {
+    std::shared_ptr<ddb_playItem_t> it;
+    std::unordered_set<std::string> plt_uuids;
+};
+
 // Returns false if cancelled, true if successful
 bool queue_cover_jobs(
     bool dry,
@@ -215,7 +224,7 @@ bool queue_cover_jobs(
     Logger& logger,
     DatabaseHandle db,
     sync_id_t sync_id,
-    std::deque<std::shared_ptr<DB_playItem_t>>& items,
+    const std::unordered_map<path, cover_job_source>& items,
     job_queued_cb_t queued_cb
 ) {
     path from;
@@ -235,8 +244,8 @@ bool queue_cover_jobs(
 
     const auto timeout = std::chrono::milliseconds(conf.cover_timeout_ms);
     const auto fname = conf.cover_fname;
-    while (!items.empty()) {
-        auto it = items.front().get();
+    for (const auto& [_, src] : items) {
+        auto it = src.it.get();
         if (plugin.cancellationtoken->get()) {
             plug_logger->debug("Cancelled while queueing cover jobs");
             break;
@@ -281,6 +290,9 @@ bool queue_cover_jobs(
             path from = creq->cover->image_filename;
             if (!dry) {
                 db->register_file(from);
+                for (const auto& plt_uuid : src.plt_uuids) {
+                    db->register_file_in_playlist(from, plt_uuid);
+                }
             }
             path to = target_dir / fname;
             auto old = db->find_entry(from);
@@ -317,7 +329,6 @@ bool queue_cover_jobs(
                 queued_cb();
             }
         }
-        items.pop_front();
     }
     return true;
 }
@@ -632,6 +643,7 @@ void build_conv_ext_cache(const std::set<std::string>& sels) {
 
 struct job_source {
     std::shared_ptr<ddb_playItem_t> it;
+    const std::string& plt_uuid;
 };
 
 // Returns false if cancelled, true if successful
@@ -681,25 +693,33 @@ bool queue_jobs(
     // it, but cover requests run async in another thread and ALSO need to lock
     // the playlist. Therefore we have to queue up items to dispatch cover
     // requests for once we are done traversing the playlist.
-    std::unordered_set<path> cover_dirs{};
-    std::deque<std::shared_ptr<DB_playItem_t>> cover_its{};
+    std::unordered_map<path, cover_job_source> cover_its{};
 
     const auto conv_settings = make_encoder_settings(conf.conv_preset);
     build_conv_ext_cache(conf.conv_fts);
 
     std::vector<job_source> sources;
+    // list promises that references remain valid even after insertions
+    std::forward_list<std::string> plt_uuids;
 
     ddb->pl_lock();
     for (auto plt : playlists) {
-        plug_logger->debug(
-            "Looking for jobs from playlist {}", plt_get_title(plt)
-        );
+        const auto plt_title = plt_get_title(plt);
+        plug_logger->debug("Looking for jobs from playlist {}", plt_title);
+
+        plt_uuids.push_front(_plt_get_uuid(plt).str());
+        const std::string& plt_uuid = plt_uuids.front();
+        if (!dry) {
+            db->register_playlist(plt_uuid, plt_title);
+            db->clear_playlist(plt_uuid);
+            db->register_synced_playlist(plt_uuid, *sync_id);
+        }
 
         DB_playItem_t* it;
         it = ddb->plt_get_first(plt, PL_MAIN);
         while (it != nullptr) {
             auto p = std::shared_ptr<DB_playItem_t>(it, ddb->pl_item_unref);
-            sources.push_back({.it = p});
+            sources.push_back({.it = p, .plt_uuid = plt_uuid});
             it = ddb->pl_get_next(it, PL_MAIN);
         }
     }
@@ -711,27 +731,55 @@ bool queue_jobs(
     std::unordered_set<std::string> visited_sources{};
 
     ddb_ows->cancellationtoken = std::make_shared<CancellationToken>();
+
     const bool artwork_available = ddb_artwork != nullptr;
-    for (auto source : sources) {
+
+    for (const auto& source : sources) {
         // Items will be unref'd when sources goes out of scope
         if (ddb_ows->cancellationtoken->get()) {
             break;
         }
 
         auto it = source.it.get();
-        path from;
-        path to;
-        from = std::string(ddb->pl_find_meta(it, ":URI"));
+        path from = std::string(ddb->pl_find_meta(it, ":URI"));
+        path to = root / get_output_path(it, fmt);
+        path target_dir = to.parent_path();
+
         if (!dry) {
-            db->register_file(from);
+            if (visited_sources.count(from) == 0) {
+                db->register_file(from);
+            }
+            db->register_file_in_playlist(from, source.plt_uuid);
         }
+
+        if (cover_sync) {
+            auto [src, inserted] = cover_its.insert(
+                {target_dir, {.it = source.it, .plt_uuids = {}}}
+            );
+            if (artwork_available) {
+                if (inserted) {
+                    plug_logger->debug("Copying cover to {}", target_dir);
+                    if (gathered_cb) {
+                        gathered_cb(sources.size() + cover_its.size());
+                    }
+                }
+                src->second.plt_uuids.insert(source.plt_uuid);
+            } else if (inserted) {
+                logger.warn(
+                    "Would sync cover to directory {}, but artwork plugin is "
+                    "not available.",
+                    target_dir
+                );
+            }
+        }
+
         if (visited_sources.count(from) > 0) {
             // This source file was already processed, avoid queueing redundant
             // jobs
             continue;
         }
         visited_sources.insert(from);
-        to = root / get_output_path(it, fmt);
+
         try {
             make_job(
                 conf, db, jobs, logger, it, *sync_id, from, to, conv_settings
@@ -744,25 +792,8 @@ bool queue_jobs(
         if (queued_cb) {
             queued_cb();
         }
-
-        path target_dir = to.parent_path();
-        if (cover_sync && !cover_dirs.count(target_dir)) {
-            cover_its.push_back(source.it);
-            if (artwork_available) {
-                if (gathered_cb) {
-                    gathered_cb(sources.size() + cover_dirs.size());
-                }
-                plug_logger->debug("Copying cover to {}", target_dir);
-                cover_dirs.insert(target_dir);
-            } else {
-                logger.warn(
-                    "Would sync cover to directory {}, but artwork plugin is "
-                    "not available.",
-                    target_dir
-                );
-            }
-        }
     }
+
     if (ddb_ows->cancellationtoken->get()) {
         plug_logger->debug("Cancelled while queueing jobs");
         free(fmt);
@@ -778,7 +809,24 @@ bool queue_jobs(
         free(fmt);
         return false;
     }
-    // TODO: delete unreferenced files
+
+    if (rm_unref) {
+        const auto unrefd = db->get_unreferenced_files();
+        if (unrefd) {
+            if (gathered_cb) {
+                gathered_cb(sources.size() + cover_its.size() + unrefd->size());
+            }
+            for (const auto& [from, to] : *unrefd) {
+                jobs->emplace_back(
+                    new DeleteJob(logger, db, *sync_id, from, to)
+                );
+                if (queued_cb) {
+                    queued_cb();
+                }
+            }
+        }
+    }
+
     jobs->close();
     const size_t n_jobs = jobs->size();
     if (complete_cb) {
