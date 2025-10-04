@@ -7,10 +7,14 @@
 #include <libnotify/notification.h>
 
 #include <atomic>
+#include <mutex>
 
 class ProgressMonitor {
   public:
     ProgressMonitor(Gtk::ProgressBar* _pb);
+    ~ProgressMonitor();
+    ProgressMonitor(const ProgressMonitor& other) = delete;
+    ProgressMonitor(ProgressMonitor&& other) = delete;
 
     void set_n_sources(size_t n);
     void job_queued();
@@ -18,9 +22,8 @@ class ProgressMonitor {
     void set_n_jobs(size_t n);
     void job_finished();
 
+    void free_notification();
     void cancel();
-
-    typedef std::shared_ptr<std::atomic<NotifyNotification*>> notification_ptr;
 
   private:
     void _job_queued();
@@ -37,8 +40,8 @@ class ProgressMonitor {
     Gtk::ProgressBar* pb;
     Glib::Dispatcher sig_job_queued, sig_job_finished, sig_cancel;
 
-    notification_ptr notification;
-    void close_notification();
+    std::mutex _m;
+    NotifyNotification* notification = nullptr;
 };
 
 #endif

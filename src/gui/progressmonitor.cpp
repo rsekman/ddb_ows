@@ -3,9 +3,8 @@
 #include <libnotify/notify.h>
 
 void close_callback(NotifyNotification*, void* user_data) {
-    auto ptr = static_cast<ProgressMonitor::notification_ptr*>(user_data);
-    (*ptr)->store(nullptr);
-    delete ptr;
+    auto ptr = static_cast<ProgressMonitor*>(user_data);
+    ptr->free_notification();
 };
 
 ProgressMonitor::ProgressMonitor(Gtk::ProgressBar* _pb) : pb(_pb) {
@@ -17,18 +16,21 @@ ProgressMonitor::ProgressMonitor(Gtk::ProgressBar* _pb) : pb(_pb) {
     sig_cancel.connect(sigc::mem_fun(*this, &ProgressMonitor::_cancel));
 
     if (notify_init("ddb_ows")) {
-        auto ptr = notify_notification_new("Started sync", "", nullptr);
-        notification.reset(new std::atomic(ptr), g_object_unref);
+        notification = notify_notification_new("Started sync", "", nullptr);
 
-        auto data = new notification_ptr(notification);
+        // When this is destroyed, it unrefs the notification, which finalizes
+        // it, thus unregistering callbacks. That is, this always outlives
+        // notification, so it is safe to pass it as a raw pointer.
         g_signal_connect(
-            *notification, "closed", (GCallback)close_callback, data
+            notification, "closed", (GCallback)close_callback, this
 
         );
 
-        notify_notification_show(*notification, nullptr);
+        notify_notification_show(notification, nullptr);
     }
 }
+
+ProgressMonitor::~ProgressMonitor() { free_notification(); }
 
 inline float pct(size_t n, size_t n_total) {
     float pct;
@@ -78,11 +80,12 @@ void ProgressMonitor::_job_queued() {
         pb->queue_draw();
     }
 
-    if (*notification != nullptr) {
+    std::lock_guard l{_m};
+    if (notification != nullptr) {
         notify_notification_update(
-            *notification, "Syncing", text.c_str(), nullptr
+            notification, "Syncing", text.c_str(), nullptr
         );
-        notify_notification_show(*notification, nullptr);
+        notify_notification_show(notification, nullptr);
     }
 }
 
@@ -127,12 +130,21 @@ void ProgressMonitor::_job_finished() {
         pb->queue_draw();
     }
 
-    if (*notification) {
+    std::lock_guard l{_m};
+    if (notification != nullptr) {
         notify_notification_update(
-            *notification, "Syncing", text.c_str(), nullptr
+            notification, "Syncing", text.c_str(), nullptr
         );
-        notify_notification_show(*notification, nullptr);
+        notify_notification_show(notification, nullptr);
     }
+}
+
+void ProgressMonitor::free_notification() {
+    std::lock_guard l{_m};
+    if (notification != nullptr) {
+        g_object_unref(notification);
+    }
+    notification = nullptr;
 }
 
 void ProgressMonitor::cancel() {
@@ -147,10 +159,9 @@ void ProgressMonitor::_cancel() {
         pb->queue_draw();
     }
 
-    if (*notification) {
-        notify_notification_update(
-            *notification, "Sync cancelled", "", nullptr
-        );
-        notify_notification_show(*notification, nullptr);
+    std::lock_guard l{_m};
+    if (notification != nullptr) {
+        notify_notification_update(notification, "Sync cancelled", "", nullptr);
+        notify_notification_show(notification, nullptr);
     }
 }
