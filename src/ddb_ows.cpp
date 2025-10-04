@@ -731,25 +731,13 @@ bool queue_jobs(
         }
         visited_sources.insert(from);
         to = root / get_output_path(it, fmt);
-        if (!exists(from)) {
-            logger.err("Source file {} does not exist!", from);
-        } else {
-            try {
-                make_job(
-                    conf,
-                    db,
-                    jobs,
-                    logger,
-                    it,
-                    *sync_id,
-                    from,
-                    to,
-                    conv_settings
-                );
-            } catch (std::filesystem::filesystem_error& e) {
-                logger.err("Could not queue job for {}: {}", from, e.what());
-                continue;
-            }
+        try {
+            make_job(
+                conf, db, jobs, logger, it, *sync_id, from, to, conv_settings
+            );
+        } catch (std::filesystem::filesystem_error& e) {
+            logger.err("Could not queue job for {}: {}", from, e.what());
+            continue;
         }
 
         if (queued_cb) {
