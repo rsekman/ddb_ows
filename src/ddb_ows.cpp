@@ -17,12 +17,12 @@
 #include <forward_list>
 #include <functional>
 #include <future>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <random>
 #include <set>
 #include <string>
-#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -224,7 +224,7 @@ bool queue_cover_jobs(
     std::shared_ptr<Logger> logger,
     DatabaseHandle db,
     sync_id_t sync_id,
-    const std::unordered_map<path, cover_job_source>& items,
+    const std::map<path, cover_job_source>& items,
     job_queued_cb_t queued_cb
 ) {
     path from;
@@ -695,7 +695,7 @@ bool queue_jobs(
     // it, but cover requests run async in another thread and ALSO need to lock
     // the playlist. Therefore we have to queue up items to dispatch cover
     // requests for once we are done traversing the playlist.
-    std::unordered_map<path, cover_job_source> cover_its{};
+    std::map<path, cover_job_source> cover_its{};
 
     const auto conv_settings = make_encoder_settings(conf.conv_preset);
     build_conv_ext_cache(conf.conv_fts);
@@ -730,7 +730,7 @@ bool queue_jobs(
         gathered_cb(sources.size());
     }
 
-    std::unordered_set<std::string> visited_sources{};
+    std::set<std::string> visited_sources{};
 
     ddb_ows->cancellationtoken = std::make_shared<CancellationToken>();
 
