@@ -521,7 +521,11 @@ void execute(bool dry) {
     } else {
         logger = std::make_shared<StdioLogger>();
     }
-    ddb_ows->run(dry, pls, logger, callbacks);
+    std::thread t{[dry, pls, logger, callbacks] {
+        ddb_ows->run(dry, pls, logger, callbacks);
+        (*plugin.sig_execution_buttons_set_sensitive)();
+    }};
+    t.detach();
 }
 
 void execution_buttons_set_sensitive(bool sensitive) {
@@ -542,13 +546,6 @@ void execution_buttons_set_sensitive() {
 }
 void execution_buttons_set_insensitive() {
     execution_buttons_set_sensitive(false);
-}
-
-auto execution_thread(bool dry) {
-    return std::thread([dry] {
-        execute(dry);
-        (*plugin.sig_execution_buttons_set_sensitive)();
-    });
 }
 
 extern "C" {
@@ -908,7 +905,7 @@ void on_execution_btn_clicked(bool dry) {
     // signal handlers are called from the Gtk main thread, so we can set to
     // insensitive immediately
     execution_buttons_set_insensitive();
-    execution_thread(dry).detach();
+    execute(dry);
 }
 
 void on_dry_run_btn_clicked(GtkButton* button, gpointer data) {
