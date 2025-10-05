@@ -108,14 +108,14 @@ void MoveJob::register_job() {
     // a move is registered as a delete followed by a recreation
     db->register_synced_file(
         {.sync_id = sync_id,
-         .source = from,
+         .source = source,
          .destination = std::nullopt,
          .converter_preset = std::nullopt,
          .timestamp = now()}
     );
     db->register_synced_file(
         {.sync_id = sync_id,
-         .source = from,
+         .source = source,
          .destination = to,
          .converter_preset = converter_preset,
          .timestamp = now()}
