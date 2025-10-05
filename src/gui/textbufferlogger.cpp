@@ -3,12 +3,12 @@
 namespace ddb_ows {
 
 TextBufferLogger::TextBufferLogger(
-    Glib::RefPtr<Gtk::TextBuffer> _buffer, Gtk::TextView *_view
+    Glib::RefPtr<Gtk::TextBuffer> _buffer, Gtk::TextView* _view
 ) :
     buffer(_buffer), view(_view), m() {
     auto style_ctx = view->get_style_context();
-    for (auto &i : loglevels) {
-        auto &l = i.second;
+    for (auto& i : loglevels) {
+        auto& l = i.second;
         style_ctx->lookup_color(l.color_name, l.color);
         l.tag = buffer->create_tag(l.name);
         l.tag->property_foreground_rgba().set_value(l.color);
@@ -29,7 +29,7 @@ DDB_OWS_TBL_METHOD(warn, WARN);
 DDB_OWS_TBL_METHOD(err, ERR);
 
 void TextBufferLogger::set_level(loglevel_e level) {
-    for (auto &l : loglevels) {
+    for (auto& l : loglevels) {
         l.second.tag->property_invisible().set_value(true);
     }
 #define DDB_OWS_TBL_LL_SET(l) \
@@ -44,7 +44,7 @@ void TextBufferLogger::set_level(loglevel_e level) {
     }
 }
 
-const std::map<loglevel_e, loglevel_info_t> &TextBufferLogger::get_levels() {
+const std::map<loglevel_e, loglevel_info_t>& TextBufferLogger::get_levels() {
     return loglevels;
 }
 
