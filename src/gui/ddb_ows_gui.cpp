@@ -42,11 +42,23 @@ namespace ddb_ows_gui {
 
 using namespace ddb_ows;
 
+typedef struct {
+    DB_misc_t plugin;
+    std::shared_ptr<Gtk::Main> app;
+    std::shared_ptr<ProgressMonitor> pm;
+    std::shared_ptr<ddb_ows::TextBufferLogger> gui_logger;
+    // These instances must be created by the Gtk main thread
+    std::shared_ptr<Glib::Dispatcher> sig_execution_buttons_set_sensitive;
+    std::shared_ptr<Glib::Dispatcher> sig_execution_buttons_set_insensitive;
+
+} ddb_ows_gui_plugin_t;
+
 ddb_ows_gui_plugin_t plugin{
+    .app = nullptr,
     .pm = nullptr,
     .gui_logger = nullptr,
     .sig_execution_buttons_set_sensitive = nullptr,
-    .sig_execution_buttons_set_insensitive = nullptr
+    .sig_execution_buttons_set_insensitive = nullptr,
 };
 
 ddb_ows_plugin_t* ddb_ows;
@@ -1039,18 +1051,18 @@ int connect(void) {
     auto logger = get_logger();
 
     ddb_ows = (ddb_ows_plugin_t*)ddb->plug_get_for_id("ddb_ows");
-    if (!ddb_ows) {
+    if (ddb_ows == nullptr) {
         logger->error("ddb_ows plugin not found, quitting.");
         return -1;
     }
 
     DB_plugin_t* ddb_gtkui = ddb->plug_get_for_id(DDB_GTKUI_PLUGIN_ID);
-    if (!ddb_gtkui) {
+    if (ddb_gtkui == nullptr) {
         logger->error("Matching gtkui plugin not found, quitting.");
         return -1;
     }
     // Needed to make gtkmm play nice
-    auto __attribute__((unused)) app = new Gtk::Main(0, nullptr, false);
+    plugin.app = std::make_shared<Gtk::Main>();
     builder = Gtk::Builder::create();
     logger->info("Initialized successfully.");
     return create_ui();
