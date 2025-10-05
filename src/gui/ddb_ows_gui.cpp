@@ -51,8 +51,6 @@ ddb_ows_gui_plugin_t plugin{
 
 ddb_ows_plugin_t* ddb_ows;
 
-StdioLogger terminal_logger{};
-
 Glib::RefPtr<Gtk::Builder> builder;
 
 std::shared_ptr<spdlog::logger> get_logger() {
@@ -517,11 +515,13 @@ void execute(bool dry) {
 
     std::vector<ddb_playlist_t*> pls = get_selected_playlists();
 
+    std::shared_ptr<Logger> logger;
     if (plugin.gui_logger) {
-        ddb_ows->run(dry, pls, *plugin.gui_logger, callbacks);
+        logger = plugin.gui_logger;
     } else {
-        ddb_ows->run(dry, pls, terminal_logger, callbacks);
+        logger = std::make_shared<StdioLogger>();
     }
+    ddb_ows->run(dry, pls, logger, callbacks);
 }
 
 void execution_buttons_set_sensitive(bool sensitive) {

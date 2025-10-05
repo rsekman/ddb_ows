@@ -221,7 +221,7 @@ struct cover_job_source {
 bool queue_cover_jobs(
     bool dry,
     const ddb_ows_config& conf,
-    Logger& logger,
+    std::shared_ptr<Logger> logger,
     DatabaseHandle db,
     sync_id_t sync_id,
     const std::unordered_map<path, cover_job_source>& items,
@@ -313,7 +313,9 @@ bool queue_cover_jobs(
             }
 
             if (dest_newer) {
-                logger.verbose("Cover at {} is newer than source {}", to, from);
+                logger->verbose(
+                    "Cover at {} is newer than source {}", to, from
+                );
             } else if (old_newer && *old_dest != to) {
                 auto cover_job = std::make_unique<MoveJob>(
                     logger, db, sync_id, *old_dest, to, from, ""
@@ -379,7 +381,7 @@ void make_job(
     const ddb_ows_config& conf,
     DatabaseHandle db,
     std::shared_ptr<JobsQueue> out,
-    Logger& logger,
+    std::shared_ptr<Logger> logger,
     DB_playItem_t* it,
     sync_id_t sync_id,
     path from,
@@ -410,7 +412,7 @@ void make_job(
 
     if (should_conv) {
         if (!conv_settings) {
-            logger.warn(
+            logger->warn(
                 "Source {} should be converted, but converter plugin is not "
                 "available.",
                 from
@@ -427,7 +429,7 @@ void make_job(
 
             if (dest_newer) {
                 // The destination exists and is newer than the source
-                logger.verbose(
+                logger->verbose(
                     "Source {} was already converted with {}; skipping.",
                     from,
                     preset_title
@@ -484,7 +486,7 @@ void make_job(
             out->emplace_back(new CopyJob(logger, db, sync_id, from, to));
         }
     } else if (dest_newer) {
-        logger.verbose(
+        logger->verbose(
             "Destination {} is newer than source {}; skipping.", to, from
         );
     } else {
@@ -504,7 +506,7 @@ bool save_playlist(
     const ddb_ows_config& conf,
     const char* ext,
     ddb_playlist_t* plt_in,
-    Logger& logger,
+    std::shared_ptr<Logger> logger,
     bool dry
 ) {
     path root(conf.root);
@@ -529,7 +531,7 @@ bool save_playlist(
         auto head = ddb->plt_get_head_item(plt_in, PL_MAIN);
         auto tail = ddb->plt_get_tail_item(plt_in, PL_MAIN);
         if (!head || !tail) {
-            logger.warn("Playlist {} is empty, not saving.", title);
+            logger->warn("Playlist {} is empty, not saving.", title);
             return false;
         }
         ddb->pl_item_unref(head);
@@ -566,10 +568,10 @@ bool save_playlist(
         ddb->plt_unref(plt_out);
     }
     if (out < 0) {
-        logger.err("Failed to save playlist {}.", title);
+        logger->err("Failed to save playlist {}.", title);
         return false;
     } else {
-        logger.log("Saved playlist {}", title);
+        logger->log("Saved playlist {}", title);
         return true;
     }
 }
@@ -579,7 +581,7 @@ bool _save_playlists(
     const ddb_ows_config& conf,
     const std::vector<ddb_playlist_t*>& playlists,
     const char* ext,
-    Logger& logger,
+    std::shared_ptr<Logger> logger,
     playlist_save_cb_t callback
 ) {
     // returns true if all playlists were successfully saved
@@ -595,7 +597,7 @@ bool save_playlists(
     bool dry,
     const ddb_ows_config& conf,
     const std::vector<ddb_playlist_t*>& playlists,
-    Logger& logger,
+    std::shared_ptr<Logger> logger,
     playlist_save_cb_t callback
 ) {
     bool out = true;
@@ -651,7 +653,7 @@ bool queue_jobs(
     bool dry,
     const ddb_ows_config& conf,
     const std::vector<ddb_playlist_t*>& playlists,
-    Logger& logger,
+    std::shared_ptr<Logger> logger,
     sources_gathered_cb_t gathered_cb,
     job_queued_cb_t queued_cb,
     queueing_complete_cb_t complete_cb
@@ -680,7 +682,7 @@ bool queue_jobs(
             : db->new_sync(tf_str, cover_sync, cover_fname, rm_unref);
 
     if (!sync_id) {
-        logger.err("Could not create a new sync in the database.");
+        logger->err("Could not create a new sync in the database.");
         return false;
     }
     char* fmt = ddb->tf_compile(tf_str.c_str());
@@ -765,7 +767,7 @@ bool queue_jobs(
                 }
                 src->second.plt_uuids.insert(source.plt_uuid);
             } else if (inserted) {
-                logger.warn(
+                logger->warn(
                     "Would sync cover to directory {}, but artwork plugin is "
                     "not available.",
                     target_dir
@@ -785,7 +787,7 @@ bool queue_jobs(
                 conf, db, jobs, logger, it, *sync_id, from, to, conv_settings
             );
         } catch (std::filesystem::filesystem_error& e) {
-            logger.err("Could not queue job for {}: {}", from, e.what());
+            logger->err("Could not queue job for {}: {}", from, e.what());
             continue;
         }
 
@@ -875,7 +877,7 @@ bool execute(bool dry, const ddb_ows_config& conf, job_finished_cb_t callback) {
 bool run(
     bool dry,
     const std::vector<ddb_playlist_t*>& playlists,
-    Logger& logger,
+    std::shared_ptr<Logger> logger,
     callback_t callbacks
 ) {
     const ddb_ows_config conf = plugin.pub.conf->get();

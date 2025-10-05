@@ -17,7 +17,7 @@ namespace ddb_ows {
 
 class Job {
   public:
-    Job(Logger& _logger,
+    Job(std::shared_ptr<Logger> _logger,
         DatabaseHandle _db,
         sync_id_t _sync_id,
         path _from,
@@ -28,7 +28,7 @@ class Job {
     virtual ~Job() {};
 
   protected:
-    Logger& logger;
+    std::shared_ptr<Logger> logger;
     DatabaseHandle db;
     const path from;
     const path to;
@@ -39,7 +39,11 @@ class Job {
 class CopyJob : public Job {
   public:
     CopyJob(
-        Logger& logger, DatabaseHandle db, sync_id_t sync_id, path from, path to
+        std::shared_ptr<Logger> logger,
+        DatabaseHandle db,
+        sync_id_t sync_id,
+        path from,
+        path to
     );
     bool run(bool dry = false) override;
     void abort() override {}
@@ -51,7 +55,7 @@ class CopyJob : public Job {
 class MoveJob : public Job {
   public:
     MoveJob(
-        Logger& logger,
+        std::shared_ptr<Logger> _logger,
         DatabaseHandle db,
         sync_id_t sync_id,
         path from,
@@ -71,7 +75,7 @@ class MoveJob : public Job {
 class ConvertJob : public Job {
   public:
     ConvertJob(
-        Logger& logger,
+        std::shared_ptr<Logger> logger,
         DatabaseHandle db,
         DB_functions_t* ddb,
         ddb_converter_settings_t settings,
@@ -96,7 +100,7 @@ class ConvertJob : public Job {
 class DeleteJob : public Job {
   public:
     DeleteJob(
-        Logger& logger,
+        std::shared_ptr<Logger> _logger,
         DatabaseHandle db,
         sync_id_t sync_id,
         path from,

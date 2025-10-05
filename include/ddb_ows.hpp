@@ -36,7 +36,7 @@ typedef struct {
     bool (*run)(
         bool dry,
         const std::vector<ddb_playlist_t*>& playlists,
-        Logger& logger,
+        std::shared_ptr<Logger> logger,
         callback_t callbacks
     );
     bool (*cancel)(cancel_cb_t callback);

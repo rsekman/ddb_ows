@@ -36,16 +36,16 @@ bool CopyJob::run(bool dry) {
             success = copy_file(from, to, copy_options::update_existing);
             if (success) {
                 register_job();
-                logger.log("Copied {}.", from_to_str);
+                logger->log("Copied {}.", from_to_str);
             } else {
-                logger.err("Failed to copy {}.", from_to_str);
+                logger->err("Failed to copy {}.", from_to_str);
             }
         } else {
             success = true;
-            logger.log("Would copy {}.", from_to_str);
+            logger->log("Would copy {}.", from_to_str);
         }
     } catch (filesystem_error& e) {
-        logger.err("Failed to copy {}: {}.", from_to_str, e.what());
+        logger->err("Failed to copy {}: {}.", from_to_str, e.what());
         success = false;
     }
     return success;
@@ -62,7 +62,7 @@ void CopyJob::register_job() {
 }
 
 CopyJob::CopyJob(
-    Logger& _logger,
+    std::shared_ptr<Logger> _logger,
     DatabaseHandle _db,
     sync_id_t _sync_id,
     path _from,
@@ -71,7 +71,7 @@ CopyJob::CopyJob(
     Job(_logger, _db, _sync_id, _from, _to) {};
 
 MoveJob::MoveJob(
-    Logger& _logger,
+    std::shared_ptr<Logger> _logger,
     DatabaseHandle _db,
     sync_id_t _sync_id,
     path _from,
@@ -92,13 +92,13 @@ bool MoveJob::run(bool dry) {
             rename(from, to);
             register_job();
             clean_parents(from.parent_path());
-            logger.log("Moved from {}.", from_to_str);
+            logger->log("Moved from {}.", from_to_str);
         } else {
-            logger.log("Would move {}.", from_to_str);
+            logger->log("Would move {}.", from_to_str);
         }
         success = true;
     } catch (filesystem_error& e) {
-        logger.err("Failed to move {}: {}.", from_to_str, e.what());
+        logger->err("Failed to move {}: {}.", from_to_str, e.what());
         success = false;
     }
     return success;
@@ -125,7 +125,7 @@ void MoveJob::register_job() {
 ConvertJob::~ConvertJob() { ddb->pl_item_unref(it); }
 
 ConvertJob::ConvertJob(
-    Logger& _logger,
+    std::shared_ptr<Logger> _logger,
     DatabaseHandle _db,
     DB_functions_t* _ddb,
     ddb_converter_settings_t _settings,
@@ -147,7 +147,7 @@ bool ConvertJob::run(bool dry) {
         "{} using {} to {}", from, settings.encoder_preset->title, to
     );
     if (!dry) {
-        logger.verbose("Converting  {}.", from_to_str);
+        logger->verbose("Converting  {}.", from_to_str);
         auto ddb_conv = (ddb_converter_t*)ddb->plug_get_for_id("converter");
         // TODO implement cancelling
         create_directories(to.parent_path());
@@ -155,13 +155,13 @@ bool ConvertJob::run(bool dry) {
             ddb_conv->convert2(&settings, it, std::string(to).c_str(), &pabort);
         if (!out) {
             register_job();
-            logger.log("Conversion of {} successful.", from_to_str);
+            logger->log("Conversion of {} successful.", from_to_str);
         } else {
-            logger.err("Converting {} failed.", from_to_str);
+            logger->err("Converting {} failed.", from_to_str);
         }
         return out == 0;
     } else {
-        logger.log("Would convert {}.", from_to_str);
+        logger->log("Would convert {}.", from_to_str);
         return true;
     }
 }
@@ -179,7 +179,7 @@ void ConvertJob::register_job() {
 void ConvertJob::abort() { pabort = 1; }
 
 DeleteJob::DeleteJob(
-    Logger& _logger,
+    std::shared_ptr<Logger> _logger,
     DatabaseHandle _db,
     sync_id_t _sync_id,
     path _source,
@@ -193,16 +193,16 @@ bool DeleteJob::run(bool dry) {
         try {
             success = remove(to);
         } catch (filesystem_error& e) {
-            logger.log("Failed to delete {}: {}.", to, e.what());
+            logger->log("Failed to delete {}: {}.", to, e.what());
             success = false;
         }
         if (success) {
             register_job();
             clean_parents(to.parent_path());
-            logger.log("Deleted {}.", to);
+            logger->log("Deleted {}.", to);
         }
     } else {
-        logger.log("Would delete {}.", to);
+        logger->log("Would delete {}.", to);
         success = true;
     }
     return success;
