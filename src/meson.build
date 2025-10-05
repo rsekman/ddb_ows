@@ -1,5 +1,3 @@
-add_global_arguments('-DDDB_OWS_LOGLEVEL=' + get_option('log-level'), language : 'cpp')
-
 fmt_dep = dependency('fmt')
 gio_dep = dependency('giomm-2.4')
 nlohmann_dep = dependency('nlohmann_json')

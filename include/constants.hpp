@@ -1,18 +1,6 @@
 #ifndef DDB_OWS_CONSTANTS_HPP
 #define DDB_OWS_CONSTANTS_HPP
 
-#define DDB_OWS_VERSION_MAJOR 0
-#define DDB_OWS_VERSION_MINOR 6
-#define DDB_OWS_VERSION_PATCH 0
-
-// dark preprocessor magic
-#define STR(x) #x
-#define MKVERSION(major, minor, patch) STR(major) "." STR(minor) "." STR(patch)
-#define DDB_OWS_VERSION                                                     \
-    MKVERSION(                                                              \
-        DDB_OWS_VERSION_MAJOR, DDB_OWS_VERSION_MINOR, DDB_OWS_VERSION_PATCH \
-    )
-
 #define DDB_OWS_PROJECT_ID "ddb_ows"
 #define DDB_OWS_PROJECT_NAME "ddb_ows"
 #define DDB_OWS_PROJECT_DESC                                                 \
