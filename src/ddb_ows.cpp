@@ -864,11 +864,8 @@ bool execute(bool dry, const ddb_ows_config& conf, job_finished_cb_t callback) {
         t.detach();
     }
     std::lock_guard lock(ddb_ows->worker_thread_futures.m);
-    for (auto t = ddb_ows->worker_thread_futures.futures.begin();
-         t != ddb_ows->worker_thread_futures.futures.end();
-         t++)
-    {
-        t->wait();
+    for (auto& t : ddb_ows->worker_thread_futures.futures) {
+        t.wait();
     }
     ddb_ows->worker_thread_futures.c.notify_all();
     return true;
