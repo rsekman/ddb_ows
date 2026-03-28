@@ -372,7 +372,7 @@ bool should_convert(DB_playItem_t* it, const std::set<std::string>& sels) {
         ext++;
         return plugin.conv_exts.count(ext);
     } else {
-        logger->warn("Unable to determine filetype for {}.");
+        logger->warn("Unable to determine filetype for {}.", fname);
         return false;
     }
 }
