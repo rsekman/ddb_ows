@@ -106,11 +106,11 @@ class DeleteJob : public Job {
         path from,
         path target
     );
-    bool run(bool dry = false);
-    void abort() {};
+    bool run(bool dry = false) override;
+    void abort() override {};
 
   private:
-    void register_job();
+    void register_job() override;
 };
 
 }  // namespace ddb_ows
