@@ -27,12 +27,12 @@
 
 namespace ddb_ows {
 
-typedef struct sync_pls_s {
+struct sync_pls_t {
     bool dbpl;
     bool m3u8;
-} sync_pls_t;
+};
 
-typedef struct {
+struct ddb_ows_config {
     std::string root;
     std::vector<std::string> fn_formats;
     std::unordered_set<plt_uuid> pl_selection;
@@ -45,7 +45,7 @@ typedef struct {
     std::string conv_preset;
     std::string conv_ext;
     int conv_wts;
-} ddb_ows_config;
+};
 
 class Configuration {
   public:

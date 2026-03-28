@@ -22,8 +22,10 @@ ProgressMonitor::ProgressMonitor(Gtk::ProgressBar* _pb) : pb(_pb) {
         // it, thus unregistering callbacks. That is, this always outlives
         // notification, so it is safe to pass it as a raw pointer.
         g_signal_connect(
-            notification, "closed", (GCallback)close_callback, this
-
+            notification,
+            "closed",
+            reinterpret_cast<GCallback>(close_callback),
+            this
         );
 
         notify_notification_show(notification, nullptr);
@@ -35,7 +37,7 @@ ProgressMonitor::~ProgressMonitor() { free_notification(); }
 inline float pct(size_t n, size_t n_total) {
     float pct;
     if (n_total > 0) {
-        pct = (float)n / (float)n_total;
+        pct = static_cast<float>(n) / static_cast<float>(n_total);
     } else {
         pct = 1.0;
     }

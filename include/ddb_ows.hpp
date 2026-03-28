@@ -30,7 +30,7 @@ struct callback_t {
 
 using namespace ddb_ows;
 
-typedef struct {
+struct ddb_ows_plugin_t {
     DB_misc_t plugin;
     std::shared_ptr<ddb_ows::Configuration> conf;
     bool (*run)(
@@ -42,6 +42,6 @@ typedef struct {
     bool (*cancel)(cancel_cb_t callback);
     std::string (*get_output_path)(DB_playItem_t* it, char* format);
     plt_uuid (*plt_get_uuid)(ddb_playlist_t* plt);
-} ddb_ows_plugin_t;
+};
 
 #endif

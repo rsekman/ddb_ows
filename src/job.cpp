@@ -148,7 +148,9 @@ bool ConvertJob::run(bool dry) {
     );
     if (!dry) {
         logger->verbose("Converting  {}.", from_to_str);
-        auto ddb_conv = (ddb_converter_t*)ddb->plug_get_for_id("converter");
+        auto* ddb_conv = reinterpret_cast<ddb_converter_t*>(
+            ddb->plug_get_for_id("converter")
+        );
         // TODO implement cancelling
         create_directories(to.parent_path());
         int out =

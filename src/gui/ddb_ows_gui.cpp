@@ -42,7 +42,7 @@ namespace ddb_ows_gui {
 
 using namespace ddb_ows;
 
-typedef struct {
+struct ddb_ows_gui_plugin_t {
     DB_misc_t plugin;
     std::shared_ptr<Gtk::Main> app;
     std::shared_ptr<ProgressMonitor> pm;
@@ -50,8 +50,7 @@ typedef struct {
     // These instances must be created by the Gtk main thread
     std::shared_ptr<Glib::Dispatcher> sig_execution_buttons_set_sensitive;
     std::shared_ptr<Glib::Dispatcher> sig_execution_buttons_set_insensitive;
-
-} ddb_ows_gui_plugin_t;
+};
 
 ddb_ows_gui_plugin_t plugin{
     .app = nullptr,
@@ -100,11 +99,11 @@ typedef std::unordered_map<
     signal_handler_id_hash>
     signal_map;
 
-typedef struct {
+struct connect_args {
     GModule* gmodule;
     gpointer data;
     signal_map* map;
-} connect_args;
+};
 
 signal_map* signals = new signal_map();
 
@@ -118,9 +117,12 @@ static void gtk_builder_connect_signals_default(
     gpointer user_data
 ) {
     GCallback func;
-    connect_args* args = (connect_args*)user_data;
+    auto* args = static_cast<connect_args*>(user_data);
 
-    if (!g_module_symbol(args->gmodule, handler_name, (gpointer*)&func)) {
+    if (!g_module_symbol(
+            args->gmodule, handler_name, reinterpret_cast<gpointer*>(&func)
+        ))
+    {
         g_warning("Could not find signal handler '%s'", handler_name);
         return;
     }
@@ -279,8 +281,8 @@ void update_fn_preview(char* format) {
 
 void cp_populate(Glib::RefPtr<Gtk::ListStore> model) {
     auto logger = get_logger();
-    ddb_converter_t* enc_plug =
-        (ddb_converter_t*)ddb->plug_get_for_id("converter");
+    auto* enc_plug =
+        reinterpret_cast<ddb_converter_t*>(ddb->plug_get_for_id("converter"));
     if (enc_plug == nullptr) {
         logger->warn("Converter plugin not present!");
         return;
@@ -478,7 +480,7 @@ void loglevel_cb_populate(std::shared_ptr<TextBufferLogger> logger) {
         }
         row->set_value(0, l.second.name);
         row->set_value(1, l.second.color);
-        row->set_value(2, (unsigned int)l.first);
+        row->set_value(2, static_cast<unsigned int>(l.first));
     }
 }
 
@@ -719,7 +721,7 @@ void on_loglevel_cb_changed(GtkComboBox* loglevel_cb, gpointer data) {
     auto model = gtk_combo_box_get_model(loglevel_cb);
     guint level;
     gtk_tree_model_get(model, &active, 2, &level, -1);
-    plugin.gui_logger->set_level((loglevel_e)level);
+    plugin.gui_logger->set_level(static_cast<loglevel_e>(level));
 }
 
 /* Initialize the UI with values from config */
@@ -757,7 +759,7 @@ void on_fn_format_combobox_show(GtkWidget* widget, gpointer data) {
     gtk_combo_box_set_active(GTK_COMBO_BOX(widget), 0);
 
     Gtk::ComboBox* fn_combobox = Glib::wrap(GTK_COMBO_BOX(widget), true);
-    Gtk::Entry* fn_entry = (Gtk::Entry*)fn_combobox->get_child();
+    auto* fn_entry = static_cast<Gtk::Entry*>(fn_combobox->get_child());
     fn_entry->signal_activate().connect(
         sigc::bind(sigc::ptr_fun(&on_fn_format_entered), fn_entry)
     );
@@ -864,7 +866,7 @@ void on_rm_unref_check_toggled(GtkToggleButton* toggle, gpointer data) {
 }
 
 void on_wt_spinbutton_value_changed(GtkSpinButton* spinbutton, gpointer data) {
-    int wt = (int)gtk_spin_button_get_value(spinbutton);
+    int wt = static_cast<int>(gtk_spin_button_get_value(spinbutton));
     ddb_ows->conf->set_conv_wts(wt);
 }
 
@@ -1050,7 +1052,8 @@ int stop() { return 0; }
 int connect(void) {
     auto logger = get_logger();
 
-    ddb_ows = (ddb_ows_plugin_t*)ddb->plug_get_for_id("ddb_ows");
+    ddb_ows =
+        reinterpret_cast<ddb_ows_plugin_t*>(ddb->plug_get_for_id("ddb_ows"));
     if (ddb_ows == nullptr) {
         logger->error("ddb_ows plugin not found, quitting.");
         return -1;
@@ -1141,7 +1144,7 @@ DB_plugin_t* load(DB_functions_t* api) {
     auto logger = spdlog::stderr_color_mt(DDB_OWS_GUI_PLUGIN_ID);
     logger->set_level(spdlog::level::DDB_OWS_LOGLEVEL);
     logger->set_pattern("[%n] [%^%l%$] [thread %t] %v");
-    return (DB_plugin_t*)&ddb_ows_gui::plugin;
+    return reinterpret_cast<DB_plugin_t*>(&ddb_ows_gui::plugin);
 }
 
 extern "C" DB_plugin_t*

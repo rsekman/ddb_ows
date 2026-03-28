@@ -20,17 +20,17 @@ using RGBA = Gdk::RGBA;
 template <typename T>
 using RefPtr = Glib::RefPtr<T>;
 
-typedef struct {
+struct loglevel_info_t {
     std::string name;
     std::string color_name;
     RGBA color;
     RefPtr<TextBuffer::Tag> tag;
-} loglevel_info_t;
+};
 
-typedef struct {
+struct message_t {
     std::string message;
     loglevel_info_t& level;
-} message_t;
+};
 
 class TextBufferLogger : public Logger {
   public:

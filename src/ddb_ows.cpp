@@ -44,11 +44,11 @@ namespace ddb_ows {
 
 typedef std::packaged_task<bool(bool, job_finished_cb_t)> worker_thread_t;
 
-typedef struct wt_futures_s {
+struct wt_futures_t {
     std::mutex m;
     std::condition_variable c;
     std::vector<std::shared_future<bool>> futures;
-} wt_futures_t;
+};
 
 struct ddb_ows_plugin_int {
     ddb_ows_plugin_t pub;
@@ -253,8 +253,9 @@ bool queue_cover_jobs(
         from = ddb->pl_find_meta(it, ":URI");
         to = root / get_output_path(it, fmt);
         path target_dir = to.parent_path();
-        ddb_cover_query_t* cover_query =
-            (ddb_cover_query_t*)calloc(1, sizeof(ddb_cover_query_t));
+        auto* cover_query = static_cast<ddb_cover_query_t*>(
+            calloc(1, sizeof(ddb_cover_query_t))
+        );
         cover_query->flags = 0;
         cover_query->track = it;
         ddb->pl_item_ref(it);
@@ -664,8 +665,8 @@ bool queue_jobs(
         return false;
     }
 
-    ddb_ows_plugin_int* ddb_ows =
-        (ddb_ows_plugin_int*)ddb->plug_get_for_id("ddb_ows");
+    auto* ddb_ows =
+        reinterpret_cast<ddb_ows_plugin_int*>(ddb->plug_get_for_id("ddb_ows"));
     auto plug_logger = ddb_ows->logger;
 
     path root(conf.root);
@@ -853,8 +854,8 @@ bool worker_thread(bool dry, job_finished_cb_t callback) {
 }
 
 bool execute(bool dry, const ddb_ows_config& conf, job_finished_cb_t callback) {
-    ddb_ows_plugin_int* ddb_ows =
-        (ddb_ows_plugin_int*)ddb->plug_get_for_id("ddb_ows");
+    auto* ddb_ows =
+        reinterpret_cast<ddb_ows_plugin_int*>(ddb->plug_get_for_id("ddb_ows"));
     int n_wts = conf.conv_wts;
     ddb_ows->worker_thread_futures.futures.clear();
     for (int i = 0; i < n_wts; i++) {
@@ -894,8 +895,8 @@ bool run(
 }
 
 bool cancel(cancel_cb_t callback) {
-    ddb_ows_plugin_int* ddb_ows =
-        (ddb_ows_plugin_int*)ddb->plug_get_for_id("ddb_ows");
+    auto* ddb_ows =
+        reinterpret_cast<ddb_ows_plugin_int*>(ddb->plug_get_for_id("ddb_ows"));
     ddb_ows->logger->debug("Cancelling");
     ddb_ows->cancellationtoken->cancel();
     plugin.jobs->cancel();
@@ -925,18 +926,21 @@ void init(DB_functions_t* api) {
 DB_plugin_t* load(DB_functions_t* api) {
     ddb = api;
     init(api);
-    return (DB_plugin_t*)&plugin;
+    return reinterpret_cast<DB_plugin_t*>(&plugin);
 }
 
 int connect() {
-    ddb_converter = (ddb_converter_t*)ddb->plug_get_for_id("converter");
+    ddb_converter =
+        reinterpret_cast<ddb_converter_t*>(ddb->plug_get_for_id("converter"));
     if (ddb_converter == nullptr) {
         plugin.logger->warn(
             "Converter plugin not available. Conversion jobs will be skipped."
         );
     }
 
-    ddb_artwork = (ddb_artwork_plugin_t*)ddb->plug_get_for_id("artwork2");
+    ddb_artwork = reinterpret_cast<ddb_artwork_plugin_t*>(
+        ddb->plug_get_for_id("artwork2")
+    );
     if (ddb_artwork == nullptr) {
         plugin.logger->warn(
             "Artwork plugin not available. Cover art will not be synced."
