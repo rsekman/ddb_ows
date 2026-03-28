@@ -254,7 +254,7 @@ bool queue_cover_jobs(
         to = root / get_output_path(it, fmt);
         path target_dir = to.parent_path();
         ddb_cover_query_t* cover_query =
-            (ddb_cover_query_t*)calloc(sizeof(ddb_cover_query_t), 1);
+            (ddb_cover_query_t*)calloc(1, sizeof(ddb_cover_query_t));
         cover_query->flags = 0;
         cover_query->track = it;
         ddb->pl_item_ref(it);
