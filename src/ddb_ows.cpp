@@ -176,9 +176,9 @@ std::string get_output_path(DB_playItem_t* it, char* format) {
 struct cover_req_t {
     std::mutex m;
     std::condition_variable c;
-    bool returned;
+    bool returned = false;
     bool timed_out = false;
-    ddb_cover_info_t* cover;
+    ddb_cover_info_t* cover = nullptr;
 };
 
 void callback_cover_art_found(
@@ -263,13 +263,7 @@ bool queue_cover_jobs(
         cover_query->source_id = sid;
         cover_query->_size = sizeof(ddb_cover_query_t);
 
-        std::shared_ptr<cover_req_t> creq(new cover_req_t{
-            .m = std::mutex(),
-            .c = std::condition_variable(),
-            .returned = false,
-            .timed_out = false,
-            .cover = nullptr
-        });
+        auto creq = std::make_shared<cover_req_t>();
         auto creq_copy = new std::shared_ptr(creq);
         cover_query->user_data = creq_copy;
 
