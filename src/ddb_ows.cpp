@@ -770,12 +770,10 @@ bool queue_jobs(
             }
         }
 
-        if (visited_sources.count(from) > 0) {
-            // This source file was already processed, avoid queueing redundant
-            // jobs
+        if (const auto [_, inserted] = visited_sources.insert(from); !inserted)
+        {
             continue;
         }
-        visited_sources.insert(from);
 
         try {
             make_job(
