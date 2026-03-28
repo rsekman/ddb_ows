@@ -489,7 +489,6 @@ std::string plt_get_title(ddb_playlist_t* plt) {
     char plt_title[PATH_MAX];
     ddb->plt_get_title(plt, plt_title, sizeof(plt_title));
     std::string out(plt_title);
-    out.shrink_to_fit();
     return out;
 }
 
