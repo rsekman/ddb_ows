@@ -23,14 +23,13 @@ int execute_from_resource(
     sqlite3* db,
     const char* resource_name,
     int (*callback)(void*, int, char**, char**),
-    void* user_data,
-    char** errmsg
+    void* user_data
 ) {
     auto res = Gio::Resource::lookup_data_global(resource_name);
     auto size = res->get_size();
     auto buf = static_cast<const char*>(res->get_data(size));
 
-    return sqlite3_exec(db, buf, callback, user_data, errmsg);
+    return sqlite3_exec(db, buf, callback, user_data, nullptr);
 }
 
 struct db_version_info_t {
@@ -61,7 +60,6 @@ Database::Database(path root) : m() {
     // it.
     // Preparing the statement can't fail because we control it fully.
     db_version_info_t version_info;
-    char* sqlite_errmsg;
     auto store_values =
         [](void* user_data, int n_cols, char** cols, char** col_names) -> int {
         auto out = static_cast<db_version_info_t*>(user_data);
@@ -70,20 +68,14 @@ Database::Database(path root) : m() {
         return 0;
     };
     status = execute_from_resource(
-        sql_db,
-        "/ddb_ows/sql/init.sql",
-        store_values,
-        &version_info,
-        &sqlite_errmsg
+        sql_db, "/ddb_ows/sql/init.sql", store_values, &version_info
     );
     if (status != SQLITE_OK) {
         const auto err_msg = fmt::format(
             "Unable to determine schema and app version of database ({}: {})",
             status,
-            sqlite3_errmsg(sql_db),
-            sqlite_errmsg != nullptr ? sqlite_errmsg : "N/A"
+            sqlite3_errmsg(sql_db)
         );
-        sqlite3_free(sqlite_errmsg);
         throw std::runtime_error(err_msg);
     }
 
@@ -113,17 +105,14 @@ Database::Database(path root) : m() {
              k++)
         {
             auto res = fmt::format("/ddb_ows/sql/schema_v{}.sql", k);
-            status = execute_from_resource(
-                sql_db, res.c_str(), nullptr, nullptr, &sqlite_errmsg
-            );
+            status =
+                execute_from_resource(sql_db, res.c_str(), nullptr, nullptr);
             if (status != SQLITE_OK) {
                 auto err_msg = fmt::format(
                     "Unable to apply migration {} ({}: {})",
                     res,
-                    sqlite3_errmsg(sql_db),
-                    sqlite_errmsg != nullptr ? sqlite_errmsg : "N/A"
+                    sqlite3_errmsg(sql_db)
                 );
-                sqlite3_free(sqlite_errmsg);
                 throw std::runtime_error(err_msg);
             }
             logger->debug("Applied database migration {}", res);
