@@ -20,7 +20,16 @@ class JobsQueue {
   public:
     JobsQueue(void) : q(), c(), m() { isOpen = true; }
     void push_back(std::unique_ptr<Job> job);
-    void emplace_back(Job* job);
+
+    template <typename T, typename... Args>
+    void emplace_back(Args&&... args) {
+        std::lock_guard<std::mutex> lock(m);
+        if (!isOpen) {
+            return;
+        }
+        q.emplace_back(std::make_unique<T>(std::forward<Args>(args)...));
+        c.notify_one();
+    }
     std::unique_ptr<Job> pop();
     void close();
     void open();

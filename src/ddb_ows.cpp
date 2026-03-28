@@ -433,7 +433,7 @@ void make_job(
             } else if (old_newer && old_dest != to) {
                 // The source was previously converted with a different
                 // destination, which is newer than the source
-                out->emplace_back(new MoveJob(
+                out->emplace_back<MoveJob>(
                     logger,
                     db,
                     sync_id,
@@ -441,13 +441,13 @@ void make_job(
                     to,
                     from,
                     old->converter_preset
-                ));
+                );
             } else {
                 // The source is newer => delete the old destination and
                 // reconvert with new destination
                 if (old_dest != to) {
-                    out->emplace_back(
-                        new DeleteJob(logger, db, sync_id, from, *old_dest)
+                    out->emplace_back<DeleteJob>(
+                        logger, db, sync_id, from, *old_dest
                     );
                 }
                 out->push_back(std::move(cjob));
@@ -456,9 +456,7 @@ void make_job(
             // This source file was previously synced, but with a different
             // encoder. Convert it, and clean up the old file.
             out->push_back(std::move(cjob));
-            out->emplace_back(
-                new DeleteJob(logger, db, sync_id, from, *old_dest)
-            );
+            out->emplace_back<DeleteJob>(logger, db, sync_id, from, *old_dest);
         } else {
             // This source file was not previously synced. All we have to do is
             // convert it.
@@ -468,24 +466,22 @@ void make_job(
         // This source file was synced previously, and was not converted
         if (old_newer && !old->converter_preset) {
             // the destination file is newer than the source => move
-            out->emplace_back(
-                new MoveJob(logger, db, sync_id, *old_dest, to, from, "")
+            out->emplace_back<MoveJob>(
+                logger, db, sync_id, *old_dest, to, from, ""
             );
         } else {
             // the source file is newer than the old copy, or was previously
             // converted but should not be now => delete the old copy/conversion
             // and copy anew
-            out->emplace_back(
-                new DeleteJob(logger, db, sync_id, from, *old_dest)
-            );
-            out->emplace_back(new CopyJob(logger, db, sync_id, from, to));
+            out->emplace_back<DeleteJob>(logger, db, sync_id, from, *old_dest);
+            out->emplace_back<CopyJob>(logger, db, sync_id, from, to);
         }
     } else if (dest_newer) {
         logger->verbose(
             "Destination {} is newer than source {}; skipping.", to, from
         );
     } else {
-        out->emplace_back(new CopyJob(logger, db, sync_id, from, to));
+        out->emplace_back<CopyJob>(logger, db, sync_id, from, to);
     }
 }
 
@@ -812,9 +808,7 @@ bool queue_jobs(
                 gathered_cb(sources.size() + cover_its.size() + unrefd->size());
             }
             for (const auto& [from, to] : *unrefd) {
-                jobs->emplace_back(
-                    new DeleteJob(logger, db, *sync_id, from, to)
-                );
+                jobs->emplace_back<DeleteJob>(logger, db, *sync_id, from, to);
                 if (queued_cb) {
                     queued_cb();
                 }

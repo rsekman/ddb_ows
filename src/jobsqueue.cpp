@@ -15,15 +15,6 @@ void JobsQueue::push_back(std::unique_ptr<Job> job) {
     c.notify_one();
 }
 
-void JobsQueue::emplace_back(Job* job) {
-    std::lock_guard<std::mutex> lock(m);
-    if (!isOpen) {
-        return;
-    }
-    q.emplace_back(job);
-    c.notify_one();
-}
-
 std::unique_ptr<Job> JobsQueue::pop() {
     std::unique_lock<std::mutex> lock(m);
     c.wait(lock, [this] { return !this->q.empty() || !this->isOpen; });
