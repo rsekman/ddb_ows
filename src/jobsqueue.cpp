@@ -61,14 +61,12 @@ void JobsQueue::cancel() {
 bool JobsQueue::empty() {
     std::lock_guard<std::mutex> lock(m);
     bool out = q.empty();
-    c.notify_all();
     return out;
 }
 
 size_t JobsQueue::size() {
     std::lock_guard<std::mutex> lock(m);
     int out = q.size();
-    c.notify_all();
     return out;
 }
 
