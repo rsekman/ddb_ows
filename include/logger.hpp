@@ -14,11 +14,11 @@ enum loglevel_e {
     DDB_OWS_TBL_ERR,
 };
 
-#define DDB_OWS_LOGGER_METHOD(x)                        \
-    virtual bool x(std::string message) = 0;            \
-    template <typename... T>                            \
-    bool x(fmt::format_string<T...> fmt, T&&... args) { \
-        return x(fmt::format(fmt, args...));            \
+#define DDB_OWS_LOGGER_METHOD(x)                                           \
+    virtual bool x(std::string message) = 0;                               \
+    template <typename... T>                                               \
+    bool x(fmt::format_string<T...> fmt, T&&... args) {                    \
+        return x(fmt::vformat(fmt.get(), fmt::make_format_args(args...))); \
     }
 
 class Logger {

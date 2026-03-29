@@ -97,9 +97,8 @@ Database::Database(path root) : m() {
             auto res = fmt::format("/ddb_ows/sql/schema_v{}.sql", k);
             status = execute_from_resource(sql_db, res.c_str(), nullptr, nullptr);
             if (status != SQLITE_OK) {
-                auto err_msg = fmt::format(
-                    "Unable to apply migration {} ({}: {})", res, sqlite3_errmsg(sql_db)
-                );
+                auto err_msg =
+                    fmt::format("Unable to apply migration {} ({})", res, sqlite3_errmsg(sql_db));
                 throw std::runtime_error(err_msg);
             }
             logger->debug("Applied database migration {}", res);
