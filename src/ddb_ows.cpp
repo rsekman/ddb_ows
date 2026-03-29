@@ -511,12 +511,16 @@ bool save_playlist(
         ddb->pl_item_unref(head);
         ddb->pl_item_unref(tail);
         ddb->plt_unref(plt_out);
-    }
-    if (out < 0) {
-        logger->err("Failed to save playlist {}.", title);
-        return false;
+
+        if (out < 0) {
+            logger->err("Failed to save playlist {}.", title);
+            return false;
+        } else {
+            logger->log("Saved playlist {}", title);
+            return true;
+        }
     } else {
-        logger->log("Saved playlist {}", title);
+        logger->log("Would save playlist {}", title);
         return true;
     }
 }
