@@ -146,8 +146,8 @@ Database::~Database() {
     logger->debug("Closed database {}.", db_fname);
 }
 
-// Convenience function to bind a text parameter from a std::string, or from
-// anything that *can be converted* to a std::string -- the compiler will write
+// Convenience function to bind a text parameter from a std::string_view, or from
+// anything that *can be converted* to a std::string_view -- the compiler will write
 // the boilerplate for us. The default destructor is SQLITE_TRANSIENT because
 // if an argument is converted, the resulting string's data only lives until
 // the end of this function. Thus the default is always correct but sometimes
@@ -156,11 +156,11 @@ Database::~Database() {
 int sqlite3_bind_str(
     sqlite3_stmt* stmt,
     const char* param,
-    const std::string& str,
+    const std::string_view str,
     void (*destructor)(void*) = SQLITE_TRANSIENT
 ) {
     auto idx = sqlite3_bind_parameter_index(stmt, param);
-    return sqlite3_bind_text(stmt, idx, str.c_str(), str.length(), destructor);
+    return sqlite3_bind_text(stmt, idx, str.data(), str.length(), destructor);
 }
 
 // Get a prepared statement and make sure it is reset and ready to be used
@@ -204,7 +204,7 @@ std::optional<synced_file_data_t> Database::find_entry(path key) {
     std::lock_guard lock(m);
 
     sqlite3_stmt* stmt = _get_statement("latest_file_sync");
-    sqlite3_bind_str(stmt, ":source", key);
+    sqlite3_bind_str(stmt, ":source", key.string());
 
     int status = sqlite3_step(stmt);
     if (status == SQLITE_ROW) {
@@ -273,7 +273,7 @@ void Database::register_file(const path& source) {
     std::lock_guard lock(m);
 
     sqlite3_stmt* stmt = _get_statement("register_file");
-    sqlite3_bind_str(stmt, ":source", source);
+    sqlite3_bind_str(stmt, ":source", source.string());
 
     int status = sqlite3_step(stmt);
     if (status != SQLITE_DONE) {
@@ -289,9 +289,9 @@ void Database::register_synced_file(const synced_file_data_t& data) {
 
     sqlite3_stmt* stmt = _get_statement("register_synced_file");
 
-    sqlite3_bind_str(stmt, ":source", data.source);
+    sqlite3_bind_str(stmt, ":source", data.source.string());
     if (data.destination) {
-        sqlite3_bind_str(stmt, ":destination", *data.destination);
+        sqlite3_bind_str(stmt, ":destination", data.destination->string());
     }
     if (data.converter_preset) {
         sqlite3_bind_str(stmt, ":conv_preset", *data.converter_preset, SQLITE_STATIC);
@@ -313,7 +313,7 @@ void Database::register_synced_file(const synced_file_data_t& data) {
     }
 }
 
-void Database::register_playlist(const std::string& uuid, const std::string& title) {
+void Database::register_playlist(std::string_view uuid, std::string_view title) {
     std::lock_guard lock(m);
 
     sqlite3_stmt* stmt = _get_statement("register_playlist");
@@ -333,7 +333,7 @@ void Database::register_playlist(const std::string& uuid, const std::string& tit
     }
 }
 
-void Database::register_synced_playlist(const std::string& uuid, sync_id_t sync_id) {
+void Database::register_synced_playlist(std::string_view uuid, sync_id_t sync_id) {
     std::lock_guard lock(m);
 
     sqlite3_stmt* stmt = _get_statement("register_synced_playlist");
@@ -352,11 +352,11 @@ void Database::register_synced_playlist(const std::string& uuid, sync_id_t sync_
     }
 }
 
-void Database::register_file_in_playlist(const path& source, const std::string& plt_uuid) {
+void Database::register_file_in_playlist(const path& source, std::string_view plt_uuid) {
     std::lock_guard lock(m);
 
     sqlite3_stmt* stmt = _get_statement("register_file_in_playlist");
-    sqlite3_bind_str(stmt, ":source", source);
+    sqlite3_bind_str(stmt, ":source", source.string());
     sqlite3_bind_str(stmt, ":playlist_uuid", plt_uuid, SQLITE_STATIC);
 
     int status = sqlite3_step(stmt);
@@ -372,7 +372,7 @@ void Database::register_file_in_playlist(const path& source, const std::string& 
     }
 }
 
-void Database::clear_playlist(const std::string& plt_uuid) {
+void Database::clear_playlist(std::string_view plt_uuid) {
     std::lock_guard lock(m);
 
     sqlite3_stmt* stmt = _get_statement("clear_playlist");

@@ -14,7 +14,6 @@
 #include <cstring>
 #include <ctime>
 #include <filesystem>
-#include <forward_list>
 #include <functional>
 #include <map>
 #include <memory>
@@ -587,7 +586,7 @@ void build_conv_ext_cache(const std::set<std::string>& sels) {
 
 struct job_source {
     std::shared_ptr<ddb_playItem_t> it;
-    const std::string& plt_uuid;
+    const std::string_view plt_uuid;
 };
 
 // Returns false if cancelled, true if successful
@@ -643,15 +642,15 @@ bool queue_jobs(
 
     std::vector<job_source> sources;
     // list promises that references remain valid even after insertions
-    std::forward_list<std::string> plt_uuids;
+    std::vector<std::string> plt_uuids;
+    plt_uuids.reserve(playlists.size());
 
     ddb->pl_lock();
     for (auto plt : playlists) {
         const auto plt_title = plt_get_title(plt);
         plug_logger->debug("Looking for jobs from playlist {}", plt_title);
 
-        plt_uuids.push_front(_plt_get_uuid(plt).str());
-        const std::string& plt_uuid = plt_uuids.front();
+        const auto plt_uuid = plt_uuids.emplace_back(_plt_get_uuid(plt).str());
         if (!dry) {
             db->register_playlist(plt_uuid, plt_title);
             db->clear_playlist(plt_uuid);
@@ -703,7 +702,7 @@ bool queue_jobs(
                         gathered_cb(sources.size() + cover_its.size());
                     }
                 }
-                src->second.plt_uuids.insert(source.plt_uuid);
+                src->second.plt_uuids.emplace(source.plt_uuid);
             } else if (inserted) {
                 logger->warn(
                     "Would sync cover to directory {}, but artwork plugin is not available.",
