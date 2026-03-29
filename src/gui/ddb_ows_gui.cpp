@@ -219,8 +219,10 @@ void fn_formats_populate(Glib::RefPtr<Gtk::ListStore> model) {
     g_signal_handler_unblock(obj, on_delete);
 }
 
-char* validate_fn_format(std::string fmt) {
-    char* bc = ddb->tf_compile(fmt.c_str());
+using tf_ptr = std::unique_ptr<char, decltype(ddb->tf_free)>;
+
+tf_ptr validate_fn_format(std::string fmt) {
+    tf_ptr bc(ddb->tf_compile(fmt.c_str()), ddb->tf_free);
     Gtk::Image* valid_indicator;
     builder->get_widget("fn_format_valid_indicator", valid_indicator);
     Gtk::BuiltinStockID icon;
@@ -260,7 +262,6 @@ void update_fn_preview(char* format) {
         ddb->pl_unlock();
     }
     std::string out = ddb_ows->get_output_path(it, format);
-    ddb->tf_free(format);
     ddb->pl_item_unref(it);
     preview_label->set_text(out);
     preview_label->queue_resize();
@@ -620,7 +621,7 @@ void fn_formats_save_on_delete(GtkListStore* ls, GtkTreePath* path, gpointer dat
 void on_fn_format_entered(Gtk::Entry* entry) {
     auto model = Glib::RefPtr<Gtk::ListStore>::cast_static(builder->get_object("fn_format_model"));
     std::string fn_format = entry->get_text();
-    char* format = validate_fn_format(fn_format);
+    const auto format = validate_fn_format(fn_format);
     if (format == nullptr) {
         return;
     }
@@ -638,7 +639,7 @@ void on_fn_format_entered(Gtk::Entry* entry) {
     }
     auto row = model->prepend();
     row->set_value(0, entry->get_text());
-    update_fn_preview(format);
+    update_fn_preview(format.get());
 }
 
 bool on_fn_format_focus_out(GdkEventFocus* event, Gtk::Entry* entry) {
@@ -660,9 +661,9 @@ void on_fn_format_combobox_changed(GtkComboBox* fn_combobox, gpointer data) {
         fn_format = gtk_entry_get_text(entry);
     }
 
-    char* format = validate_fn_format(fn_format);
+    const auto format = validate_fn_format(fn_format);
     if (format != nullptr) {
-        update_fn_preview(format);
+        update_fn_preview(format.get());
     } else {
         clear_fn_preview();
     }

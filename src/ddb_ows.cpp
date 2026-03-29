@@ -197,6 +197,8 @@ struct cover_job_source {
     std::unordered_set<std::string> plt_uuids;
 };
 
+using tf_ptr = std::unique_ptr<char, decltype(ddb->tf_free)>;
+
 // Returns false if cancelled, true if successful
 bool queue_cover_jobs(
     bool dry,
@@ -212,8 +214,10 @@ bool queue_cover_jobs(
     auto jobs = plugin.jobs;
     auto plug_logger = plugin.logger;
 
-    char* fmt = ddb->tf_compile(conf.fn_formats[0].c_str());
-    if (fmt == nullptr) {
+    const auto tf_str = conf.fn_formats[0];
+    tf_ptr fmt(ddb->tf_compile(tf_str.c_str()), ddb->tf_free);
+    if (fmt.get() == nullptr) {
+        logger->err("Invalid title format string {}.", tf_str);
         return false;
     }
 
@@ -231,7 +235,7 @@ bool queue_cover_jobs(
             return false;
         }
         from = ddb->pl_find_meta(it, ":URI");
-        to = root / get_output_path(it, fmt);
+        to = root / get_output_path(it, fmt.get());
         path target_dir = to.parent_path();
         auto* cover_query = static_cast<ddb_cover_query_t*>(calloc(1, sizeof(ddb_cover_query_t)));
         cover_query->flags = 0;
@@ -466,8 +470,10 @@ bool save_playlist(
     plug_logger->debug("Saving playlist to {}", pl_to);
     int out = 0;
 
-    char* fmt = ddb->tf_compile(conf.fn_formats[0].c_str());
-    if (fmt == nullptr) {
+    const auto tf_str = conf.fn_formats[0];
+    tf_ptr fmt(ddb->tf_compile(tf_str.c_str()), ddb->tf_free);
+    if (fmt.get() == nullptr) {
+        logger->err("Invalid title format string {}.", tf_str);
         return false;
     }
 
@@ -490,7 +496,7 @@ bool save_playlist(
             DB_playItem_t* new_it = ddb->pl_item_alloc();
             ddb->pl_item_copy(new_it, its[k]);
             ddb->pl_item_unref(its[k]);
-            path out_path = get_output_path(new_it, fmt);
+            path out_path = get_output_path(new_it, fmt.get());
 
             if (should_convert(new_it, conf.conv_fts)) {
                 out_path.replace_extension(conf.conv_ext);
@@ -621,8 +627,9 @@ bool queue_jobs(
         logger->err("Could not create a new sync in the database.");
         return false;
     }
-    char* fmt = ddb->tf_compile(tf_str.c_str());
-    if (fmt == nullptr) {
+    tf_ptr fmt(ddb->tf_compile(tf_str.c_str()), ddb->tf_free);
+    if (fmt.get() == nullptr) {
+        logger->err("Invalid title format string {}.", tf_str);
         return false;
     }
     jobs->open();
@@ -678,7 +685,7 @@ bool queue_jobs(
 
         auto it = source.it.get();
         path from = std::string(ddb->pl_find_meta(it, ":URI"));
-        path to = root / get_output_path(it, fmt);
+        path to = root / get_output_path(it, fmt.get());
         path target_dir = to.parent_path();
 
         if (!dry) {
@@ -726,7 +733,6 @@ bool queue_jobs(
 
     if (ddb_ows->stop.stop_requested()) {
         plug_logger->debug("Cancelled while queueing jobs");
-        free(fmt);
         return false;
     }
 
@@ -734,7 +740,6 @@ bool queue_jobs(
     if (artwork_available &&
         !queue_cover_jobs(dry, conf, logger, db, *sync_id, cover_its, queued_cb))
     {
-        free(fmt);
         return false;
     }
 
@@ -759,7 +764,6 @@ bool queue_jobs(
         complete_cb(n_jobs);
     }
     plug_logger->debug("Found {} jobs", n_jobs);
-    free(fmt);
     return true;
 }
 
