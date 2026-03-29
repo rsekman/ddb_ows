@@ -2,9 +2,7 @@
 
 namespace ddb_ows {
 
-TextBufferLogger::TextBufferLogger(
-    Glib::RefPtr<Gtk::TextBuffer> _buffer, Gtk::TextView* _view
-) :
+TextBufferLogger::TextBufferLogger(Glib::RefPtr<Gtk::TextBuffer> _buffer, Gtk::TextView* _view) :
     buffer(_buffer), view(_view), m() {
     auto style_ctx = view->get_style_context();
     for (auto& i : loglevels) {
@@ -18,10 +16,8 @@ TextBufferLogger::TextBufferLogger(
     sig_flush.connect(sigc::mem_fun(*this, &TextBufferLogger::flush));
 };
 
-#define DDB_OWS_TBL_METHOD(l, e)                    \
-    bool TextBufferLogger::l(std::string message) { \
-        return enqueue(message, DDB_OWS_TBL_##e);   \
-    }
+#define DDB_OWS_TBL_METHOD(l, e) \
+    bool TextBufferLogger::l(std::string message) { return enqueue(message, DDB_OWS_TBL_##e); }
 
 DDB_OWS_TBL_METHOD(verbose, VERBOSE);
 DDB_OWS_TBL_METHOD(log, LOG);
@@ -44,9 +40,7 @@ void TextBufferLogger::set_level(loglevel_e level) {
     }
 }
 
-const std::map<loglevel_e, loglevel_info_t>& TextBufferLogger::get_levels() {
-    return loglevels;
-}
+const std::map<loglevel_e, loglevel_info_t>& TextBufferLogger::get_levels() { return loglevels; }
 
 bool TextBufferLogger::enqueue(std::string message, loglevel_e level) {
     std::lock_guard<std::mutex> lock(m);
@@ -66,9 +60,7 @@ void TextBufferLogger::flush() {
         auto message = q.front();
         q.pop();
         if (!end->get_deleted()) {
-            buffer->insert_with_tag(
-                end->get_iter(), message.message + "\n", message.level.tag
-            );
+            buffer->insert_with_tag(end->get_iter(), message.message + "\n", message.level.tag);
         }
         logged = true;
     }

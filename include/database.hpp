@@ -40,9 +40,7 @@ class Database {
 
     void register_playlist(const std::string& uuid, const std::string& title);
     void register_synced_playlist(const std::string& uuid, sync_id_t sync_id);
-    void register_file_in_playlist(
-        const path& source, const std::string& plt_uuid
-    );
+    void register_file_in_playlist(const path& source, const std::string& plt_uuid);
     void clear_playlist(const std::string& plt_uuid);
 
     std::optional<std::vector<std::tuple<path, path>>> get_unreferenced_files();

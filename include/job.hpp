@@ -40,11 +40,7 @@ class Job {
 class CopyJob : public Job {
   public:
     CopyJob(
-        std::shared_ptr<Logger> logger,
-        DatabaseHandle db,
-        sync_id_t sync_id,
-        path from,
-        path to
+        std::shared_ptr<Logger> logger, DatabaseHandle db, sync_id_t sync_id, path from, path to
     );
     bool run(bool dry = false) override;
     void abort() override {}

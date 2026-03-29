@@ -34,9 +34,7 @@ plt_uuid plt_get_uuid(ddb_playlist_t* plt, DB_functions_t* ddb);
 
 template <>
 struct std::hash<ddb_ows::plt_uuid> {
-    std::size_t operator()(ddb_ows::plt_uuid const& uuid) const noexcept {
-        return uuid.hash();
-    }
+    std::size_t operator()(ddb_ows::plt_uuid const& uuid) const noexcept { return uuid.hash(); }
 };
 
 #endif

@@ -12,9 +12,7 @@ bool plt_uuid::operator==(const plt_uuid& other) const {
 
 void plt_uuid::get(uuid_t out) const { uuid_copy(out, uuid); }
 
-std::size_t plt_uuid::hash() const noexcept {
-    return std::hash<std::string>{}(str());
-}
+std::size_t plt_uuid::hash() const noexcept { return std::hash<std::string>{}(str()); }
 
 std::string plt_uuid::str() const {
     char buf[UUID_STR_LEN];

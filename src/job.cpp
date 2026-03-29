@@ -22,9 +22,7 @@ void clean_parents(path p) {
 
 std::chrono::seconds now() {
     using namespace std::chrono;
-    return duration_cast<std::chrono::seconds>(
-        system_clock::now().time_since_epoch()
-    );
+    return duration_cast<std::chrono::seconds>(system_clock::now().time_since_epoch());
 }
 
 bool CopyJob::run(bool dry) {
@@ -62,11 +60,7 @@ void CopyJob::register_job() {
 }
 
 CopyJob::CopyJob(
-    std::shared_ptr<Logger> _logger,
-    DatabaseHandle _db,
-    sync_id_t _sync_id,
-    path _from,
-    path _to
+    std::shared_ptr<Logger> _logger, DatabaseHandle _db, sync_id_t _sync_id, path _from, path _to
 ) :
     Job(_logger, _db, _sync_id, _from, _to) {};
 
@@ -134,27 +128,19 @@ ConvertJob::ConvertJob(
     path _from,
     path _to
 ) :
-    Job(_logger, _db, _sync_id, _from, _to),
-    ddb(_ddb),
-    settings(_settings),
-    it(_it),
-    pabort(0) {
+    Job(_logger, _db, _sync_id, _from, _to), ddb(_ddb), settings(_settings), it(_it), pabort(0) {
     ddb->pl_item_ref(it);
 }
 
 bool ConvertJob::run(bool dry) {
-    std::string from_to_str = fmt::format(
-        "{} using {} to {}", from, settings.encoder_preset->title, to
-    );
+    std::string from_to_str =
+        fmt::format("{} using {} to {}", from, settings.encoder_preset->title, to);
     if (!dry) {
         logger->verbose("Converting  {}.", from_to_str);
-        auto* ddb_conv = reinterpret_cast<ddb_converter_t*>(
-            ddb->plug_get_for_id("converter")
-        );
+        auto* ddb_conv = reinterpret_cast<ddb_converter_t*>(ddb->plug_get_for_id("converter"));
         // TODO implement cancelling
         create_directories(to.parent_path());
-        int out =
-            ddb_conv->convert2(&settings, it, std::string(to).c_str(), &pabort);
+        int out = ddb_conv->convert2(&settings, it, std::string(to).c_str(), &pabort);
         if (!out) {
             register_job();
             logger->log("Conversion of {} successful.", from_to_str);

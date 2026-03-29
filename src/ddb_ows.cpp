@@ -72,9 +72,7 @@ int stop() { return 0; }
 int disconnect() { return 0; }
 int connect();
 
-int handleMessage(uint32_t id, uintptr_t ctx, uint32_t p1, uint32_t p2) {
-    return 0;
-}
+int handleMessage(uint32_t id, uintptr_t ctx, uint32_t p1, uint32_t p2) { return 0; }
 
 const char* configDialog_ = "";
 
@@ -106,8 +104,7 @@ plt_uuid _plt_get_uuid(ddb_playlist_t* plt) { return plt_get_uuid(plt, ddb); }
 // introspection to make it somewhat more readable.
 std::remove_reference_t<decltype(*ddb_ows_plugin_t::run)> run;
 std::remove_reference_t<decltype(*ddb_ows_plugin_t::cancel)> cancel;
-std::remove_reference_t<decltype(*ddb_ows_plugin_t::get_output_path)>
-    get_output_path;
+std::remove_reference_t<decltype(*ddb_ows_plugin_t::get_output_path)> get_output_path;
 
 ddb_ows_plugin_t plugin_public = {
     .plugin = plugin_ddb,
@@ -181,9 +178,7 @@ struct cover_req_t {
     ddb_cover_info_t* cover = nullptr;
 };
 
-void callback_cover_art_found(
-    int error, ddb_cover_query_t* query, ddb_cover_info_t* cover
-) {
+void callback_cover_art_found(int error, ddb_cover_query_t* query, ddb_cover_info_t* cover) {
     auto creq = static_cast<std::shared_ptr<cover_req_t>*>(query->user_data);
 
     auto logger = spdlog::get(DDB_OWS_PROJECT_ID);
@@ -192,8 +187,8 @@ void callback_cover_art_found(
         std::lock_guard<std::mutex> lock((*creq)->m);
         if (!(*creq)->timed_out) {
             (*creq)->returned = true;
-            if ((query->flags & DDB_ARTWORK_FLAG_CANCELLED) ||
-                cover == nullptr || cover->image_filename == nullptr)
+            if ((query->flags & DDB_ARTWORK_FLAG_CANCELLED) || cover == nullptr ||
+                cover->image_filename == nullptr)
             {
                 (*creq)->cover = nullptr;
             } else {
@@ -208,9 +203,7 @@ void callback_cover_art_found(
     free(query);
 }
 
-bool is_newer(path a, path b) {
-    return last_write_time(a) > last_write_time(b);
-}
+bool is_newer(path a, path b) { return last_write_time(a) > last_write_time(b); }
 
 struct cover_job_source {
     std::shared_ptr<ddb_playItem_t> it;
@@ -253,9 +246,7 @@ bool queue_cover_jobs(
         from = ddb->pl_find_meta(it, ":URI");
         to = root / get_output_path(it, fmt);
         path target_dir = to.parent_path();
-        auto* cover_query = static_cast<ddb_cover_query_t*>(
-            calloc(1, sizeof(ddb_cover_query_t))
-        );
+        auto* cover_query = static_cast<ddb_cover_query_t*>(calloc(1, sizeof(ddb_cover_query_t)));
         cover_query->flags = 0;
         cover_query->track = it;
         ddb->pl_item_ref(it);
@@ -274,9 +265,7 @@ bool queue_cover_jobs(
         }
         if (!creq->returned) {
             plug_logger->debug(
-                "Cover request for {} timed out after {:%Q %q}",
-                target_dir,
-                timeout
+                "Cover request for {} timed out after {:%Q %q}", target_dir, timeout
             );
             creq->timed_out = true;
         } else if (creq->cover == nullptr) {
@@ -291,8 +280,7 @@ bool queue_cover_jobs(
             }
             path to = target_dir / fname;
             auto old = db->find_entry(from);
-            auto old_dest =
-                old ? std::optional{old->destination} : std::nullopt;
+            auto old_dest = old ? std::optional{old->destination} : std::nullopt;
 
             bool dest_newer;
             try {
@@ -308,18 +296,14 @@ bool queue_cover_jobs(
             }
 
             if (dest_newer) {
-                logger->verbose(
-                    "Cover at {} is newer than source {}", to, from
-                );
+                logger->verbose("Cover at {} is newer than source {}", to, from);
             } else if (old_newer && *old_dest != to) {
-                auto cover_job = std::make_unique<MoveJob>(
-                    logger, db, sync_id, *old_dest, to, from, ""
-                );
+                auto cover_job =
+                    std::make_unique<MoveJob>(logger, db, sync_id, *old_dest, to, from, "");
                 jobs->push_back(std::move(cover_job));
             } else {
-                auto cover_job = std::make_unique<CopyJob>(
-                    logger, db, sync_id, creq->cover->image_filename, to
-                );
+                auto cover_job =
+                    std::make_unique<CopyJob>(logger, db, sync_id, creq->cover->image_filename, to);
                 jobs->push_back(std::move(cover_job));
             }
             if (queued_cb) {
@@ -330,9 +314,7 @@ bool queue_cover_jobs(
     return true;
 }
 
-std::optional<ddb_converter_settings_t> make_encoder_settings(
-    const std::string& selected
-) {
+std::optional<ddb_converter_settings_t> make_encoder_settings(const std::string& selected) {
     if (ddb_converter == nullptr) {
         return {};
     }
@@ -415,9 +397,8 @@ void make_job(
             return;
         }
         std::string preset_title = conv_settings->encoder_preset->title;
-        auto cjob = std::make_unique<ConvertJob>(
-            logger, db, ddb, *conv_settings, it, sync_id, from, to
-        );
+        auto cjob =
+            std::make_unique<ConvertJob>(logger, db, ddb, *conv_settings, it, sync_id, from, to);
         if (old && old->converter_preset == preset_title) {
             // This source file was synced previously and the same encoder
             // preset is selected
@@ -425,30 +406,20 @@ void make_job(
             if (dest_newer) {
                 // The destination exists and is newer than the source
                 logger->verbose(
-                    "Source {} was already converted with {}; skipping.",
-                    from,
-                    preset_title
+                    "Source {} was already converted with {}; skipping.", from, preset_title
                 );
                 return;
             } else if (old_newer && old_dest != to) {
                 // The source was previously converted with a different
                 // destination, which is newer than the source
                 out->emplace_back<MoveJob>(
-                    logger,
-                    db,
-                    sync_id,
-                    *old_dest,
-                    to,
-                    from,
-                    old->converter_preset
+                    logger, db, sync_id, *old_dest, to, from, old->converter_preset
                 );
             } else {
                 // The source is newer => delete the old destination and
                 // reconvert with new destination
                 if (old_dest != to) {
-                    out->emplace_back<DeleteJob>(
-                        logger, db, sync_id, from, *old_dest
-                    );
+                    out->emplace_back<DeleteJob>(logger, db, sync_id, from, *old_dest);
                 }
                 out->push_back(std::move(cjob));
             }
@@ -466,9 +437,7 @@ void make_job(
         // This source file was synced previously, and was not converted
         if (old_newer && !old->converter_preset) {
             // the destination file is newer than the source => move
-            out->emplace_back<MoveJob>(
-                logger, db, sync_id, *old_dest, to, from, ""
-            );
+            out->emplace_back<MoveJob>(logger, db, sync_id, *old_dest, to, from, "");
         } else {
             // the source file is newer than the old copy, or was previously
             // converted but should not be now => delete the old copy/conversion
@@ -477,9 +446,7 @@ void make_job(
             out->emplace_back<CopyJob>(logger, db, sync_id, from, to);
         }
     } else if (dest_newer) {
-        logger->verbose(
-            "Destination {} is newer than source {}; skipping.", to, from
-        );
+        logger->verbose("Destination {} is newer than source {}; skipping.", to, from);
     } else {
         out->emplace_back<CopyJob>(logger, db, sync_id, from, to);
     }
@@ -550,9 +517,7 @@ bool save_playlist(
 
         head = ddb->plt_get_head_item(plt_out, PL_MAIN);
         tail = ddb->plt_get_tail_item(plt_out, PL_MAIN);
-        out = ddb->plt_save(
-            plt_out, head, tail, pl_to.c_str(), nullptr, nullptr, nullptr
-        );
+        out = ddb->plt_save(plt_out, head, tail, pl_to.c_str(), nullptr, nullptr, nullptr);
         ddb->pl_item_unref(head);
         ddb->pl_item_unref(tail);
         ddb->plt_unref(plt_out);
@@ -592,12 +557,10 @@ bool save_playlists(
 ) {
     bool out = true;
     if (conf.sync_pls.dbpl) {
-        out = out &&
-              _save_playlists(dry, conf, playlists, "dbpl", logger, callback);
+        out = out && _save_playlists(dry, conf, playlists, "dbpl", logger, callback);
     }
     if (conf.sync_pls.m3u8) {
-        out = out &&
-              _save_playlists(dry, conf, playlists, "m3u8", logger, callback);
+        out = out && _save_playlists(dry, conf, playlists, "m3u8", logger, callback);
     }
     return out;
 }
@@ -628,9 +591,7 @@ void build_conv_ext_cache(const std::set<std::string>& sels) {
         }
         i++;
     }
-    logger->debug(
-        "Determined {} extensions for conversion", plugin.conv_exts.size()
-    );
+    logger->debug("Determined {} extensions for conversion", plugin.conv_exts.size());
 }
 
 struct job_source {
@@ -654,8 +615,7 @@ bool queue_jobs(
         return false;
     }
 
-    auto* ddb_ows =
-        reinterpret_cast<ddb_ows_plugin_int*>(ddb->plug_get_for_id("ddb_ows"));
+    auto* ddb_ows = reinterpret_cast<ddb_ows_plugin_int*>(ddb->plug_get_for_id("ddb_ows"));
     auto plug_logger = ddb_ows->logger;
 
     path root(conf.root);
@@ -667,9 +627,8 @@ bool queue_jobs(
     const auto rm_unref = conf.rm_unref;
     // Use 0 as a dummy value for dry runs. Probably would be more correct to
     // use a sum type, but then we have to touch all the Job interfaces.
-    const auto sync_id =
-        dry ? std::make_optional<sync_id_t>(0)
-            : db->new_sync(tf_str, cover_sync, cover_fname, rm_unref);
+    const auto sync_id = dry ? std::make_optional<sync_id_t>(0)
+                             : db->new_sync(tf_str, cover_sync, cover_fname, rm_unref);
 
     if (!sync_id) {
         logger->err("Could not create a new sync in the database.");
@@ -745,9 +704,8 @@ bool queue_jobs(
         }
 
         if (cover_sync) {
-            auto [src, inserted] = cover_its.insert(
-                {target_dir, {.it = source.it, .plt_uuids = {}}}
-            );
+            auto [src, inserted] =
+                cover_its.insert({target_dir, {.it = source.it, .plt_uuids = {}}});
             if (artwork_available) {
                 if (inserted) {
                     plug_logger->debug("Copying cover to {}", target_dir);
@@ -765,15 +723,12 @@ bool queue_jobs(
             }
         }
 
-        if (const auto [_, inserted] = visited_sources.insert(from); !inserted)
-        {
+        if (const auto [_, inserted] = visited_sources.insert(from); !inserted) {
             continue;
         }
 
         try {
-            make_job(
-                conf, db, jobs, logger, it, *sync_id, from, to, conv_settings
-            );
+            make_job(conf, db, jobs, logger, it, *sync_id, from, to, conv_settings);
         } catch (std::filesystem::filesystem_error& e) {
             logger->err("Could not queue job for {}: {}", from, e.what());
             continue;
@@ -792,9 +747,7 @@ bool queue_jobs(
 
     // Now we can dispatch cover requests
     if (artwork_available &&
-        !queue_cover_jobs(
-            dry, conf, logger, db, *sync_id, cover_its, queued_cb
-        ))
+        !queue_cover_jobs(dry, conf, logger, db, *sync_id, cover_its, queued_cb))
     {
         free(fmt);
         return false;
@@ -839,8 +792,7 @@ bool worker_thread(bool dry, job_finished_cb_t callback) {
 }
 
 bool execute(bool dry, const ddb_ows_config& conf, job_finished_cb_t callback) {
-    auto* ddb_ows =
-        reinterpret_cast<ddb_ows_plugin_int*>(ddb->plug_get_for_id("ddb_ows"));
+    auto* ddb_ows = reinterpret_cast<ddb_ows_plugin_int*>(ddb->plug_get_for_id("ddb_ows"));
     int n_wts = conf.conv_wts;
     ddb_ows->worker_thread_futures.futures.clear();
     for (int i = 0; i < n_wts; i++) {
@@ -864,9 +816,7 @@ bool run(
     callback_t callbacks
 ) {
     const ddb_ows_config conf = plugin.pub.conf->get();
-    return save_playlists(
-               dry, conf, playlists, logger, callbacks.on_playlist_save
-           ) &&
+    return save_playlists(dry, conf, playlists, logger, callbacks.on_playlist_save) &&
            queue_jobs(
                dry,
                conf,
@@ -880,8 +830,7 @@ bool run(
 }
 
 bool cancel(cancel_cb_t callback) {
-    auto* ddb_ows =
-        reinterpret_cast<ddb_ows_plugin_int*>(ddb->plug_get_for_id("ddb_ows"));
+    auto* ddb_ows = reinterpret_cast<ddb_ows_plugin_int*>(ddb->plug_get_for_id("ddb_ows"));
     ddb_ows->logger->debug("Cancelling");
     ddb_ows->cancellationtoken->cancel();
     plugin.jobs->cancel();
@@ -915,21 +864,14 @@ DB_plugin_t* load(DB_functions_t* api) {
 }
 
 int connect() {
-    ddb_converter =
-        reinterpret_cast<ddb_converter_t*>(ddb->plug_get_for_id("converter"));
+    ddb_converter = reinterpret_cast<ddb_converter_t*>(ddb->plug_get_for_id("converter"));
     if (ddb_converter == nullptr) {
-        plugin.logger->warn(
-            "Converter plugin not available. Conversion jobs will be skipped."
-        );
+        plugin.logger->warn("Converter plugin not available. Conversion jobs will be skipped.");
     }
 
-    ddb_artwork = reinterpret_cast<ddb_artwork_plugin_t*>(
-        ddb->plug_get_for_id("artwork2")
-    );
+    ddb_artwork = reinterpret_cast<ddb_artwork_plugin_t*>(ddb->plug_get_for_id("artwork2"));
     if (ddb_artwork == nullptr) {
-        plugin.logger->warn(
-            "Artwork plugin not available. Cover art will not be synced."
-        );
+        plugin.logger->warn("Artwork plugin not available. Cover art will not be synced.");
     }
     plugin.jobs->close();
     spdlog::get(DDB_OWS_PROJECT_ID)->info("Initialized successfully.");

@@ -47,8 +47,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
 )
 
 Configuration::Configuration(DB_functions_t* api) : ddb(api) {
-    auto res =
-        Gio::Resource::lookup_data_global("/ddb_ows/default_config.json");
+    auto res = Gio::Resource::lookup_data_global("/ddb_ows/default_config.json");
     auto size = res->get_size();
     auto default_buf = static_cast<const char*>(res->get_data(size));
     // This is safe because we fully control the input and can fix it at
@@ -90,9 +89,7 @@ bool Configuration::load_conf_from_buffer(const char* buf) {
         return false;
     }
     if (!upd.is_object()) {
-        logger->error(
-            "Configuration is not a JSON object. Falling back to default."
-        );
+        logger->error("Configuration is not a JSON object. Falling back to default.");
         return false;
     }
     // ensures proper copying of strings
@@ -101,9 +98,7 @@ bool Configuration::load_conf_from_buffer(const char* buf) {
     try {
         _conf = conf;
     } catch (json::exception& e) {
-        logger->error(
-            "Configuration is not valid: {}. Falling back to default.", e.what()
-        );
+        logger->error("Configuration is not valid: {}. Falling back to default.", e.what());
         return false;
     }
     return true;

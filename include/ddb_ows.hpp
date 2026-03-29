@@ -15,8 +15,7 @@ typedef std::function<void(const char*)> playlist_save_cb_t;
 typedef std::function<void(size_t)> sources_gathered_cb_t;
 typedef std::function<void(size_t)> queueing_complete_cb_t;
 typedef std::function<void()> job_queued_cb_t;
-typedef std::function<void(std::unique_ptr<ddb_ows::Job>, bool)>
-    job_finished_cb_t;
+typedef std::function<void(std::unique_ptr<ddb_ows::Job>, bool)> job_finished_cb_t;
 typedef std::function<void()> cancel_cb_t;
 
 struct callback_t {

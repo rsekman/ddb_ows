@@ -9,9 +9,7 @@ void close_callback(NotifyNotification*, void* user_data) {
 
 ProgressMonitor::ProgressMonitor(Gtk::ProgressBar* _pb) : pb(_pb) {
     sig_job_queued.connect(sigc::mem_fun(*this, &ProgressMonitor::_job_queued));
-    sig_job_finished.connect(
-        sigc::mem_fun(*this, &ProgressMonitor::_job_finished)
-    );
+    sig_job_finished.connect(sigc::mem_fun(*this, &ProgressMonitor::_job_finished));
 
     sig_cancel.connect(sigc::mem_fun(*this, &ProgressMonitor::_cancel));
 
@@ -21,12 +19,7 @@ ProgressMonitor::ProgressMonitor(Gtk::ProgressBar* _pb) : pb(_pb) {
         // When this is destroyed, it unrefs the notification, which finalizes
         // it, thus unregistering callbacks. That is, this always outlives
         // notification, so it is safe to pass it as a raw pointer.
-        g_signal_connect(
-            notification,
-            "closed",
-            reinterpret_cast<GCallback>(close_callback),
-            this
-        );
+        g_signal_connect(notification, "closed", reinterpret_cast<GCallback>(close_callback), this);
 
         notify_notification_show(notification, nullptr);
     }
@@ -50,16 +43,9 @@ void ProgressMonitor::set_n_sources(size_t n) {
     sig_job_queued();
 }
 
-std::pair<float, std::string> queue_progress(
-    size_t n_queued, size_t n_sources
-) {
+std::pair<float, std::string> queue_progress(size_t n_queued, size_t n_sources) {
     const float p = pct(n_queued, n_sources);
-    return {
-        p,
-        fmt::format(
-            "Queueing jobs ({}/{}, {:.0f}%)", n_queued, n_sources, 100 * p
-        )
-    };
+    return {p, fmt::format("Queueing jobs ({}/{}, {:.0f}%)", n_queued, n_sources, 100 * p)};
 }
 
 void ProgressMonitor::job_queued() {
@@ -84,9 +70,7 @@ void ProgressMonitor::_job_queued() {
 
     std::lock_guard l{_m};
     if (notification != nullptr) {
-        notify_notification_update(
-            notification, "Syncing", text.c_str(), nullptr
-        );
+        notify_notification_update(notification, "Syncing", text.c_str(), nullptr);
         notify_notification_show(notification, nullptr);
     }
 }
@@ -104,12 +88,7 @@ std::pair<float, std::string> job_progress(size_t n_finished, size_t n_jobs) {
     }
 
     const float p = pct(n_finished, n_jobs);
-    return {
-        p,
-        fmt ::format(
-            "Executing jobs ({}/{}, {:.0f}%)", n_finished, n_jobs, 100 * p
-        )
-    };
+    return {p, fmt ::format("Executing jobs ({}/{}, {:.0f}%)", n_finished, n_jobs, 100 * p)};
 }
 
 void ProgressMonitor::job_finished() {
@@ -134,9 +113,7 @@ void ProgressMonitor::_job_finished() {
 
     std::lock_guard l{_m};
     if (notification != nullptr) {
-        notify_notification_update(
-            notification, "Syncing", text.c_str(), nullptr
-        );
+        notify_notification_update(notification, "Syncing", text.c_str(), nullptr);
         notify_notification_show(notification, nullptr);
     }
 }

@@ -60,11 +60,9 @@ class TextBufferLogger : public Logger {
     bool enqueue(std::string message, loglevel_e level);
 
     std::map<loglevel_e, loglevel_info_t> loglevels{
-        {DDB_OWS_TBL_VERBOSE,
-         {"Verbose", "insensitive_fg_color", RGBA("rgb( 94,  94,  94)")}},
+        {DDB_OWS_TBL_VERBOSE, {"Verbose", "insensitive_fg_color", RGBA("rgb( 94,  94,  94)")}},
         {DDB_OWS_TBL_LOG, {"Log", "success_color", RGBA("rgb(  0, 202,   0)")}},
-        {DDB_OWS_TBL_WARN,
-         {"Warning", "warning_color", RGBA("rgb(202, 202,   0)")}},
+        {DDB_OWS_TBL_WARN, {"Warning", "warning_color", RGBA("rgb(202, 202,   0)")}},
         {
             DDB_OWS_TBL_ERR,
             {"Error", "error_color", RGBA("rgb(202,   0,   0)")},
