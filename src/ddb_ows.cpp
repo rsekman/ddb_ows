@@ -381,9 +381,7 @@ void make_job(
     if (should_conv) {
         if (!conv_settings) {
             logger->warn(
-                "Source {} should be converted, but converter plugin is not "
-                "available.",
-                from
+                "Source {} should be converted, but converter plugin is not available.", from
             );
             return;
         }
@@ -708,8 +706,7 @@ bool queue_jobs(
                 src->second.plt_uuids.insert(source.plt_uuid);
             } else if (inserted) {
                 logger->warn(
-                    "Would sync cover to directory {}, but artwork plugin is "
-                    "not available.",
+                    "Would sync cover to directory {}, but artwork plugin is not available.",
                     target_dir
                 );
             }
