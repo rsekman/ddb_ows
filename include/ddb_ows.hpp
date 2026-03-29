@@ -10,12 +10,12 @@
 
 namespace ddb_ows {
 
-typedef std::function<void(const char*)> playlist_save_cb_t;
-typedef std::function<void(size_t)> sources_gathered_cb_t;
-typedef std::function<void(size_t)> queueing_complete_cb_t;
-typedef std::function<void()> job_queued_cb_t;
-typedef std::function<void(std::unique_ptr<ddb_ows::Job>, bool)> job_finished_cb_t;
-typedef std::function<void()> cancel_cb_t;
+using playlist_save_cb_t = std::function<void(const char*)>;
+using sources_gathered_cb_t = std::function<void(size_t)>;
+using queueing_complete_cb_t = std::function<void(size_t)>;
+using job_queued_cb_t = std::function<void()>;
+using job_finished_cb_t = std::function<void(std::unique_ptr<ddb_ows::Job>, bool)>;
+using cancel_cb_t = std::function<void()>;
 
 struct callback_t {
     playlist_save_cb_t on_playlist_save;

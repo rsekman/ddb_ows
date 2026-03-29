@@ -14,7 +14,7 @@
 
 namespace ddb_ows {
 
-typedef uint64_t sync_id_t;
+using sync_id_t = uint64_t;
 
 struct synced_file_data_t {
     using path = std::filesystem::path;
@@ -72,7 +72,7 @@ class Database {
     Database& operator=(Database&& other) = delete;
 };
 
-typedef std::shared_ptr<Database> DatabaseHandle;
+using DatabaseHandle = std::shared_ptr<Database>;
 
 }  // namespace ddb_ows
 
