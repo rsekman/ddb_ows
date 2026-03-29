@@ -228,7 +228,7 @@ std::optional<synced_file_data_t> Database::find_entry(path key) {
         return {{
             .sync_id = sync_id,
             .source = path(source),
-            .destination = dest,
+            .destination = destination,
             .converter_preset = conv_preset,
             .timestamp = std::chrono::seconds(ts),
         }};
