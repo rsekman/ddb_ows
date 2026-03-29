@@ -13,22 +13,30 @@ Inspired by [foo_ows](https://wiki.hydrogenaud.io/index.php?title=Foobar2000:Com
 
 ## Building
 
-Requirements
-- `ddb_ows` requires DeaDBeeF headers >= [`788d277`](https://github.com/DeaDBeeF-Player/deadbeef/commit/788d277ac08ecaed5b8a215b0e7146d7630c71df) to build as-is.
-It can be built with older headers by cloning the DeaDBeeF repository to your `CPATH` and modifying the relevant includes to read from there.
-- gtk headers
-- `meson`
-- `clang`
-- [`fmt`](https://github.com/fmtlib/fmt)
+Requirements:
+- DeaDBeeF headers >= [`788d277`](https://github.com/DeaDBeeF-Player/deadbeef/commit/788d277ac08ecaed5b8a215b0e7146d7630c71df)
+- A C++20 compiler
+- [Meson](https://mesonbuild.com/) >= 1.1
+- [fmt](https://github.com/fmtlib/fmt)
+- [spdlog](https://github.com/gabime/spdlog)
+- [nlohmann/json](https://github.com/nlohmann/json)
+- SQLite3
+- libuuid
+- gtkmm-3.0
+- libnotify
+- giomm-2.4
 
 ```sh
-export DDB_OWS_LOGLEVEL=n
-meson setup build && cd build
-meson install
+meson setup build
+meson compile -C build
+meson install -C build
 ```
-Set `n = 0, 1, 2, 3` for increasingly verbose console logging on `stderr`;
-the default is `3`.
-To install for the current user only, pass `--libir ~/.local/lib` to `meson setup`.
+To install for the current user only, pass `--libdir ~/.local/lib` to `meson setup`.
+
+Log verbosity is set at compile time via the `log-level` option (trace, debug, info, warn, error, critical; default: info):
+```sh
+meson setup build -Dlog-level=debug
+```
 
 `ddb_ows` is Linux only with no plans to support other operating systems.
 
