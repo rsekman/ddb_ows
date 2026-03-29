@@ -21,9 +21,9 @@ class Job {
     Job(std::shared_ptr<Logger> _logger,
         DatabaseHandle _db,
         sync_id_t _sync_id,
-        path _from,
-        path _to) :
-        logger(_logger), db(_db), from(_from), to(_to), sync_id(_sync_id) {};
+        path _source,
+        path _destination) :
+        logger(_logger), db(_db), source(_source), destination(_destination), sync_id(_sync_id) {};
     virtual bool run(bool dry = false) = 0;
     virtual void abort() = 0;
     virtual ~Job() {};
@@ -31,8 +31,8 @@ class Job {
   protected:
     std::shared_ptr<Logger> logger;
     DatabaseHandle db;
-    const path from;
-    const path to;
+    const path source;
+    const path destination;
     const sync_id_t sync_id;
     virtual void register_job() = 0;
 };
@@ -40,7 +40,11 @@ class Job {
 class CopyJob : public Job {
   public:
     CopyJob(
-        std::shared_ptr<Logger> logger, DatabaseHandle db, sync_id_t sync_id, path from, path to
+        std::shared_ptr<Logger> logger,
+        DatabaseHandle db,
+        sync_id_t sync_id,
+        path source,
+        path destination
     );
     bool run(bool dry = false) override;
     void abort() override {}
@@ -55,16 +59,16 @@ class MoveJob : public Job {
         std::shared_ptr<Logger> _logger,
         DatabaseHandle db,
         sync_id_t sync_id,
-        path from,
-        path to,
         path source,
+        path old_destination,
+        path destination,
         std::optional<std::string> converter_preset
     );
     bool run(bool dry = false) override;
     void abort() override {}
 
   private:
-    path source;
+    path old_destination;
     std::optional<std::string> converter_preset;
     void register_job() override;
 };
@@ -78,8 +82,8 @@ class ConvertJob : public Job {
         ddb_converter_settings_t settings,
         DB_playItem_t* it,
         sync_id_t sync_id,
-        path from,
-        path to
+        path source,
+        path destination
     );
     ~ConvertJob();
     bool run(bool dry = false) override;
@@ -100,8 +104,8 @@ class DeleteJob : public Job {
         std::shared_ptr<Logger> _logger,
         DatabaseHandle db,
         sync_id_t sync_id,
-        path from,
-        path target
+        path source,
+        path destination
     );
     bool run(bool dry = false) override;
     void abort() override {};

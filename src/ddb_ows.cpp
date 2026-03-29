@@ -208,8 +208,6 @@ bool queue_cover_jobs(
     const std::map<path, cover_job_source>& items,
     job_queued_cb_t queued_cb
 ) {
-    path from;
-    path to;
     auto jobs = plugin.jobs;
     auto plug_logger = plugin.logger;
 
@@ -233,9 +231,9 @@ bool queue_cover_jobs(
             plug_logger->debug("Cancelled while queueing cover jobs");
             return false;
         }
-        from = ddb->pl_find_meta(it, ":URI");
-        to = root / get_output_path(it, fmt.get());
-        path target_dir = to.parent_path();
+        path item_source = ddb->pl_find_meta(it, ":URI");
+        path item_destination = root / get_output_path(it, fmt.get());
+        path target_dir = item_destination.parent_path();
         auto* cover_query = static_cast<ddb_cover_query_t*>(calloc(1, sizeof(ddb_cover_query_t)));
         cover_query->flags = 0;
         cover_query->track = it;
@@ -261,39 +259,41 @@ bool queue_cover_jobs(
         } else if (creq->cover == nullptr) {
             plug_logger->debug("No cover found for {}", target_dir);
         } else {
-            path from = creq->cover->image_filename;
+            path source = creq->cover->image_filename;
             if (!dry) {
-                db->register_file(from);
+                db->register_file(source);
                 for (const auto& plt_uuid : src.plt_uuids) {
-                    db->register_file_in_playlist(from, plt_uuid);
+                    db->register_file_in_playlist(source, plt_uuid);
                 }
             }
-            path to = target_dir / fname;
-            auto old = db->find_entry(from);
+            path destination = target_dir / fname;
+            auto old = db->find_entry(source);
             auto old_dest = old ? std::optional{old->destination} : std::nullopt;
 
             bool dest_newer;
             try {
-                dest_newer = is_newer(to, from);
+                dest_newer = is_newer(destination, source);
             } catch (std::filesystem::filesystem_error& e) {
                 dest_newer = false;
             }
             bool old_newer;
             try {
-                old_newer = old_dest && is_newer(*old_dest, from);
+                old_newer = old_dest && is_newer(*old_dest, source);
             } catch (std::filesystem::filesystem_error& e) {
                 old_newer = false;
             }
 
             if (dest_newer) {
-                logger->verbose("Cover at {} is newer than source {}", to, from);
-            } else if (old_newer && *old_dest != to) {
-                auto cover_job =
-                    std::make_unique<MoveJob>(logger, db, sync_id, *old_dest, to, from, "");
+                logger->verbose("Cover at {} is newer than source {}", destination, source);
+            } else if (old_newer && *old_dest != destination) {
+                auto cover_job = std::make_unique<MoveJob>(
+                    logger, db, sync_id, *old_dest, destination, source, ""
+                );
                 jobs->push_back(std::move(cover_job));
             } else {
-                auto cover_job =
-                    std::make_unique<CopyJob>(logger, db, sync_id, creq->cover->image_filename, to);
+                auto cover_job = std::make_unique<CopyJob>(
+                    logger, db, sync_id, creq->cover->image_filename, destination
+                );
                 jobs->push_back(std::move(cover_job));
             }
             if (queued_cb) {
@@ -351,28 +351,28 @@ void make_job(
     std::shared_ptr<Logger> logger,
     DB_playItem_t* it,
     sync_id_t sync_id,
-    path from,
-    path to,
+    path source,
+    path destination,
     const std::optional<ddb_converter_settings_t>& conv_settings
 ) {
     // throws: can throw any filesystem error throw by checking ctime
-    const auto old = db->find_entry(from);
+    const auto old = db->find_entry(source);
     const std::optional<path> old_dest = old ? old->destination : std::nullopt;
 
     bool should_conv = should_convert(it, conf.conv_fts);
     if (should_conv) {
-        to.replace_extension(conf.conv_ext);
+        destination.replace_extension(conf.conv_ext);
     }
 
     bool dest_newer;
     try {
-        dest_newer = is_newer(to, from);
+        dest_newer = is_newer(destination, source);
     } catch (std::filesystem::filesystem_error& e) {
         dest_newer = false;
     }
     bool old_newer;
     try {
-        old_newer = old_dest && is_newer(*old_dest, from);
+        old_newer = old_dest && is_newer(*old_dest, source);
     } catch (std::filesystem::filesystem_error& e) {
         old_newer = false;
     }
@@ -380,13 +380,14 @@ void make_job(
     if (should_conv) {
         if (!conv_settings) {
             logger->warn(
-                "Source {} should be converted, but converter plugin is not available.", from
+                "Source {} should be converted, but converter plugin is not available.", source
             );
             return;
         }
         std::string preset_title = conv_settings->encoder_preset->title;
-        auto cjob =
-            std::make_unique<ConvertJob>(logger, db, ddb, *conv_settings, it, sync_id, from, to);
+        auto cjob = std::make_unique<ConvertJob>(
+            logger, db, ddb, *conv_settings, it, sync_id, source, destination
+        );
         if (old && old->converter_preset == preset_title) {
             // This source file was synced previously and the same encoder
             // preset is selected
@@ -394,20 +395,20 @@ void make_job(
             if (dest_newer) {
                 // The destination exists and is newer than the source
                 logger->verbose(
-                    "Source {} was already converted with {}; skipping.", from, preset_title
+                    "Source {} was already converted with {}; skipping.", source, preset_title
                 );
                 return;
-            } else if (old_newer && old_dest != to) {
+            } else if (old_newer && old_dest != destination) {
                 // The source was previously converted with a different
                 // destination, which is newer than the source
                 out->emplace_back<MoveJob>(
-                    logger, db, sync_id, *old_dest, to, from, old->converter_preset
+                    logger, db, sync_id, source, *old_dest, destination, old->converter_preset
                 );
             } else {
                 // The source is newer => delete the old destination and
                 // reconvert with new destination
-                if (old_dest != to) {
-                    out->emplace_back<DeleteJob>(logger, db, sync_id, from, *old_dest);
+                if (old_dest != destination) {
+                    out->emplace_back<DeleteJob>(logger, db, sync_id, source, *old_dest);
                 }
                 out->push_back(std::move(cjob));
             }
@@ -415,28 +416,28 @@ void make_job(
             // This source file was previously synced, but with a different
             // encoder. Convert it, and clean up the old file.
             out->push_back(std::move(cjob));
-            out->emplace_back<DeleteJob>(logger, db, sync_id, from, *old_dest);
+            out->emplace_back<DeleteJob>(logger, db, sync_id, source, *old_dest);
         } else {
             // This source file was not previously synced. All we have to do is
             // convert it.
             out->push_back(std::move(cjob));
         }
-    } else if (old_dest && *old_dest != to && exists(*old_dest)) {
+    } else if (old_dest && *old_dest != destination && exists(*old_dest)) {
         // This source file was synced previously, and was not converted
         if (old_newer && !old->converter_preset) {
             // the destination file is newer than the source => move
-            out->emplace_back<MoveJob>(logger, db, sync_id, *old_dest, to, from, "");
+            out->emplace_back<MoveJob>(logger, db, sync_id, source, *old_dest, destination, "");
         } else {
             // the source file is newer than the old copy, or was previously
             // converted but should not be now => delete the old copy/conversion
             // and copy anew
-            out->emplace_back<DeleteJob>(logger, db, sync_id, from, *old_dest);
-            out->emplace_back<CopyJob>(logger, db, sync_id, from, to);
+            out->emplace_back<DeleteJob>(logger, db, sync_id, source, *old_dest);
+            out->emplace_back<CopyJob>(logger, db, sync_id, source, destination);
         }
     } else if (dest_newer) {
-        logger->verbose("Destination {} is newer than source {}; skipping.", to, from);
+        logger->verbose("Destination {} is newer than source {}; skipping.", destination, source);
     } else {
-        out->emplace_back<CopyJob>(logger, db, sync_id, from, to);
+        out->emplace_back<CopyJob>(logger, db, sync_id, source, destination);
     }
 }
 
@@ -678,27 +679,27 @@ bool queue_jobs(
 
     const bool artwork_available = ddb_artwork != nullptr;
 
-    for (const auto& source : sources) {
+    for (const auto& job_source : sources) {
         // Items will be unref'd when sources goes out of scope
         if (ddb_ows->stop.stop_requested()) {
             break;
         }
 
-        auto it = source.it.get();
-        path from = std::string(ddb->pl_find_meta(it, ":URI"));
-        path to = root / get_output_path(it, fmt.get());
-        path target_dir = to.parent_path();
+        auto it = job_source.it.get();
+        path source = std::string(ddb->pl_find_meta(it, ":URI"));
+        path destination = root / get_output_path(it, fmt.get());
+        path target_dir = destination.parent_path();
 
         if (!dry) {
-            if (!visited_sources.contains(from)) {
-                db->register_file(from);
+            if (!visited_sources.contains(source)) {
+                db->register_file(source);
             }
-            db->register_file_in_playlist(from, source.plt_uuid);
+            db->register_file_in_playlist(source, job_source.plt_uuid);
         }
 
         if (cover_sync) {
             auto [src, inserted] =
-                cover_its.insert({target_dir, {.it = source.it, .plt_uuids = {}}});
+                cover_its.insert({target_dir, {.it = job_source.it, .plt_uuids = {}}});
             if (artwork_available) {
                 if (inserted) {
                     plug_logger->debug("Copying cover to {}", target_dir);
@@ -706,7 +707,7 @@ bool queue_jobs(
                         gathered_cb(sources.size() + cover_its.size());
                     }
                 }
-                src->second.plt_uuids.emplace(source.plt_uuid);
+                src->second.plt_uuids.emplace(job_source.plt_uuid);
             } else if (inserted) {
                 logger->warn(
                     "Would sync cover to directory {}, but artwork plugin is not available.",
@@ -715,14 +716,14 @@ bool queue_jobs(
             }
         }
 
-        if (const auto [_, inserted] = visited_sources.insert(from); !inserted) {
+        if (const auto [_, inserted] = visited_sources.insert(source); !inserted) {
             continue;
         }
 
         try {
-            make_job(conf, db, jobs, logger, it, *sync_id, from, to, conv_settings);
+            make_job(conf, db, jobs, logger, it, *sync_id, source, destination, conv_settings);
         } catch (std::filesystem::filesystem_error& e) {
-            logger->err("Could not queue job for {}: {}", from, e.what());
+            logger->err("Could not queue job for {}: {}", source, e.what());
             continue;
         }
 
@@ -749,8 +750,8 @@ bool queue_jobs(
             if (gathered_cb) {
                 gathered_cb(sources.size() + cover_its.size() + unrefd->size());
             }
-            for (const auto& [from, to] : *unrefd) {
-                jobs->emplace_back<DeleteJob>(logger, db, *sync_id, from, to);
+            for (const auto& [source, destination] : *unrefd) {
+                jobs->emplace_back<DeleteJob>(logger, db, *sync_id, source, destination);
                 if (queued_cb) {
                     queued_cb();
                 }
