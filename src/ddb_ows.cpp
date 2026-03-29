@@ -228,7 +228,7 @@ bool queue_cover_jobs(
         auto it = src.it.get();
         if (plugin.stop.stop_requested()) {
             plug_logger->debug("Cancelled while queueing cover jobs");
-            break;
+            return false;
         }
         from = ddb->pl_find_meta(it, ":URI");
         to = root / get_output_path(it, fmt);
