@@ -138,7 +138,7 @@ static void gtk_builder_connect_signals_default(
     }
 
     if (args->map != nullptr) {
-        get_logger()->debug(
+        get_logger()->trace(
             "Connected {}::{} -> {} (id: {}). {} signals",
             static_cast<const void*>(object),
             signal_name,
@@ -218,7 +218,7 @@ void fn_formats_populate(Glib::RefPtr<Gtk::ListStore> model) {
     Gtk::TreeModel::iterator r;
     auto logger = get_logger();
     for (auto i : fmts) {
-        logger->debug("Appending {} to fn formats", i);
+        logger->trace("Appending {} to fn formats", i);
         r = model->append();
         r->set_value(0, i);
     }
@@ -882,7 +882,7 @@ int create_ui() {
     try {
         builder->add_from_resource("/ddb_ows/ddb_ows.ui");
     } catch (Gtk::BuilderError& e) {
-        logger->error("Could not build ui: {}.", std::string(e.what()));
+        logger->critical("Could not build ui: {}.", std::string(e.what()));
         return -1;
     }
     auto provider = Gtk::CssProvider::create();
@@ -970,13 +970,13 @@ int connect(void) {
 
     ddb_ows = reinterpret_cast<ddb_ows_plugin_t*>(ddb->plug_get_for_id("ddb_ows"));
     if (ddb_ows == nullptr) {
-        logger->error("ddb_ows plugin not found, quitting.");
+        logger->critical("ddb_ows plugin not found, quitting.");
         return -1;
     }
 
     DB_plugin_t* ddb_gtkui = ddb->plug_get_for_id(DDB_GTKUI_PLUGIN_ID);
     if (ddb_gtkui == nullptr) {
-        logger->error("Matching gtkui plugin not found, quitting.");
+        logger->critical("Matching gtkui plugin not found, quitting.");
         return -1;
     }
     // Needed to make gtkmm play nice
