@@ -42,33 +42,6 @@ namespace ddb_ows_gui {
 
 using namespace ddb_ows;
 
-struct ddb_ows_gui_plugin_t {
-    DB_misc_t plugin;
-    std::shared_ptr<Gtk::Main> app;
-    std::shared_ptr<ProgressMonitor> pm;
-    std::shared_ptr<ddb_ows::TextBufferLogger> gui_logger;
-    // These instances must be created by the Gtk main thread
-    std::shared_ptr<Glib::Dispatcher> sig_execution_buttons_set_sensitive;
-    std::shared_ptr<Glib::Dispatcher> sig_execution_buttons_set_insensitive;
-};
-
-ddb_ows_gui_plugin_t plugin{
-    .app = nullptr,
-    .pm = nullptr,
-    .gui_logger = nullptr,
-    .sig_execution_buttons_set_sensitive = nullptr,
-    .sig_execution_buttons_set_insensitive = nullptr,
-};
-
-ddb_ows_plugin_t* ddb_ows;
-
-Glib::RefPtr<Gtk::Builder> builder;
-
-std::shared_ptr<spdlog::logger> get_logger() {
-    auto logger = spdlog::get(DDB_OWS_GUI_PLUGIN_ID);
-    return logger ? logger : spdlog::default_logger();
-}
-
 // adapted from boost::hash_combine
 size_t hash_combine(size_t x, size_t y) {
     x ^= y + 0x9e3779b97f4a7c16 + (x << 6) + (x >> 2);
@@ -93,16 +66,44 @@ struct signal_handler_id_hash {
         return hash_combine(hash_combine(obj_hash, sig_hash), handler_hash);
     }
 };
-typedef std::unordered_map<ddb_ows_gui::signal_handler_id, gulong, signal_handler_id_hash>
-    signal_map;
+
+using signal_map =
+    std::unordered_map<ddb_ows_gui::signal_handler_id, gulong, signal_handler_id_hash>;
+
+struct ddb_ows_gui_plugin_t {
+    DB_misc_t plugin;
+    std::shared_ptr<Gtk::Main> app;
+    std::shared_ptr<ProgressMonitor> pm;
+    std::shared_ptr<ddb_ows::TextBufferLogger> gui_logger;
+    std::shared_ptr<signal_map> signals;
+    // These instances must be created by the Gtk main thread
+    std::shared_ptr<Glib::Dispatcher> sig_execution_buttons_set_sensitive;
+    std::shared_ptr<Glib::Dispatcher> sig_execution_buttons_set_insensitive;
+};
+
+ddb_ows_gui_plugin_t plugin{
+    .app = nullptr,
+    .pm = nullptr,
+    .gui_logger = nullptr,
+    .signals = std::make_shared<signal_map>(),
+    .sig_execution_buttons_set_sensitive = nullptr,
+    .sig_execution_buttons_set_insensitive = nullptr,
+};
+
+ddb_ows_plugin_t* ddb_ows;
+
+Glib::RefPtr<Gtk::Builder> builder;
+
+std::shared_ptr<spdlog::logger> get_logger() {
+    auto logger = spdlog::get(DDB_OWS_GUI_PLUGIN_ID);
+    return logger ? logger : spdlog::default_logger();
+}
 
 struct connect_args {
     GModule* gmodule;
     gpointer data;
-    signal_map* map;
+    std::shared_ptr<signal_map> map;
 };
-
-signal_map* signals = new signal_map();
 
 static void gtk_builder_connect_signals_default(
     GtkBuilder* builder,
@@ -198,9 +199,9 @@ void fn_formats_populate(Glib::RefPtr<Gtk::ListStore> model) {
     // configuration. We need to block them until we are done to not issue
     // configuration writes in incorrect states. Issue: #35
     GObject* const obj = reinterpret_cast<GObject*>(model->gobj());
-    const gulong on_change = signals->at({obj, "row-changed", "fn_formats_save"});
-    const gulong on_insert = signals->at({obj, "row-inserted", "fn_formats_save"});
-    const gulong on_delete = signals->at({obj, "row-deleted", "fn_formats_save_on_delete"});
+    const gulong on_change = plugin.signals->at({obj, "row-changed", "fn_formats_save"});
+    const gulong on_insert = plugin.signals->at({obj, "row-inserted", "fn_formats_save"});
+    const gulong on_delete = plugin.signals->at({obj, "row-deleted", "fn_formats_save_on_delete"});
     g_signal_handler_block(obj, on_change);
     g_signal_handler_block(obj, on_insert);
     g_signal_handler_block(obj, on_delete);
@@ -327,7 +328,7 @@ void pl_selection_populate(
     logger->debug("Populating playlist selection model with {} playlists.", plt_count);
 
     GObject* const obj = reinterpret_cast<GObject*>(model->gobj());
-    const gulong on_change = signals->at({obj, "row-changed", "pl_selection_save"});
+    const gulong on_change = plugin.signals->at({obj, "row-changed", "pl_selection_save"});
     g_signal_handler_block(obj, on_change);
 
     char buf[4096];
@@ -418,7 +419,7 @@ void conv_fts_populate(
     auto logger = get_logger();
 
     GObject* const obj = reinterpret_cast<GObject*>(model->gobj());
-    const gulong on_change = signals->at({obj, "row-changed", "conv_fts_save"});
+    const gulong on_change = plugin.signals->at({obj, "row-changed", "conv_fts_save"});
     g_signal_handler_block(obj, on_change);
 
     // decoders and decoders[i]->exts are null-terminated arrays
@@ -903,7 +904,7 @@ int create_ui() {
     connect_args* args = g_slice_new0(connect_args);
     args->gmodule = g_module_open(bt_symbols[0], G_MODULE_BIND_LAZY);
     args->data = nullptr;
-    args->map = signals;
+    args->map = plugin.signals;
     gtk_builder_connect_signals_full(builder->gobj(), gtk_builder_connect_signals_default, args);
 
     plugin.sig_execution_buttons_set_sensitive = std::make_shared<Glib::Dispatcher>();
