@@ -2,6 +2,7 @@
 
 #include <deadbeef/converter.h>
 #include <deadbeef/gtkui_api.h>
+#include <dlfcn.h>
 #include <execinfo.h>
 #include <fmt/core.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -37,6 +38,13 @@
 using namespace std::chrono_literals;
 
 static DB_functions_t* ddb;
+
+extern "C" DB_plugin_t*
+#if GTK_CHECK_VERSION(3, 0, 0)
+ddb_ows_gtk3_load(DB_functions_t* api);
+#else
+#error "Only Gtk 3 is supported!"
+#endif
 
 namespace ddb_ows_gui {
 
@@ -883,26 +891,21 @@ int create_ui() {
         Gdk::Screen::get_default(), provider, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION
     );
 
-    // Use introspection (backtrace) to figure out which file (.so) we are in.
+    // Use introspection (dladrr) to figure out which file (.so) we are in.
     // This is necessary because we have to tell gtk to look for the signal
     // handlers in the .so, rather than in the main deadbeef executable.
-    char** bt_symbols = nullptr;
-    void* trace[1];
-    int trace_l = backtrace(trace, 1);
-    bt_symbols = backtrace_symbols(trace, trace_l);
-    // Backtrace looks something like
-    // "/usr/lib/deadbeef/ddb_ows_gtk3.so(create_ui+0x53) [0x7f7b0ae932a3]"
-    // We need to account for the possibility that the path is silly and
-    // contains '(' => find last position
-    char* last_bracket = strrchr(bt_symbols[0], '(');
-    if (last_bracket) {
-        *last_bracket = '\0';
+    Dl_info dlinfo;
+    int rc = dladdr(reinterpret_cast<void*>(&ddb_ows_gtk3_load), &dlinfo);
+    if (!rc) {
+        logger->critical("Could not determine .so location, quitting.");
+        return -1;
     }
-    logger->debug("Trying to load GModule {}", bt_symbols[0]);
+
+    logger->debug("Trying to load GModule {}", dlinfo.dli_fname);
 
     // Now we are ready to connect signal handlers;
     connect_args* args = g_slice_new0(connect_args);
-    args->gmodule = g_module_open(bt_symbols[0], G_MODULE_BIND_LAZY);
+    args->gmodule = g_module_open(dlinfo.dli_fname, G_MODULE_BIND_LAZY);
     args->data = nullptr;
     args->map = plugin.signals;
     gtk_builder_connect_signals_full(builder->gobj(), gtk_builder_connect_signals_default, args);
@@ -1056,11 +1059,4 @@ DB_plugin_t* load(DB_functions_t* api) {
     return reinterpret_cast<DB_plugin_t*>(&ddb_ows_gui::plugin);
 }
 
-extern "C" DB_plugin_t*
-#if GTK_CHECK_VERSION(3, 0, 0)
-ddb_ows_gtk3_load(DB_functions_t* api) {
-#else
-#error "Only Gtk 3 is supported!"
-#endif
-    return load(api);
-}
+extern "C" DB_plugin_t* ddb_ows_gtk3_load(DB_functions_t* api) { return load(api); }
