@@ -16,13 +16,14 @@
 #include <filesystem>
 #include <forward_list>
 #include <functional>
-#include <future>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <random>
 #include <set>
+#include <stop_token>
 #include <string>
+#include <thread>
 #include <unordered_set>
 #include <vector>
 
@@ -42,21 +43,14 @@ using namespace std::filesystem;
 
 namespace ddb_ows {
 
-typedef std::packaged_task<bool(bool, job_finished_cb_t)> worker_thread_t;
-
-struct wt_futures_t {
-    std::mutex m;
-    std::condition_variable c;
-    std::vector<std::shared_future<bool>> futures;
-};
-
 struct ddb_ows_plugin_int {
     ddb_ows_plugin_t pub;
-    std::mutex running;
-    std::shared_ptr<ddb_ows::CancellationToken> cancellationtoken;
+    std::stop_source stop;
+    std::mutex running_m;
+    std::condition_variable running_cv;
+    bool running = false;
     std::shared_ptr<JobsQueue> jobs;
     std::shared_ptr<spdlog::logger> logger;
-    wt_futures_t worker_thread_futures;
     std::unordered_set<std::string> conv_exts;
 };
 
@@ -116,13 +110,6 @@ ddb_ows_plugin_t plugin_public = {
 
 ddb_ows_plugin_int plugin = {
     .pub = plugin_public,
-    .cancellationtoken = std::make_shared<ddb_ows::CancellationToken>(),
-    .logger = std::shared_ptr<spdlog::logger>(),
-    .worker_thread_futures = wt_futures_t{
-        .m = std::mutex(),
-        .c = std::condition_variable(),
-        .futures = std::vector<std::shared_future<bool>>{}
-    },
 };
 
 void escape(std::string& s) {
@@ -239,7 +226,7 @@ bool queue_cover_jobs(
     const auto fname = conf.cover_fname;
     for (const auto& [_, src] : items) {
         auto it = src.it.get();
-        if (plugin.cancellationtoken->get()) {
+        if (plugin.stop.stop_requested()) {
             plug_logger->debug("Cancelled while queueing cover jobs");
             break;
         }
@@ -681,13 +668,11 @@ bool queue_jobs(
 
     std::set<std::string> visited_sources{};
 
-    ddb_ows->cancellationtoken = std::make_shared<CancellationToken>();
-
     const bool artwork_available = ddb_artwork != nullptr;
 
     for (const auto& source : sources) {
         // Items will be unref'd when sources goes out of scope
-        if (ddb_ows->cancellationtoken->get()) {
+        if (ddb_ows->stop.stop_requested()) {
             break;
         }
 
@@ -739,7 +724,7 @@ bool queue_jobs(
         }
     }
 
-    if (ddb_ows->cancellationtoken->get()) {
+    if (ddb_ows->stop.stop_requested()) {
         plug_logger->debug("Cancelled while queueing jobs");
         free(fmt);
         return false;
@@ -792,20 +777,13 @@ bool worker_thread(bool dry, job_finished_cb_t callback) {
 }
 
 bool execute(bool dry, const ddb_ows_config& conf, job_finished_cb_t callback) {
-    auto* ddb_ows = reinterpret_cast<ddb_ows_plugin_int*>(ddb->plug_get_for_id("ddb_ows"));
     int n_wts = conf.conv_wts;
-    ddb_ows->worker_thread_futures.futures.clear();
+    std::vector<std::jthread> workers;
+    workers.reserve(n_wts);
     for (int i = 0; i < n_wts; i++) {
-        auto task = worker_thread_t(worker_thread);
-        ddb_ows->worker_thread_futures.futures.push_back(task.get_future());
-        std::thread t(std::move(task), dry, callback);
-        t.detach();
+        workers.emplace_back(worker_thread, dry, callback);
     }
-    std::lock_guard lock(ddb_ows->worker_thread_futures.m);
-    for (auto& t : ddb_ows->worker_thread_futures.futures) {
-        t.wait();
-    }
-    ddb_ows->worker_thread_futures.c.notify_all();
+    // jthreads auto-join when the vector destructs
     return true;
 }
 
@@ -815,34 +793,46 @@ bool run(
     std::shared_ptr<Logger> logger,
     callback_t callbacks
 ) {
+    auto* ddb_ows = reinterpret_cast<ddb_ows_plugin_int*>(ddb->plug_get_for_id("ddb_ows"));
+    {
+        std::lock_guard lock(ddb_ows->running_m);
+        if (ddb_ows->running) {
+            ddb_ows->logger->warn("A sync is already in progress.");
+            return false;
+        }
+        ddb_ows->running = true;
+        ddb_ows->stop = std::stop_source();
+    }
+
     const ddb_ows_config conf = plugin.pub.conf->get();
-    return save_playlists(dry, conf, playlists, logger, callbacks.on_playlist_save) &&
-           queue_jobs(
-               dry,
-               conf,
-               playlists,
-               logger,
-               callbacks.on_sources_gathered,
-               callbacks.on_job_queued,
-               callbacks.on_queueing_complete
-           ) &&
-           execute(dry, conf, callbacks.on_job_finished);
+    bool result = save_playlists(dry, conf, playlists, logger, callbacks.on_playlist_save) &&
+                  queue_jobs(
+                      dry,
+                      conf,
+                      playlists,
+                      logger,
+                      callbacks.on_sources_gathered,
+                      callbacks.on_job_queued,
+                      callbacks.on_queueing_complete
+                  ) &&
+                  execute(dry, conf, callbacks.on_job_finished);
+
+    {
+        std::lock_guard lock(ddb_ows->running_m);
+        ddb_ows->running = false;
+    }
+    ddb_ows->running_cv.notify_all();
+    return result;
 }
 
 bool cancel(cancel_cb_t callback) {
     auto* ddb_ows = reinterpret_cast<ddb_ows_plugin_int*>(ddb->plug_get_for_id("ddb_ows"));
     ddb_ows->logger->debug("Cancelling");
-    ddb_ows->cancellationtoken->cancel();
+    ddb_ows->stop.request_stop();
     plugin.jobs->cancel();
-    std::lock_guard lock(ddb_ows->worker_thread_futures.m);
-    for (auto t = ddb_ows->worker_thread_futures.futures.begin();
-         t != ddb_ows->worker_thread_futures.futures.end();
-         t++)
-    {
-        t->wait();
-    }
+    std::unique_lock lock(ddb_ows->running_m);
+    ddb_ows->running_cv.wait(lock, [&] { return !ddb_ows->running; });
     callback();
-    ddb_ows->worker_thread_futures.c.notify_all();
     return true;
 }
 

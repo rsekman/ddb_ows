@@ -3,7 +3,6 @@
 
 #include <spdlog/spdlog.h>
 
-#include "cancellationtoken.hpp"
 #include "config.hpp"
 #include "deadbeef/deadbeef.h"
 #include "job.hpp"
