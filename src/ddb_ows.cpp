@@ -568,7 +568,7 @@ void build_conv_ext_cache(const std::set<std::string>& sels) {
         {
             s = s.substr(0, n);
         }
-        if (sels.count(s)) {
+        if (sels.contains(s)) {
             const char** exts = decoders[i]->exts;
             if (exts) {
                 for (int j = 0; exts[j]; j++) {
@@ -682,7 +682,7 @@ bool queue_jobs(
         path target_dir = to.parent_path();
 
         if (!dry) {
-            if (visited_sources.count(from) == 0) {
+            if (!visited_sources.contains(from)) {
                 db->register_file(from);
             }
             db->register_file_in_playlist(from, source.plt_uuid);

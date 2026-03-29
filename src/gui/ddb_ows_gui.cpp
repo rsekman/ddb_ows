@@ -338,7 +338,7 @@ void pl_selection_populate(
         ddb->plt_get_title(plt, buf, sizeof(buf));
         row = model->append();
         plt_uuid uuid = ddb_ows->plt_get_uuid(plt);
-        bool s = selected_uuids.count(uuid) > 0;
+        bool s = selected_uuids.contains(uuid);
         row->set_value(0, s);
         row->set_value(1, std::string(buf));
         row->set_value(2, plt);
@@ -435,7 +435,7 @@ void conv_fts_populate(
         {
             s = s.substr(0, n);
         }
-        row->set_value(0, sels.count(s) > 0);
+        row->set_value(0, sels.contains(s));
         row->set_value(1, s);
         row->set_value(2, decoders[i]);
         i++;
