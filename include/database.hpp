@@ -12,13 +12,12 @@
 #include <string>
 #include <unordered_map>
 
-using namespace std::filesystem;
-
 namespace ddb_ows {
 
 typedef uint64_t sync_id_t;
 
 struct synced_file_data_t {
+    using path = std::filesystem::path;
     sync_id_t sync_id;
     const path source;
     // nullopt represents that the file was deleted
@@ -28,6 +27,8 @@ struct synced_file_data_t {
 };
 
 class Database {
+    using path = std::filesystem::path;
+
   public:
     Database(path root);
     ~Database();

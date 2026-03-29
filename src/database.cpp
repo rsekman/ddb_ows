@@ -270,7 +270,8 @@ std::optional<synced_file_data_t> Database::find_entry(path key) {
     }
 }
 
-std::optional<std::vector<std::tuple<path, path>>>
+std::optional<
+    std::vector<std::tuple<std::filesystem::path, std::filesystem::path>>>
 Database::get_unreferenced_files() {
     std::lock_guard lock(m);
 

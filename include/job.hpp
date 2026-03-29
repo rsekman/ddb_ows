@@ -11,11 +11,12 @@
 #include "database.hpp"
 #include "logger.hpp"
 
-using namespace std::filesystem;
-
 namespace ddb_ows {
 
 class Job {
+  protected:
+    using path = std::filesystem::path;
+
   public:
     Job(std::shared_ptr<Logger> _logger,
         DatabaseHandle _db,
