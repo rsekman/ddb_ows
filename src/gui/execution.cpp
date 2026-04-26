@@ -87,13 +87,18 @@ void execute(bool dry) {
 void execution_buttons_set_sensitive(bool sensitive) {
     Button* dry_run_btn = nullptr;
     Button* execute_btn = nullptr;
+    Button* cancel_btn = nullptr;
     plugin.builder->get_widget("execute_btn", execute_btn);
     plugin.builder->get_widget("dry_run_btn", dry_run_btn);
+    plugin.builder->get_widget("cancel_btn", cancel_btn);
     if (dry_run_btn) {
         dry_run_btn->set_sensitive(sensitive);
     }
     if (execute_btn) {
         execute_btn->set_sensitive(sensitive);
+    }
+    if (cancel_btn) {
+        cancel_btn->set_sensitive(!sensitive);
     }
 }
 
