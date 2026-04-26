@@ -108,6 +108,9 @@ void on_quit_btn_clicked() {
 }
 
 void on_cancel_btn_clicked(GtkButton* button, gpointer data) {
+    if (!plugin.pm) {
+        return;
+    }
     plugin.pm->cancel();
     cancel_cb_t cb = []() { (*plugin.sig_execution_buttons_set_sensitive)(); };
     auto t = std::thread([cb]() { ddb_ows->cancel(cb); });
